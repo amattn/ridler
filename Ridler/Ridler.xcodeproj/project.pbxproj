@@ -35,6 +35,8 @@
 		A10000010000000000000026 /* NewPRDSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000026 /* NewPRDSheet.swift */; };
 		A10000010000000000000027 /* BranchWarningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000027 /* BranchWarningSheet.swift */; };
 		A10000010000000000000028 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000028 /* NotificationManager.swift */; };
+		A10000010000000000000029 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000029 /* SettingsView.swift */; };
+		A10000010000000000000030 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000030 /* SettingsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +78,8 @@
 		A10000020000000000000026 /* NewPRDSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPRDSheet.swift; sourceTree = "<group>"; };
 		A10000020000000000000027 /* BranchWarningSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BranchWarningSheet.swift; sourceTree = "<group>"; };
 		A10000020000000000000028 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		A10000020000000000000029 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A10000020000000000000030 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -155,6 +159,7 @@
 				A10000020000000000000016 /* FileWatcher.swift */,
 				A10000020000000000000018 /* PRDManager.swift */,
 				A10000020000000000000028 /* NotificationManager.swift */,
+				A10000020000000000000030 /* SettingsManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -170,6 +175,7 @@
 				A10000020000000000000025 /* StatusBarView.swift */,
 				A10000020000000000000026 /* NewPRDSheet.swift */,
 				A10000020000000000000027 /* BranchWarningSheet.swift */,
+				A10000020000000000000029 /* SettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -273,6 +279,8 @@
 				A10000010000000000000026 /* NewPRDSheet.swift in Sources */,
 				A10000010000000000000027 /* BranchWarningSheet.swift in Sources */,
 				A10000010000000000000028 /* NotificationManager.swift in Sources */,
+				A10000010000000000000029 /* SettingsView.swift in Sources */,
+				A10000010000000000000030 /* SettingsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

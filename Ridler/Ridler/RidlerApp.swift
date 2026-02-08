@@ -57,6 +57,10 @@ struct RidlerApp: App {
                 }
             }
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 
     private func recentFileLabel(for path: String) -> String {
