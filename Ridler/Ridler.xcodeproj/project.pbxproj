@@ -9,16 +9,40 @@
 /* Begin PBXBuildFile section */
 		A10000010000000000000001 /* RidlerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000001 /* RidlerApp.swift */; };
 		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* PRDProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000003 /* PRDProject.swift */; };
+		A10000010000000000000004 /* PRDFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000004 /* PRDFileManager.swift */; };
+		A10000010000000000000005 /* PRDModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000005 /* PRDModelsTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1000000B000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000090000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000060000000000000001;
+			remoteInfo = Ridler;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A10000020000000000000001 /* RidlerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidlerApp.swift; sourceTree = "<group>"; };
 		A10000020000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A10000020000000000000003 /* PRDProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDProject.swift; sourceTree = "<group>"; };
+		A10000020000000000000004 /* PRDFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDFileManager.swift; sourceTree = "<group>"; };
+		A10000020000000000000005 /* PRDModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDModelsTests.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10000040000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000040000000000000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -32,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000050000000000000002 /* Ridler */,
+				A10000050000000000000004 /* RidlerTests */,
 				A10000050000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +66,7 @@
 			children = (
 				A10000020000000000000001 /* RidlerApp.swift */,
 				A10000020000000000000002 /* ContentView.swift */,
+				A10000050000000000000005 /* Models */,
 			);
 			path = Ridler;
 			sourceTree = "<group>";
@@ -49,8 +75,26 @@
 			isa = PBXGroup;
 			children = (
 				A10000030000000000000001 /* Ridler.app */,
+				A10000030000000000000002 /* RidlerTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000050000000000000004 /* RidlerTests */ = {
+			isa = PBXGroup;
+			children = (
+				A10000020000000000000005 /* PRDModelsTests.swift */,
+			);
+			path = RidlerTests;
+			sourceTree = "<group>";
+		};
+		A10000050000000000000005 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10000020000000000000003 /* PRDProject.swift */,
+				A10000020000000000000004 /* PRDFileManager.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -72,6 +116,23 @@
 			productReference = A10000030000000000000001 /* Ridler.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000060000000000000002 /* RidlerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000080000000000000003 /* Build configuration list for PBXNativeTarget "RidlerTests" */;
+			buildPhases = (
+				A10000070000000000000002 /* Sources */,
+				A10000040000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000B000000000000002 /* PBXTargetDependency */,
+			);
+			name = RidlerTests;
+			productName = RidlerTests;
+			productReference = A10000030000000000000002 /* RidlerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -84,6 +145,10 @@
 				TargetAttributes = {
 					A10000060000000000000001 = {
 						CreatedOnToolsVersion = 15.4;
+					};
+					A10000060000000000000002 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = A10000060000000000000001;
 					};
 				};
 			};
@@ -101,6 +166,7 @@
 			projectRoot = "";
 			targets = (
 				A10000060000000000000001 /* Ridler */,
+				A10000060000000000000002 /* RidlerTests */,
 			);
 		};
 /* End PBXProject section */
@@ -112,10 +178,28 @@
 			files = (
 				A10000010000000000000001 /* RidlerApp.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
+				A10000010000000000000003 /* PRDProject.swift in Sources */,
+				A10000010000000000000004 /* PRDFileManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000070000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000005 /* PRDModelsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1000000B000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000060000000000000001 /* Ridler */;
+			targetProxy = A1000000B000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1000000A000000000000001 /* Debug */ = {
@@ -286,6 +370,40 @@
 			};
 			name = Release;
 		};
+		A1000000A000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.amattn.ridler.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ridler.app/Contents/MacOS/Ridler";
+			};
+			name = Debug;
+		};
+		A1000000A000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.amattn.ridler.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ridler.app/Contents/MacOS/Ridler";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -303,6 +421,15 @@
 			buildConfigurations = (
 				A1000000A000000000000001 /* Debug */,
 				A1000000A000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000080000000000000003 /* Build configuration list for PBXNativeTarget "RidlerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000A000000000000005 /* Debug */,
+				A1000000A000000000000006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
