@@ -42,7 +42,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| PM-1 | Open an existing PRD via File > Open (`⌘O`), which presents a file picker for selecting a `prd.md` or `ridl.json` file at any location on disk | P0 |
+| PM-1 | Open an existing PRD via File > Open (`⌘O`), which presents a file picker for selecting a `prd.md` or `ridl.json` file at any location on disk. If opening fails (missing companion JSON, invalid JSON, decoding error), display a native alert with a descriptive error message instead of failing silently | P0 |
 | PM-2 | Each opened PRD becomes a tab in the interface; multiple PRDs from different locations can be open simultaneously | P0 |
 | PM-3 | Create a new PRD via File > New (`⌘N`), which prompts the user to choose a save location and PRD name, then creates an empty `prd.md` file there | P0 |
 | PM-4 | Edit an existing PRD by clicking an "Edit PRD" button in the UI, which launches Claude Code with the PRD context loaded | P0 |
@@ -50,11 +50,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | PM-6 | Delete a PRD's files on disk (with confirmation dialog) | P1 |
 | PM-7 | Display PRD completion status: total stories, passed, in-progress, pending | P0 |
 | PM-8 | Watch each opened PRD's files for filesystem changes and auto-reload when files change externally | P0 |
-| PM-9 | Support the two-file PRD format: `prd.md` (human-readable) and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file | P0 |
+| PM-9 | Support the two-file PRD format: `prd.md` (human-readable) and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file. JSON decoding must be resilient to missing optional-in-practice fields (`passes` defaults to `false`, `inProgress` defaults to `false`) | P0 |
 | PM-10 | Auto-convert `prd.md` to `ridl.json` when the markdown source is newer than the JSON | P1 |
 | PM-11 | Companion files (`ridl.json`, `progress.md`, `claude.log`) are stored alongside the `prd.md` in the same directory | P0 |
 | PM-12 | Remember recently opened PRDs and display them in File > Open Recent | P1 |
-| PM-13 | Drag-and-drop a `prd.md` or `ridl.json` file onto the app icon to open it as a tab | P1 |
+| PM-13 | Drag-and-drop a `prd.md` or `ridl.json` file onto the app icon to open it as a tab. Show an error alert if the drop target cannot be loaded | P1 |
+| PM-14 | JSON decoding errors must include the file name, the missing or invalid key, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) rather than generic system error messages | P0 |
 
 ### 3.2 The Ralph Loop (Autonomous Execution Engine)
 
@@ -357,6 +358,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 | Audio notifications | Toggle | On | Play sound on PRD completion |
 | Auto-retry on crash | Toggle | Off | Automatically retry when Claude Code crashes |
 | Verbose log | Toggle | Off | Show raw Claude JSON in log view |
+| Debug mode | Toggle | Off | Enable debug information overlays and the Debug window (see Section 7 — Developer Experience) |
 
 #### Per-PRD Settings (Toolbar / Inline)
 
@@ -366,9 +368,56 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 
 ---
 
-## 7. User Flows
+## 7. Developer Experience
 
-### 7.1 First Launch — Creating a New PRD
+Ridler is built and maintained by both human developers and AI coding agents. The codebase, error surfaces, and debugging tools must be equally effective for both audiences. Clear error messages, structured logging, and accessible debug state reduce the time from "something is wrong" to "here is the fix" — whether the person investigating is a human reading a stack trace or an agent parsing log output.
+
+### 7.1 Error Presentation
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| DX-1 | All user-facing errors must be displayed in a native alert dialog with a clear, specific message (never silently swallowed) | P0 |
+| DX-2 | Error alerts must include a "Copy" button that copies the full error message to the clipboard for easy pasting into bug reports, chat, or agent prompts | P0 |
+| DX-3 | JSON decoding errors must identify the file name, the problematic key or field, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) | P0 |
+| DX-4 | File-not-found errors must include the full path that was searched and, for companion file lookups, list which filenames were tried (e.g., "No ridl.json or prd.json found in /path/to/dir") | P0 |
+| DX-5 | Process errors (Claude Code crashes, non-zero exit codes) must include the exit code, stderr output (if any), and the command that was run | P1 |
+| DX-6 | Git errors must include the git command that failed and its stderr output | P1 |
+
+### 7.2 Debug Mode
+
+When the "Debug mode" toggle is enabled in Settings, additional diagnostic information becomes available throughout the app.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| DX-10 | A "Debug" menu item (Window > Debug Info) opens a dedicated Debug window showing live internal state | P1 |
+| DX-11 | The Debug window displays: current loop state per PRD, engine iteration count, file watcher status, active process PIDs, last error per tab, and memory usage | P1 |
+| DX-12 | In debug mode, the status bar expands to show internal state: loop state enum value, current story ID, engine retry count, and elapsed time per iteration | P2 |
+| DX-13 | In debug mode, log entries include raw JSON alongside the parsed representation (equivalent to "Verbose log" but scoped to the debug overlay) | P2 |
+| DX-14 | Debug mode state is persisted across launches via UserDefaults | P2 |
+
+### 7.3 Logging and Diagnostics
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| DX-20 | All errors, state transitions, and significant events are logged to the unified macOS logging system (`os_log`) with appropriate log levels (`.error`, `.info`, `.debug`) | P1 |
+| DX-21 | Log messages include structured metadata (PRD name, story ID, iteration number) so they can be filtered in Console.app | P1 |
+| DX-22 | The per-PRD `claude.log` file captures the full raw stdout/stderr of each Claude Code invocation for post-mortem debugging | P0 |
+
+### 7.4 Code Readability and Agent Compatibility
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| DX-30 | Swift source files are organized into clearly named groups (Models, Views, Managers, Protocols) matching Xcode's project navigator structure | P0 |
+| DX-31 | Public types and non-obvious methods include concise documentation comments describing purpose and contracts | P1 |
+| DX-32 | Error types conform to `LocalizedError` with human-readable `errorDescription` values that are suitable for both UI display and log output | P0 |
+| DX-33 | Test files mirror the source structure and use descriptive test method names that read as specifications (e.g., `testOpenInvalidPathThrows`, `testAutoRetryExhaustsAllRetries`) | P1 |
+| DX-34 | Protocols are used for external dependencies (process spawning, git operations, file system access) to enable test mocking and make the dependency graph explicit for agents navigating the codebase | P0 |
+
+---
+
+## 8. User Flows
+
+### 8.1 First Launch — Creating a New PRD
 
 1. User opens Ridler for the first time. App shows empty state with "Open PRD..." and "New PRD..." buttons.
 2. User clicks "New PRD...". A dialog prompts for a PRD name and a save location.
@@ -377,14 +426,14 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 5. User describes the project. Claude populates the `prd.md` and generates `ridl.json`.
 6. Claude Code exits. App detects the file changes, loads the PRD and user stories, and displays them.
 
-### 7.2 Opening an Existing PRD
+### 8.2 Opening an Existing PRD
 
 1. User clicks File > Open (`⌘O`). A file picker appears filtering for `prd.md` / `ridl.json` files.
 2. User selects a PRD file from any location on disk.
 3. App opens it as a new tab, loads the stories, and displays them in the main window.
 4. User can repeat to open additional PRDs from different locations — each becomes its own tab.
 
-### 7.3 Running the Loop
+### 8.3 Running the Loop
 
 1. User has one or more PRD tabs open.
 2. User clicks Start (or presses `⌘R`). App detects protected branch → shows warning dialog.
@@ -393,7 +442,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 5. User monitors story detail in the middle pane and Claude's streaming output in the log pane simultaneously.
 6. All stories complete. App transitions to Complete state and plays a sound.
 
-### 7.4 Parallel PRDs
+### 8.4 Parallel PRDs
 
 1. User has three PRD tabs open: auth, dashboard, api (each from different directories).
 2. User starts the auth loop, switches to the dashboard tab, starts that loop too.
@@ -401,7 +450,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 4. Auth completes first → tab shows `✓`. Dashboard continues running.
 5. User clicks the auth tab to review its completed stories while dashboard continues.
 
-### 7.5 Resuming After Interruption
+### 8.5 Resuming After Interruption
 
 1. User quits the app while a loop was running.
 2. User re-opens Ridler. App restores previously opened PRD tabs (from Open Recent / persisted state).
@@ -410,7 +459,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 
 ---
 
-## 8. Release Milestones
+## 9. Release Milestones
 
 ### v0.1 — Core Loop & Minimal UI
 
@@ -430,6 +479,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 - File watcher for external PRD changes
 - Empty state with Open/New PRD buttons
 - Protected branch detection and warning dialog
+- Error alerts with descriptive messages and copy-to-clipboard for all open/load failures
 
 ### v0.3 — Parallel Execution & Polish
 
@@ -447,11 +497,13 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 - Full menu bar (File, Edit, View, PRD, Window, Help)
 - Open Recent PRDs
 - Right-click context menus on PRD tabs
+- Debug mode toggle in Settings with Debug window (Window > Debug Info)
+- os_log integration with structured metadata for Console.app filtering
 - App icon, notarization, DMG distribution
 
 ---
 
-## 9. Resolved Questions
+## 10. Resolved Questions
 
 | # | Question | Decision |
 |---|----------|----------|
@@ -461,7 +513,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 | 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, claude.log) stays alongside the PRD file. |
 | 5 | Should the responsive layout from the TUI (stacked vs. side-by-side) be replicated? | **No.** SwiftUI's NavigationSplitView handles window resizing natively. The sidebar collapses automatically on narrow windows. |
 
-## 10. Open Questions
+## 11. Open Questions
 
 | # | Question | Notes |
 |---|----------|-------|
@@ -469,20 +521,20 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 
 ---
 
-## 11. Critical Test Areas
+## 12. Critical Test Areas
 
 | Area | Risk if broken | Suggested test approach |
 |------|---------------|----------------------|
 | Ralph Loop engine (story selection, iteration cycle, state transitions) | Core functionality — the entire app exists to run this loop correctly. Wrong story selection, skipped stories, or stuck loops make the app useless | Unit tests for story selection algorithm, state machine transition tests for all 6 states and every valid transition, integration tests with mock Claude process |
 | Claude Code process management (spawn, stream, kill) | Zombie processes, lost output, app hangs on process crash | Integration tests with mock processes that simulate: normal exit, crash, hang, slow output. Verify cleanup on app quit |
 | Streaming JSON parser | Garbled log view, missed completion signals, crashes on malformed input | Unit tests with captured real Claude output. Fuzz testing with malformed JSON lines. Test partial reads and buffer boundaries |
-| PRD JSON read/write (`ridl.json` state updates) | Data loss — stories marked as passed when they aren't, or completed work lost | Unit tests for every field update. Round-trip tests (read → modify → write → read). Concurrent access tests (file watcher + loop writing simultaneously) |
+| PRD JSON read/write (`ridl.json` state updates) | Data loss — stories marked as passed when they aren't, or completed work lost. Silent failures when opening invalid PRD files | Unit tests for every field update. Round-trip tests (read → modify → write → read). Concurrent access tests (file watcher + loop writing simultaneously). Verify error alerts appear for missing companion JSON, malformed JSON, and missing required fields. Verify decoding succeeds when `passes` and `inProgress` are omitted from JSON |
 | Git integration (branch detection, commit creation) | Commits to wrong branch (main/master), malformed commits, data loss from bad git state | Integration tests with real git repos. Test protected branch detection on main, master, and custom branches. Verify commit message format |
 | Parallel PRD execution | Race conditions — loops interfering with each other, state corruption, UI showing wrong PRD's data | Concurrent execution tests with 3+ PRDs. Verify independent state isolation. Test rapid tab switching during active loops |
 
 ---
 
-## 12. Success Metrics
+## 13. Success Metrics
 
 | Metric | Target |
 |--------|--------|
