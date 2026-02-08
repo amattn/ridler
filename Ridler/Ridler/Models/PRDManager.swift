@@ -35,6 +35,11 @@ final class PRDManager {
     var branchWarningCurrentBranch: String = ""
     var branchWarningSuggestedBranch: String = ""
 
+    var showCloseConfirmation = false
+    var closeConfirmationTabId: String?
+    var showDeleteConfirmation = false
+    var deleteConfirmationTabId: String?
+
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
     private let gitManager: GitManager
@@ -106,6 +111,22 @@ final class PRDManager {
         persistOpenedPRDs()
     }
 
+    func requestCloseTab(id: String) {
+        guard tabs.contains(where: { $0.id == id }) else { return }
+
+        // If a loop is running or paused, prompt confirmation
+        if let engine = engines[id] {
+            let state = engine.stateMachine.state
+            if state == .running || state == .paused {
+                closeConfirmationTabId = id
+                showCloseConfirmation = true
+                return
+            }
+        }
+
+        closeTab(id: id)
+    }
+
     func closeTab(id: String) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         let tab = tabs[index]
@@ -121,11 +142,34 @@ final class PRDManager {
 
         // Select another tab or clear
         if selectedTabId == id {
-            selectedTabId = tabs.last?.id
+            if let next = tabs.last {
+                selectedTabId = next.id
+            } else {
+                selectedTabId = nil
+            }
             selectedStoryId = nil
         }
 
         persistOpenedPRDs()
+    }
+
+    func requestDeletePRD(tabId: String) {
+        guard tabs.contains(where: { $0.id == tabId }) else { return }
+        deleteConfirmationTabId = tabId
+        showDeleteConfirmation = true
+    }
+
+    func deletePRD(tabId: String) {
+        guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
+
+        let directory = tab.directory
+        let fm = FileManager.default
+
+        // Close the tab first (stops engine, watcher, etc.)
+        closeTab(id: tabId)
+
+        // Delete the PRD directory and all its contents
+        try? fm.removeItem(atPath: directory)
     }
 
     // MARK: - File Open

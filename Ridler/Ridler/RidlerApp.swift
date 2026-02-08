@@ -30,6 +30,15 @@ struct RidlerApp: App {
                 }
                 .keyboardShortcut("e")
                 .disabled(prdManager.selectedTab == nil)
+
+                Divider()
+
+                Button("Close Tab") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    prdManager.requestCloseTab(id: tabId)
+                }
+                .keyboardShortcut("w")
+                .disabled(prdManager.selectedTab == nil)
             }
 
             CommandGroup(after: .newItem) {

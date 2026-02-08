@@ -60,6 +60,26 @@ struct ContentView: View {
                 suggestedBranch: prdManager.branchWarningSuggestedBranch
             )
         }
+        .alert("Close PRD?", isPresented: $prdManager.showCloseConfirmation) {
+            Button("Close", role: .destructive) {
+                if let tabId = prdManager.closeConfirmationTabId {
+                    prdManager.closeTab(id: tabId)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A loop is currently running for this PRD. Closing will stop the loop.")
+        }
+        .alert("Delete PRD?", isPresented: $prdManager.showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let tabId = prdManager.deleteConfirmationTabId {
+                    prdManager.deletePRD(tabId: tabId)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Delete PRD and all its files? This cannot be undone.")
+        }
     }
 
     // MARK: - Three-Pane Layout

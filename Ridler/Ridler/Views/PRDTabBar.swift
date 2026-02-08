@@ -57,6 +57,15 @@ struct PRDTabBar: View {
                 Text(tab.name)
                     .font(.caption)
                     .lineLimit(1)
+
+                Button {
+                    prdManager.requestCloseTab(id: tab.id)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -138,11 +147,11 @@ struct PRDTabBar: View {
         Divider()
 
         Button("Close") {
-            prdManager.closeTab(id: tab.id)
+            prdManager.requestCloseTab(id: tab.id)
         }
 
         Button("Delete", role: .destructive) {
-            // Placeholder — will be implemented in US-021
+            prdManager.requestDeletePRD(tabId: tab.id)
         }
     }
 }
