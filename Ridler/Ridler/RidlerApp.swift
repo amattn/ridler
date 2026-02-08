@@ -6,6 +6,6 @@ struct RidlerApp: App {
         WindowGroup {
             ContentView()
         }
-        .defaultSize(width: 800, height: 500)
+        .defaultSize(width: 1200, height: 700)
     }
 }
