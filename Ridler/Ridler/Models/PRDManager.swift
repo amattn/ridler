@@ -40,6 +40,8 @@ final class PRDManager {
     var showDeleteConfirmation = false
     var deleteConfirmationTabId: String?
     var focusLogPanelRequested = false
+    var showOpenError = false
+    var openErrorMessage = ""
 
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
@@ -186,7 +188,12 @@ final class PRDManager {
         panel.canChooseDirectories = false
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? openPRD(filePath: url.path)
+        do {
+            try openPRD(filePath: url.path)
+        } catch {
+            openErrorMessage = error.localizedDescription
+            showOpenError = true
+        }
     }
 
     func clearRecentFiles() {

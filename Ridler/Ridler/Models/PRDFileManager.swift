@@ -37,7 +37,7 @@ struct PRDFileManager {
             let decoder = JSONDecoder()
             return try decoder.decode(PRDProject.self, from: data)
         } catch {
-            throw PRDFileError.decodingFailed(error.localizedDescription)
+            throw PRDFileError.decodingFailed(Self.describeDecodingError(error, path: path))
         }
     }
 
@@ -103,6 +103,31 @@ struct PRDFileManager {
             return (project, prdJsonPath)
         }
 
-        throw PRDFileError.fileNotFound("No JSON file found in \(dir)")
+        throw PRDFileError.fileNotFound("No ridl.json or prd.json found in \(dir)")
+    }
+
+    static func describeDecodingError(_ error: Error, path: String) -> String {
+        let file = URL(fileURLWithPath: path).lastPathComponent
+        switch error {
+        case let e as DecodingError:
+            switch e {
+            case .keyNotFound(let key, let context):
+                let location = context.codingPath.map(\.stringValue).joined(separator: ".")
+                let where_ = location.isEmpty ? "root" : location
+                return "\(file): missing required key \"\(key.stringValue)\" in \(where_)"
+            case .typeMismatch(let type, let context):
+                let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+                return "\(file): expected \(type) at \"\(path)\""
+            case .valueNotFound(let type, let context):
+                let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+                return "\(file): null value for \(type) at \"\(path)\""
+            case .dataCorrupted(let context):
+                return "\(file): invalid JSON — \(context.debugDescription)"
+            @unknown default:
+                return "\(file): \(e.localizedDescription)"
+            }
+        default:
+            return "\(file): \(error.localizedDescription)"
+        }
     }
 }

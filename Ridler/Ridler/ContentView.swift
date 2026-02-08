@@ -86,6 +86,11 @@ struct ContentView: View {
         } message: {
             Text("Delete PRD and all its files? This cannot be undone.")
         }
+        .alert("Failed to Open PRD", isPresented: $prdManager.showOpenError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(prdManager.openErrorMessage)
+        }
     }
 
     // MARK: - Three-Pane Layout
@@ -219,7 +224,12 @@ struct ContentView: View {
                 guard ext == "md" || ext == "json" else { return }
 
                 DispatchQueue.main.async {
-                    try? prdManager.openPRD(filePath: url.path)
+                    do {
+                        try prdManager.openPRD(filePath: url.path)
+                    } catch {
+                        prdManager.openErrorMessage = error.localizedDescription
+                        prdManager.showOpenError = true
+                    }
                 }
             }
         }

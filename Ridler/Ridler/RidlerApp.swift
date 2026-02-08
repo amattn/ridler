@@ -47,7 +47,12 @@ struct RidlerApp: App {
                     Menu("Open Recent") {
                         ForEach(prdManager.recentFiles, id: \.self) { path in
                             Button(recentFileLabel(for: path)) {
-                                try? prdManager.openPRD(filePath: path)
+                                do {
+                                    try prdManager.openPRD(filePath: path)
+                                } catch {
+                                    prdManager.openErrorMessage = error.localizedDescription
+                                    prdManager.showOpenError = true
+                                }
                             }
                         }
                         Divider()
