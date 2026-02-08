@@ -34,6 +34,8 @@ final class RalphLoopEngine {
     private(set) var currentIteration: Int = 0
     private(set) var currentStoryId: String?
     private(set) var logEntries: [LogEntry] = []
+    private(set) var retryCount: Int = 0
+    private(set) var iterationStartDate: Date?
 
     let prdFilePath: String
     let workingDirectory: String
@@ -137,6 +139,8 @@ final class RalphLoopEngine {
 
             currentIteration += 1
             currentStoryId = story.id
+            retryCount = 0
+            iterationStartDate = Date()
             delegate?.engine(self, didUpdateIteration: currentIteration, max: maxIterations)
 
             addLogEntry(.system("Starting iteration \(currentIteration)/\(maxIterations): \(story.id) - \(story.title)"))
@@ -234,6 +238,7 @@ final class RalphLoopEngine {
                     for retryAttempt in 1...Self.maxRetries {
                         if stopRequested { break }
 
+                        retryCount = retryAttempt
                         let delay = Self.retryDelays[min(retryAttempt - 1, Self.retryDelays.count - 1)]
                         addLogEntry(.system("Retry \(retryAttempt)/\(Self.maxRetries) for \(story.id) (waiting \(Int(delay))s)"))
 

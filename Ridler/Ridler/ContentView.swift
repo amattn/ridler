@@ -38,8 +38,13 @@ struct ContentView: View {
             }
 
             if prdManager.selectedTab != nil {
+                let engine = prdManager.selectedTabId.flatMap { prdManager.engines[$0] }
                 StatusBarView(activityMessage: activityMessage,
-                             loopState: currentLoopState)
+                             loopState: currentLoopState,
+                             debugMode: SettingsManager.shared.debugMode,
+                             currentStoryId: engine?.currentStoryId,
+                             retryCount: engine?.retryCount ?? 0,
+                             iterationStartDate: engine?.iterationStartDate)
             }
         }
         .onDrop(of: [.fileURL], isTargeted: $isDragOver) { providers in
