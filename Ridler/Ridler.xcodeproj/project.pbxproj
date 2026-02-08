@@ -37,6 +37,7 @@
 		A10000010000000000000028 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000028 /* NotificationManager.swift */; };
 		A10000010000000000000029 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000029 /* SettingsView.swift */; };
 		A10000010000000000000030 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000030 /* SettingsManager.swift */; };
+		A10000010000000000000031 /* CodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000031 /* CodeHighlighter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,6 +81,7 @@
 		A10000020000000000000028 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		A10000020000000000000029 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A10000020000000000000030 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		A10000020000000000000031 /* CodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeHighlighter.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -160,6 +162,7 @@
 				A10000020000000000000018 /* PRDManager.swift */,
 				A10000020000000000000028 /* NotificationManager.swift */,
 				A10000020000000000000030 /* SettingsManager.swift */,
+				A10000020000000000000031 /* CodeHighlighter.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -281,6 +284,7 @@
 				A10000010000000000000028 /* NotificationManager.swift in Sources */,
 				A10000010000000000000029 /* SettingsView.swift in Sources */,
 				A10000010000000000000030 /* SettingsManager.swift in Sources */,
+				A10000010000000000000031 /* CodeHighlighter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

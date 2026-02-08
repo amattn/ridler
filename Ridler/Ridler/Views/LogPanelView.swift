@@ -111,12 +111,64 @@ struct LogEntryRowView: View {
                 .frame(width: 14)
                 .font(.caption)
 
-            Text(displayText)
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
+            displayContent
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 1)
+    }
+
+    @ViewBuilder
+    private var displayContent: some View {
+        switch entry.type {
+        case .assistantText(let text):
+            if CodeHighlighter.containsCodeBlock(text) {
+                highlightedTextView(text)
+            } else {
+                Text(text)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+            }
+        default:
+            Text(displayText)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+        }
+    }
+
+    private func highlightedTextView(_ text: String) -> some View {
+        let segments = CodeHighlighter.parseSegments(text)
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { item in
+                segmentView(item.element)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func segmentView(_ segment: TextSegment) -> some View {
+        switch segment {
+        case .plain(let plainText):
+            Text(plainText)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+        case .codeBlock(let language, let code):
+            VStack(alignment: .leading, spacing: 2) {
+                if !language.isEmpty {
+                    Text(language)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.top, 4)
+                }
+                Text(CodeHighlighter.highlight(code: code, language: language))
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.2))
+            .cornerRadius(4)
+        }
     }
 
     private var iconName: String {
