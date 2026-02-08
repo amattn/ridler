@@ -12,6 +12,18 @@ struct LoopToolbar: CustomizableToolbarContent {
 
         ToolbarItem(id: "loopControls", placement: .primaryAction) {
             HStack(spacing: 12) {
+                // Edit PRD button
+                Button {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    prdManager.editPRD(tabId: tabId)
+                } label: {
+                    Label("Edit PRD", systemImage: "pencil.and.outline")
+                }
+                .help("Edit PRD in Claude Code (Cmd+E)")
+
+                Divider()
+                    .frame(height: 18)
+
                 // State badge
                 Text(state.label)
                     .font(.caption)

@@ -257,6 +257,33 @@ final class PRDManager {
         return max(remaining + 5, 5)
     }
 
+    // MARK: - Edit PRD
+
+    func editPRD(tabId: String) {
+        guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
+
+        let prdPath = tab.filePath
+        let directory = tab.directory
+
+        // Launch Claude Code in Terminal with the PRD file path
+        let escapedDir = directory.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedPath = prdPath.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "cd \\\"\(escapedDir)\\\" && claude \\\"\(escapedPath)\\\""
+        end tell
+        """
+
+        guard let appleScript = NSAppleScript(source: script) else { return }
+        var error: NSDictionary?
+        appleScript.executeAndReturnError(&error)
+        // File watcher will auto-reload when Claude modifies files in the PRD directory
+    }
+
     // MARK: - Reload
 
     func reloadPRD(tabId: String) {

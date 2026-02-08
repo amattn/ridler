@@ -22,6 +22,17 @@ struct RidlerApp: App {
                 }
                 .keyboardShortcut("o")
 
+                Divider()
+
+                Button("Edit PRD") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    prdManager.editPRD(tabId: tabId)
+                }
+                .keyboardShortcut("e")
+                .disabled(prdManager.selectedTab == nil)
+            }
+
+            CommandGroup(after: .newItem) {
                 if !prdManager.recentFiles.isEmpty {
                     Menu("Open Recent") {
                         ForEach(prdManager.recentFiles, id: \.self) { path in

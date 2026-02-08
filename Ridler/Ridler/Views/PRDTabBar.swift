@@ -132,7 +132,7 @@ struct PRDTabBar: View {
         Divider()
 
         Button("Edit") {
-            // Placeholder — will be implemented in US-020
+            prdManager.editPRD(tabId: tab.id)
         }
 
         Divider()
