@@ -24,6 +24,8 @@
 		A10000010000000000000015 /* GitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000015 /* GitManagerTests.swift */; };
 		A10000010000000000000016 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000016 /* FileWatcher.swift */; };
 		A10000010000000000000017 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000017 /* FileWatcherTests.swift */; };
+		A10000010000000000000018 /* PRDManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000018 /* PRDManager.swift */; };
+		A10000010000000000000019 /* PRDManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000019 /* PRDManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +56,8 @@
 		A10000020000000000000015 /* GitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManagerTests.swift; sourceTree = "<group>"; };
 		A10000020000000000000016 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		A10000020000000000000017 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
+		A10000020000000000000018 /* PRDManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDManager.swift; sourceTree = "<group>"; };
+		A10000020000000000000019 /* PRDManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDManagerTests.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -114,6 +118,7 @@
 				A10000020000000000000013 /* RalphLoopEngineTests.swift */,
 				A10000020000000000000015 /* GitManagerTests.swift */,
 				A10000020000000000000017 /* FileWatcherTests.swift */,
+				A10000020000000000000019 /* PRDManagerTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -129,6 +134,7 @@
 				A10000020000000000000012 /* RalphLoopEngine.swift */,
 				A10000020000000000000014 /* GitManager.swift */,
 				A10000020000000000000016 /* FileWatcher.swift */,
+				A10000020000000000000018 /* PRDManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -222,6 +228,7 @@
 				A10000010000000000000012 /* RalphLoopEngine.swift in Sources */,
 				A10000010000000000000014 /* GitManager.swift in Sources */,
 				A10000010000000000000016 /* FileWatcher.swift in Sources */,
+				A10000010000000000000018 /* PRDManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +243,7 @@
 				A10000010000000000000013 /* RalphLoopEngineTests.swift in Sources */,
 				A10000010000000000000015 /* GitManagerTests.swift in Sources */,
 				A10000010000000000000017 /* FileWatcherTests.swift in Sources */,
+				A10000010000000000000019 /* PRDManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
