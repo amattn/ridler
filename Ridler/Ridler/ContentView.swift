@@ -87,6 +87,10 @@ struct ContentView: View {
             Text("Delete PRD and all its files? This cannot be undone.")
         }
         .alert("Failed to Open PRD", isPresented: $prdManager.showOpenError) {
+            Button("Copy Error") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(prdManager.openErrorMessage, forType: .string)
+            }
             Button("OK", role: .cancel) {}
         } message: {
             Text(prdManager.openErrorMessage)
