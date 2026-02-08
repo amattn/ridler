@@ -261,6 +261,7 @@ final class PRDManager {
         if let existing = engines[tabId], existing.stateMachine.state == .paused || existing.stateMachine.state == .stopped || existing.stateMachine.state == .error {
             engine = existing
             await engine.resume()
+            notifyIfComplete(engine: engine, prdName: tab.name)
             return
         }
 
@@ -271,6 +272,13 @@ final class PRDManager {
         )
         engines[tabId] = engine
         await engine.start()
+        notifyIfComplete(engine: engine, prdName: tab.name)
+    }
+
+    private func notifyIfComplete(engine: RalphLoopEngine, prdName: String) {
+        if engine.stateMachine.state == .complete {
+            NotificationManager.shared.notifyCompletion(prdName: prdName)
+        }
     }
 
     func createBranchAndStart(tabId: String, branchName: String) async {
