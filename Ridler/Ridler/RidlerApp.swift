@@ -11,6 +11,7 @@ struct RidlerApp: App {
         }
         .defaultSize(width: 1200, height: 700)
         .commands {
+            // MARK: - File Menu
             CommandGroup(replacing: .newItem) {
                 Button("New PRD...") {
                     prdManager.showNewPRDSheet = true
@@ -56,11 +57,79 @@ struct RidlerApp: App {
                     }
                 }
             }
+
+            // MARK: - View Menu
+            CommandGroup(after: .toolbar) {
+                Button("Focus Log Panel") {
+                    prdManager.focusLogPanelRequested = true
+                }
+                .keyboardShortcut("l")
+                .disabled(prdManager.selectedTab == nil)
+            }
+
+            // MARK: - PRD Menu
+            CommandMenu("PRD") {
+                Button("Start / Resume") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    Task {
+                        await prdManager.checkBranchAndStart(tabId: tabId)
+                    }
+                }
+                .keyboardShortcut("r")
+                .disabled(!canStartSelectedPRD)
+
+                Button("Start / Resume") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    Task {
+                        await prdManager.checkBranchAndStart(tabId: tabId)
+                    }
+                }
+                .keyboardShortcut(.return)
+                .disabled(!canStartSelectedPRD)
+
+                Button("Pause") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    prdManager.pause(tabId: tabId)
+                }
+                .keyboardShortcut(".", modifiers: .command)
+                .disabled(selectedLoopState != .running)
+
+                Button("Stop") {
+                    guard let tabId = prdManager.selectedTabId else { return }
+                    prdManager.stop(tabId: tabId)
+                }
+                .keyboardShortcut(".", modifiers: [.command, .shift])
+                .disabled(selectedLoopState != .running && selectedLoopState != .paused)
+
+                Divider()
+
+                // Tab switching: Cmd+1 through Cmd+9
+                ForEach(0..<min(prdManager.tabs.count, 9), id: \.self) { index in
+                    Button(prdManager.tabs[index].name) {
+                        prdManager.selectedTabId = prdManager.tabs[index].id
+                        prdManager.selectedStoryId = nil
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
+                }
+            }
         }
 
         Settings {
             SettingsView()
         }
+    }
+
+    // MARK: - Helpers
+
+    private var selectedLoopState: LoopState {
+        guard let tabId = prdManager.selectedTabId else { return .ready }
+        return prdManager.loopState(for: tabId)
+    }
+
+    private var canStartSelectedPRD: Bool {
+        guard prdManager.selectedTab != nil else { return false }
+        let state = selectedLoopState
+        return state == .ready || state == .paused || state == .stopped || state == .error
     }
 
     private func recentFileLabel(for path: String) -> String {

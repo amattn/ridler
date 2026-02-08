@@ -26,6 +26,12 @@ struct ContentView: View {
                             loopStartDate = nil
                         }
                     }
+                    .onChange(of: prdManager.focusLogPanelRequested) { _, newValue in
+                        if newValue {
+                            columnVisibility = .all
+                            prdManager.focusLogPanelRequested = false
+                        }
+                    }
             } else {
                 emptyState
                     .navigationTitle("Ridler")

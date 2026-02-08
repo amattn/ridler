@@ -39,6 +39,7 @@ final class PRDManager {
     var closeConfirmationTabId: String?
     var showDeleteConfirmation = false
     var deleteConfirmationTabId: String?
+    var focusLogPanelRequested = false
 
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
