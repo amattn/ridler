@@ -22,6 +22,8 @@
 		A10000010000000000000013 /* RalphLoopEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000013 /* RalphLoopEngineTests.swift */; };
 		A10000010000000000000014 /* GitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000014 /* GitManager.swift */; };
 		A10000010000000000000015 /* GitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000015 /* GitManagerTests.swift */; };
+		A10000010000000000000016 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000016 /* FileWatcher.swift */; };
+		A10000010000000000000017 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000017 /* FileWatcherTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +52,8 @@
 		A10000020000000000000013 /* RalphLoopEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngineTests.swift; sourceTree = "<group>"; };
 		A10000020000000000000014 /* GitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManager.swift; sourceTree = "<group>"; };
 		A10000020000000000000015 /* GitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManagerTests.swift; sourceTree = "<group>"; };
+		A10000020000000000000016 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
+		A10000020000000000000017 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -109,6 +113,7 @@
 				A10000020000000000000011 /* StreamingJSONLogParserTests.swift */,
 				A10000020000000000000013 /* RalphLoopEngineTests.swift */,
 				A10000020000000000000015 /* GitManagerTests.swift */,
+				A10000020000000000000017 /* FileWatcherTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -123,6 +128,7 @@
 				A10000020000000000000010 /* StreamingJSONLogParser.swift */,
 				A10000020000000000000012 /* RalphLoopEngine.swift */,
 				A10000020000000000000014 /* GitManager.swift */,
+				A10000020000000000000016 /* FileWatcher.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -215,6 +221,7 @@
 				A10000010000000000000010 /* StreamingJSONLogParser.swift in Sources */,
 				A10000010000000000000012 /* RalphLoopEngine.swift in Sources */,
 				A10000010000000000000014 /* GitManager.swift in Sources */,
+				A10000010000000000000016 /* FileWatcher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +235,7 @@
 				A10000010000000000000011 /* StreamingJSONLogParserTests.swift in Sources */,
 				A10000010000000000000013 /* RalphLoopEngineTests.swift in Sources */,
 				A10000010000000000000015 /* GitManagerTests.swift in Sources */,
+				A10000010000000000000017 /* FileWatcherTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
