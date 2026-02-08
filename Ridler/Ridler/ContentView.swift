@@ -28,6 +28,11 @@ struct ContentView: View {
                 emptyState
                     .navigationTitle("Ridler")
             }
+
+            if prdManager.selectedTab != nil {
+                StatusBarView(activityMessage: activityMessage,
+                             loopState: currentLoopState)
+            }
         }
     }
 
@@ -107,6 +112,36 @@ struct ContentView: View {
     private var currentLoopState: LoopState {
         guard let tabId = prdManager.selectedTabId else { return .ready }
         return prdManager.loopState(for: tabId)
+    }
+
+    private var activityMessage: String {
+        guard let tabId = prdManager.selectedTabId,
+              let engine = prdManager.engines[tabId] else {
+            return "Ready"
+        }
+
+        let state = prdManager.loopState(for: tabId)
+        switch state {
+        case .running:
+            if let storyId = engine.currentStoryId,
+               let story = prdManager.selectedPRD?.userStories.first(where: { $0.id == storyId }) {
+                return "Working on: \(story.id) - \(story.title)"
+            }
+            return "Running..."
+        case .paused:
+            return "Paused"
+        case .stopped:
+            return "Stopped"
+        case .complete:
+            return "All stories complete"
+        case .error:
+            if let lastError = lastErrorMessage {
+                return "Error: \(lastError)"
+            }
+            return "Error occurred"
+        case .ready:
+            return "Ready"
+        }
     }
 
     private var lastErrorMessage: String? {
