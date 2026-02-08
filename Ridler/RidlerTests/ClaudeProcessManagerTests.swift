@@ -38,7 +38,7 @@ final class MockProcessSpawner: ProcessSpawning, @unchecked Sendable {
             onOutput(line)
         }
 
-        return ClaudeProcessResult(exitCode: exitCode)
+        return ClaudeProcessResult(exitCode: exitCode, stderr: "")
     }
 
     func terminate() {
@@ -77,7 +77,7 @@ final class ClaudeProcessManagerTests: XCTestCase {
             _ = try await manager.run(prompt: "test", workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as ClaudeProcessError {
-            if case .processFailedWithExitCode(let code) = error {
+            if case .processFailedWithExitCode(let code, _) = error {
                 XCTAssertEqual(code, 1)
             } else {
                 XCTFail("Expected processFailedWithExitCode error")
@@ -250,13 +250,14 @@ final class ClaudeProcessManagerTests: XCTestCase {
     // MARK: - ClaudeProcessResult Tests
 
     func testResultSuccessProperty() {
-        let success = ClaudeProcessResult(exitCode: 0)
+        let success = ClaudeProcessResult(exitCode: 0, stderr: "")
         XCTAssertTrue(success.success)
 
-        let failure = ClaudeProcessResult(exitCode: 1)
+        let failure = ClaudeProcessResult(exitCode: 1, stderr: "error output")
         XCTAssertFalse(failure.success)
+        XCTAssertEqual(failure.stderr, "error output")
 
-        let signaled = ClaudeProcessResult(exitCode: -1)
+        let signaled = ClaudeProcessResult(exitCode: -1, stderr: "")
         XCTAssertFalse(signaled.success)
     }
 
@@ -272,8 +273,12 @@ final class ClaudeProcessManagerTests: XCTestCase {
             "A Claude process is already running"
         )
         XCTAssertEqual(
-            ClaudeProcessError.processFailedWithExitCode(42).errorDescription,
+            ClaudeProcessError.processFailedWithExitCode(42, stderr: "").errorDescription,
             "Claude process exited with code 42"
+        )
+        XCTAssertEqual(
+            ClaudeProcessError.processFailedWithExitCode(42, stderr: "something went wrong").errorDescription,
+            "Claude process exited with code 42\nsomething went wrong"
         )
         XCTAssertEqual(
             ClaudeProcessError.executableNotFound("/foo/bar").errorDescription,

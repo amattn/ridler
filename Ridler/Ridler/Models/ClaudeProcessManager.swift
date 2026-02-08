@@ -3,7 +3,7 @@ import Foundation
 enum ClaudeProcessError: Error, LocalizedError {
     case processNotRunning
     case processAlreadyRunning
-    case processFailedWithExitCode(Int32)
+    case processFailedWithExitCode(Int32, stderr: String)
     case executableNotFound(String)
 
     var errorDescription: String? {
@@ -12,8 +12,11 @@ enum ClaudeProcessError: Error, LocalizedError {
             return "No Claude process is currently running"
         case .processAlreadyRunning:
             return "A Claude process is already running"
-        case .processFailedWithExitCode(let code):
-            return "Claude process exited with code \(code)"
+        case .processFailedWithExitCode(let code, let stderr):
+            if stderr.isEmpty {
+                return "Claude process exited with code \(code)"
+            }
+            return "Claude process exited with code \(code)\n\(stderr)"
         case .executableNotFound(let path):
             return "Claude executable not found at: \(path)"
         }
@@ -22,6 +25,7 @@ enum ClaudeProcessError: Error, LocalizedError {
 
 struct ClaudeProcessResult {
     let exitCode: Int32
+    let stderr: String
     var success: Bool { exitCode == 0 }
 }
 
@@ -63,6 +67,21 @@ private final class LineBuffer: @unchecked Sendable {
     }
 }
 
+private final class LockIsolatedValue<Value>: @unchecked Sendable {
+    private var _value: Value
+    private let lock = NSLock()
+
+    init(_ value: Value) {
+        self._value = value
+    }
+
+    func withLock<T>(_ operation: (inout Value) -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return operation(&_value)
+    }
+}
+
 final class RealProcessSpawner: ProcessSpawning, @unchecked Sendable {
     private let lock = NSLock()
     private var process: Process?
@@ -78,15 +97,16 @@ final class RealProcessSpawner: ProcessSpawning, @unchecked Sendable {
         proc.arguments = arguments
         proc.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
 
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = pipe
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        proc.standardOutput = stdoutPipe
+        proc.standardError = stderrPipe
 
         lock.lock()
         self.process = proc
         lock.unlock()
 
-        let fileHandle = pipe.fileHandleForReading
+        let fileHandle = stdoutPipe.fileHandleForReading
         let lineBuffer = LineBuffer()
 
         fileHandle.readabilityHandler = { handle in
@@ -96,14 +116,25 @@ final class RealProcessSpawner: ProcessSpawning, @unchecked Sendable {
             lineBuffer.append(text, emitLine: onOutput)
         }
 
+        let stderrCollector = LockIsolatedValue<String>("")
+        let stderrHandle = stderrPipe.fileHandleForReading
+        stderrHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            guard let text = String(data: data, encoding: .utf8) else { return }
+            stderrCollector.withLock { $0 += text }
+        }
+
         return try await withCheckedThrowingContinuation { continuation in
             proc.terminationHandler = { [weak self] process in
                 fileHandle.readabilityHandler = nil
+                stderrHandle.readabilityHandler = nil
                 lineBuffer.flush(emitLine: onOutput)
+                let stderrOutput = stderrCollector.withLock { $0 }.trimmingCharacters(in: .whitespacesAndNewlines)
                 self?.lock.lock()
                 self?.process = nil
                 self?.lock.unlock()
-                continuation.resume(returning: ClaudeProcessResult(exitCode: process.terminationStatus))
+                continuation.resume(returning: ClaudeProcessResult(exitCode: process.terminationStatus, stderr: stderrOutput))
             }
 
             do {
@@ -172,7 +203,7 @@ final class ClaudeProcessManager {
             }
 
             if !result.success {
-                throw ClaudeProcessError.processFailedWithExitCode(result.exitCode)
+                throw ClaudeProcessError.processFailedWithExitCode(result.exitCode, stderr: result.stderr)
             }
 
             return result

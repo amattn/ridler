@@ -828,7 +828,7 @@ final class SequentialExitCodeSpawner: ProcessSpawning, @unchecked Sendable {
         if code == 0 {
             onOutput("{\"type\":\"system\",\"message\":\"done\"}")
         }
-        return ClaudeProcessResult(exitCode: code)
+        return ClaudeProcessResult(exitCode: code, stderr: code != 0 ? "mock process failed" : "")
     }
 
     func terminate() {

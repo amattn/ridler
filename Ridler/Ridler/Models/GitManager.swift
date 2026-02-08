@@ -3,9 +3,9 @@ import Foundation
 enum GitError: Error, LocalizedError {
     case notAGitRepository(String)
     case gitNotFound
-    case commandFailed(String)
-    case branchCreationFailed(String)
-    case commitFailed(String)
+    case commandFailed(command: [String], stderr: String)
+    case branchCreationFailed(command: [String], stderr: String)
+    case commitFailed(command: [String], stderr: String)
 
     var errorDescription: String? {
         switch self {
@@ -13,12 +13,24 @@ enum GitError: Error, LocalizedError {
             return "Not a git repository: \(path)"
         case .gitNotFound:
             return "git executable not found"
-        case .commandFailed(let message):
-            return "Git command failed: \(message)"
-        case .branchCreationFailed(let message):
-            return "Failed to create branch: \(message)"
-        case .commitFailed(let message):
-            return "Failed to commit: \(message)"
+        case .commandFailed(let command, let stderr):
+            let cmdStr = "git " + command.joined(separator: " ")
+            if stderr.isEmpty {
+                return "Git command failed: \(cmdStr)"
+            }
+            return "Git command failed: \(cmdStr)\n\(stderr)"
+        case .branchCreationFailed(let command, let stderr):
+            let cmdStr = "git " + command.joined(separator: " ")
+            if stderr.isEmpty {
+                return "Failed to create branch: \(cmdStr)"
+            }
+            return "Failed to create branch: \(cmdStr)\n\(stderr)"
+        case .commitFailed(let command, let stderr):
+            let cmdStr = "git " + command.joined(separator: " ")
+            if stderr.isEmpty {
+                return "Failed to commit: \(cmdStr)"
+            }
+            return "Failed to commit: \(cmdStr)\n\(stderr)"
         }
     }
 }
@@ -46,6 +58,7 @@ final class RealGitOperator: GitOperating, @unchecked Sendable {
         proc.standardOutput = stdoutPipe
         proc.standardError = stderrPipe
 
+        let args = arguments
         return try await withCheckedThrowingContinuation { continuation in
             proc.terminationHandler = { process in
                 let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
@@ -56,8 +69,8 @@ final class RealGitOperator: GitOperating, @unchecked Sendable {
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: stdout)
                 } else {
-                    let message = stderr.isEmpty ? stdout : stderr
-                    continuation.resume(throwing: GitError.commandFailed(message))
+                    let stderrOutput = stderr.isEmpty ? stdout : stderr
+                    continuation.resume(throwing: GitError.commandFailed(command: args, stderr: stderrOutput))
                 }
             }
 
@@ -78,12 +91,13 @@ final class GitManager {
     }
 
     func currentBranchName(workingDirectory: String) async throws -> String {
+        let args = ["rev-parse", "--abbrev-ref", "HEAD"]
         let output = try await gitOperator.runGit(
-            arguments: ["rev-parse", "--abbrev-ref", "HEAD"],
+            arguments: args,
             workingDirectory: workingDirectory
         )
         if output.isEmpty {
-            throw GitError.commandFailed("Could not determine current branch")
+            throw GitError.commandFailed(command: args, stderr: "Could not determine current branch")
         }
         return output
     }
@@ -101,8 +115,8 @@ final class GitManager {
             )
         } catch let error as GitError {
             switch error {
-            case .commandFailed(let message):
-                throw GitError.branchCreationFailed(message)
+            case .commandFailed(let command, let stderr):
+                throw GitError.branchCreationFailed(command: command, stderr: stderr)
             default:
                 throw error
             }
@@ -118,8 +132,8 @@ final class GitManager {
             )
         } catch let error as GitError {
             switch error {
-            case .commandFailed(let msg):
-                throw GitError.commitFailed("Failed to stage changes: \(msg)")
+            case .commandFailed(let command, let stderr):
+                throw GitError.commitFailed(command: command, stderr: "Failed to stage changes: \(stderr)")
             default:
                 throw error
             }
@@ -133,8 +147,8 @@ final class GitManager {
             )
         } catch let error as GitError {
             switch error {
-            case .commandFailed(let msg):
-                throw GitError.commitFailed(msg)
+            case .commandFailed(let command, let stderr):
+                throw GitError.commitFailed(command: command, stderr: stderr)
             default:
                 throw error
             }

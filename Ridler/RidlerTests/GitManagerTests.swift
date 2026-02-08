@@ -81,8 +81,8 @@ final class GitManagerTests: XCTestCase {
             _ = try await manager.currentBranchName(workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as GitError {
-            if case .commandFailed(let msg) = error {
-                XCTAssertTrue(msg.contains("Could not determine current branch"))
+            if case .commandFailed(_, let stderr) = error {
+                XCTAssertTrue(stderr.contains("Could not determine current branch"))
             } else {
                 XCTFail("Expected commandFailed error, got \(error)")
             }
@@ -93,7 +93,7 @@ final class GitManagerTests: XCTestCase {
 
     func testCurrentBranchNamePropagatesGitError() async {
         let mock = MockGitOperator()
-        mock.setError(for: "rev-parse", error: .commandFailed("fatal: not a git repository"))
+        mock.setError(for: "rev-parse", error: .commandFailed(command: ["rev-parse", "--abbrev-ref", "HEAD"], stderr: "fatal: not a git repository"))
 
         let manager = GitManager(gitOperator: mock)
 
@@ -101,8 +101,8 @@ final class GitManagerTests: XCTestCase {
             _ = try await manager.currentBranchName(workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as GitError {
-            if case .commandFailed(let msg) = error {
-                XCTAssertEqual(msg, "fatal: not a git repository")
+            if case .commandFailed(_, let stderr) = error {
+                XCTAssertEqual(stderr, "fatal: not a git repository")
             } else {
                 XCTFail("Expected commandFailed error, got \(error)")
             }
@@ -170,7 +170,7 @@ final class GitManagerTests: XCTestCase {
 
     func testCreateBranchThrowsBranchCreationFailedOnError() async {
         let mock = MockGitOperator()
-        mock.setError(for: "checkout", error: .commandFailed("fatal: A branch named 'ridler/test' already exists"))
+        mock.setError(for: "checkout", error: .commandFailed(command: ["checkout", "-b", "ridler/test"], stderr: "fatal: A branch named 'ridler/test' already exists"))
 
         let manager = GitManager(gitOperator: mock)
 
@@ -178,8 +178,8 @@ final class GitManagerTests: XCTestCase {
             try await manager.createBranch(name: "ridler/test", workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as GitError {
-            if case .branchCreationFailed(let msg) = error {
-                XCTAssertTrue(msg.contains("already exists"))
+            if case .branchCreationFailed(_, let stderr) = error {
+                XCTAssertTrue(stderr.contains("already exists"))
             } else {
                 XCTFail("Expected branchCreationFailed error, got \(error)")
             }
@@ -215,7 +215,7 @@ final class GitManagerTests: XCTestCase {
 
     func testCommitFailsOnStagingError() async {
         let mock = MockGitOperator()
-        mock.setError(for: "add", error: .commandFailed("fatal: not a git repository"))
+        mock.setError(for: "add", error: .commandFailed(command: ["add", "-A"], stderr: "fatal: not a git repository"))
 
         let manager = GitManager(gitOperator: mock)
 
@@ -223,8 +223,8 @@ final class GitManagerTests: XCTestCase {
             try await manager.commitAllChanges(message: "test", workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as GitError {
-            if case .commitFailed(let msg) = error {
-                XCTAssertTrue(msg.contains("Failed to stage changes"))
+            if case .commitFailed(_, let stderr) = error {
+                XCTAssertTrue(stderr.contains("Failed to stage changes"))
             } else {
                 XCTFail("Expected commitFailed error, got \(error)")
             }
@@ -236,7 +236,7 @@ final class GitManagerTests: XCTestCase {
     func testCommitFailsOnCommitError() async {
         let mock = MockGitOperator()
         mock.setResponse(for: "add", output: "")
-        mock.setError(for: "commit", error: .commandFailed("nothing to commit, working tree clean"))
+        mock.setError(for: "commit", error: .commandFailed(command: ["commit", "-m", "test"], stderr: "nothing to commit, working tree clean"))
 
         let manager = GitManager(gitOperator: mock)
 
@@ -244,8 +244,8 @@ final class GitManagerTests: XCTestCase {
             try await manager.commitAllChanges(message: "test", workingDirectory: "/tmp")
             XCTFail("Expected error to be thrown")
         } catch let error as GitError {
-            if case .commitFailed(let msg) = error {
-                XCTAssertEqual(msg, "nothing to commit, working tree clean")
+            if case .commitFailed(_, let stderr) = error {
+                XCTAssertEqual(stderr, "nothing to commit, working tree clean")
             } else {
                 XCTFail("Expected commitFailed error, got \(error)")
             }
@@ -266,16 +266,20 @@ final class GitManagerTests: XCTestCase {
             "git executable not found"
         )
         XCTAssertEqual(
-            GitError.commandFailed("some error").errorDescription,
-            "Git command failed: some error"
+            GitError.commandFailed(command: ["rev-parse", "--abbrev-ref", "HEAD"], stderr: "some error").errorDescription,
+            "Git command failed: git rev-parse --abbrev-ref HEAD\nsome error"
         )
         XCTAssertEqual(
-            GitError.branchCreationFailed("already exists").errorDescription,
-            "Failed to create branch: already exists"
+            GitError.commandFailed(command: ["status"], stderr: "").errorDescription,
+            "Git command failed: git status"
         )
         XCTAssertEqual(
-            GitError.commitFailed("nothing to commit").errorDescription,
-            "Failed to commit: nothing to commit"
+            GitError.branchCreationFailed(command: ["checkout", "-b", "test"], stderr: "already exists").errorDescription,
+            "Failed to create branch: git checkout -b test\nalready exists"
+        )
+        XCTAssertEqual(
+            GitError.commitFailed(command: ["commit", "-m", "msg"], stderr: "nothing to commit").errorDescription,
+            "Failed to commit: git commit -m msg\nnothing to commit"
         )
     }
 }
