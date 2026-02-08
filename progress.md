@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - Xcode project lives at `Ridler/Ridler.xcodeproj`, Swift sources at `Ridler/Ridler/`
+- Use `@Observable` macro for observable classes (macOS 14.0+ / Observation framework)
 - Build command: `cd Ridler && xcodebuild -project Ridler.xcodeproj -scheme Ridler -configuration Debug -arch arm64 build`
 - Bundle identifier: `com.amattn.ridler`
 - Target: macOS 14.0+, Apple Silicon (arm64) only
@@ -40,4 +41,17 @@
   - The `-scheme RidlerTests` doesn't work directly — use `-scheme Ridler` with `test` action instead
   - Optional Codable fields (like `lastPrompt`, `notes`, `branchName`) decode as nil when absent from JSON
   - PRDFileManager.loadFromCompanion tries ridl.json first, then prd.json when given a non-JSON file path
+---
+
+## 2026-02-08 - US-003
+- What was implemented: LoopState enum with six cases (ready, running, paused, stopped, complete, error) and LoopStateMachine @Observable class with enforced valid/invalid transitions
+- Files changed:
+  - `Ridler/Ridler/Models/LoopState.swift` (new - LoopState enum with color/label properties, LoopStateMachine with transition enforcement)
+  - `Ridler/RidlerTests/LoopStateTests.swift` (new - 28 unit tests for valid transitions, invalid transitions, multi-step lifecycles, reset)
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` (updated - added new source and test files)
+- **Learnings for future iterations:**
+  - `@Observable` macro from Observation framework works on macOS 14.0+ — no need for ObservableObject/Published
+  - State machine pattern: define valid transitions as a computed `Set<State>` property on the enum, check with `contains` before transitioning
+  - LoopState.complete has no valid outgoing transitions — use `reset()` to go back to .ready
+  - Next available pbxproj IDs: file refs 008+, build files 008+
 ---
