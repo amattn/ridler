@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 @main
 struct RidlerApp: App {
     @State private var prdManager = PRDManager()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup {
@@ -72,6 +73,14 @@ struct RidlerApp: App {
                 .disabled(prdManager.selectedTab == nil)
             }
 
+            // MARK: - Window Menu
+            CommandGroup(before: .windowList) {
+                Button("Debug Info") {
+                    openWindow(id: "debug-info")
+                }
+                .disabled(!SettingsManager.shared.debugMode)
+            }
+
             // MARK: - PRD Menu
             CommandMenu("PRD") {
                 Button("Start / Resume") {
@@ -118,6 +127,11 @@ struct RidlerApp: App {
                 }
             }
         }
+
+        Window("Debug Info", id: "debug-info") {
+            DebugWindowView(prdManager: prdManager)
+        }
+        .defaultSize(width: 500, height: 400)
 
         Settings {
             SettingsView()

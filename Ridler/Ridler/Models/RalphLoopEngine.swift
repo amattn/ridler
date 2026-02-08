@@ -40,7 +40,7 @@ final class RalphLoopEngine {
     let maxIterations: Int
 
     let stateMachine: LoopStateMachine
-    private let processManager: ClaudeProcessManager
+    let processManager: ClaudeProcessManager
     private let parser: StreamingJSONLogParser
 
     weak var delegate: RalphLoopEngineDelegate?

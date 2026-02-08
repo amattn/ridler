@@ -54,6 +54,10 @@ final class PRDManager {
         UserDefaults.standard.stringArray(forKey: recentFilesKey) ?? []
     }
 
+    var fileWatcherDirectories: [String] {
+        fileWatcher.watchedDirectories
+    }
+
     var selectedTab: PRDTab? {
         guard let id = selectedTabId else { return nil }
         return tabs.first { $0.id == id }

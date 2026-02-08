@@ -46,6 +46,8 @@ final class MockProcessSpawner: ProcessSpawning, @unchecked Sendable {
         _terminated = true
         lock.unlock()
     }
+
+    var processIdentifier: Int32? { nil }
 }
 
 // MARK: - Tests

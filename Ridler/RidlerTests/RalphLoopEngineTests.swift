@@ -836,4 +836,6 @@ final class SequentialExitCodeSpawner: ProcessSpawning, @unchecked Sendable {
         _terminated = true
         lock.unlock()
     }
+
+    var processIdentifier: Int32? { nil }
 }

@@ -37,6 +37,7 @@ protocol ProcessSpawning: Sendable {
         onOutput: @escaping @Sendable (String) -> Void
     ) async throws -> ClaudeProcessResult
     func terminate()
+    var processIdentifier: Int32? { get }
 }
 
 private final class LineBuffer: @unchecked Sendable {
@@ -155,6 +156,12 @@ final class RealProcessSpawner: ProcessSpawning, @unchecked Sendable {
         lock.unlock()
         proc?.terminate()
     }
+
+    var processIdentifier: Int32? {
+        lock.lock()
+        defer { lock.unlock() }
+        return process?.processIdentifier
+    }
 }
 
 @Observable
@@ -217,5 +224,9 @@ final class ClaudeProcessManager {
 
     func cancel() {
         spawner.terminate()
+    }
+
+    var processIdentifier: Int32? {
+        spawner.processIdentifier
     }
 }
