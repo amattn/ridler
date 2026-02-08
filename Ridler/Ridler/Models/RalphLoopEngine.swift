@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum RalphLoopError: Error, LocalizedError {
     case noStoriesRemaining
@@ -80,6 +81,7 @@ final class RalphLoopEngine {
 
     func start() async {
         guard stateMachine.transition(to: .running) else { return }
+        RidlerLogger.loop.info("Loop started for PRD: \(self.prdFilePath, privacy: .public), maxIterations: \(self.maxIterations)")
 
         pauseRequested = false
         stopRequested = false
@@ -90,6 +92,7 @@ final class RalphLoopEngine {
 
     func resume() async {
         guard stateMachine.transition(to: .running) else { return }
+        RidlerLogger.loop.info("Loop resumed for PRD: \(self.prdFilePath, privacy: .public), iteration: \(self.currentIteration)")
 
         pauseRequested = false
         stopRequested = false
@@ -100,12 +103,14 @@ final class RalphLoopEngine {
     func pause() {
         guard stateMachine.state == .running else { return }
         pauseRequested = true
+        RidlerLogger.loop.info("Pause requested for PRD: \(self.prdFilePath, privacy: .public)")
     }
 
     func stop() {
         guard stateMachine.state == .running || stateMachine.state == .paused else { return }
         stopRequested = true
         processManager.cancel()
+        RidlerLogger.loop.info("Stop requested for PRD: \(self.prdFilePath, privacy: .public)")
     }
 
     // MARK: - Core Loop
@@ -114,6 +119,7 @@ final class RalphLoopEngine {
         while !stopRequested && !pauseRequested {
             // Check max iterations
             if currentIteration >= maxIterations {
+                RidlerLogger.loop.info("Max iterations reached: \(self.maxIterations)")
                 addLogEntry(.system("Maximum iterations reached (\(maxIterations))"))
                 stateMachine.transition(to: .stopped)
                 return
@@ -124,6 +130,7 @@ final class RalphLoopEngine {
             do {
                 prd = try PRDFileManager.load(from: prdFilePath)
             } catch {
+                RidlerLogger.loop.error("Failed to load PRD: \(error.localizedDescription, privacy: .public)")
                 addLogEntry(.error("Failed to load PRD: \(error.localizedDescription)"))
                 stateMachine.transition(to: .error)
                 return
@@ -132,6 +139,7 @@ final class RalphLoopEngine {
             // Select next story
             guard let story = selectNextStory(from: prd) else {
                 // All stories pass
+                RidlerLogger.loop.info("All stories complete for PRD: \(self.prdFilePath, privacy: .public)")
                 addLogEntry(.system("All stories complete!"))
                 stateMachine.transition(to: .complete)
                 return
@@ -143,6 +151,7 @@ final class RalphLoopEngine {
             iterationStartDate = Date()
             delegate?.engine(self, didUpdateIteration: currentIteration, max: maxIterations)
 
+            RidlerLogger.loop.info("Starting iteration \(self.currentIteration)/\(self.maxIterations): story=\(story.id, privacy: .public), title=\(story.title, privacy: .public)")
             addLogEntry(.system("Starting iteration \(currentIteration)/\(maxIterations): \(story.id) - \(story.title)"))
 
             // Mark story as in progress
@@ -153,6 +162,7 @@ final class RalphLoopEngine {
                 }
                 try PRDFileManager.save(updatedPrd, to: prdFilePath)
             } catch {
+                RidlerLogger.loop.error("Failed to update PRD (inProgress): \(error.localizedDescription, privacy: .public), story=\(story.id, privacy: .public)")
                 addLogEntry(.error("Failed to update PRD: \(error.localizedDescription)"))
                 stateMachine.transition(to: .error)
                 return
@@ -203,8 +213,10 @@ final class RalphLoopEngine {
                         updatedPrd.userStories[idx].inProgress = false
                     }
                     try PRDFileManager.save(updatedPrd, to: prdFilePath)
+                    RidlerLogger.loop.info("Story completed: \(story.id, privacy: .public), iteration: \(self.currentIteration)")
                     addLogEntry(.system("Story \(story.id) completed successfully"))
                 } catch {
+                    RidlerLogger.loop.error("Failed to update PRD after completion: \(error.localizedDescription, privacy: .public), story=\(story.id, privacy: .public)")
                     addLogEntry(.error("Failed to update PRD after completion: \(error.localizedDescription)"))
                     stateMachine.transition(to: .error)
                     return
@@ -215,6 +227,7 @@ final class RalphLoopEngine {
 
                 // Check if ridler-complete was detected
                 if parser.ridlerCompleteDetected {
+                    RidlerLogger.loop.info("Ridler complete signal detected for PRD: \(self.prdFilePath, privacy: .public)")
                     addLogEntry(.system("Ridler complete signal detected"))
                     stateMachine.transition(to: .complete)
                     return
@@ -224,6 +237,7 @@ final class RalphLoopEngine {
                 do {
                     let finalPrd = try PRDFileManager.load(from: prdFilePath)
                     if finalPrd.userStories.allSatisfy({ $0.passes }) {
+                        RidlerLogger.loop.info("All stories complete for PRD: \(self.prdFilePath, privacy: .public)")
                         addLogEntry(.system("All stories complete!"))
                         stateMachine.transition(to: .complete)
                         return
@@ -240,6 +254,7 @@ final class RalphLoopEngine {
 
                         retryCount = retryAttempt
                         let delay = Self.retryDelays[min(retryAttempt - 1, Self.retryDelays.count - 1)]
+                        RidlerLogger.loop.info("Retry \(retryAttempt)/\(Self.maxRetries) for story=\(story.id, privacy: .public), delay=\(Int(delay))s")
                         addLogEntry(.system("Retry \(retryAttempt)/\(Self.maxRetries) for \(story.id) (waiting \(Int(delay))s)"))
 
                         if delay > 0 {
@@ -320,6 +335,7 @@ final class RalphLoopEngine {
                         } catch {
                             // Best effort
                         }
+                        RidlerLogger.loop.error("All retries exhausted for story=\(story.id, privacy: .public)")
                         addLogEntry(.error("All retries exhausted for \(story.id)"))
                         stateMachine.transition(to: .error)
                         return
@@ -335,6 +351,7 @@ final class RalphLoopEngine {
                     } catch {
                         // Best effort
                     }
+                    RidlerLogger.loop.error("Story iteration failed: \(story.id, privacy: .public), iteration: \(self.currentIteration)")
                     addLogEntry(.error("Story \(story.id) iteration failed"))
                     stateMachine.transition(to: .error)
                     return
@@ -343,6 +360,7 @@ final class RalphLoopEngine {
 
             // Check pause after iteration completes
             if pauseRequested {
+                RidlerLogger.loop.info("Loop paused after iteration \(self.currentIteration) for PRD: \(self.prdFilePath, privacy: .public)")
                 addLogEntry(.system("Loop paused after iteration \(currentIteration)"))
                 stateMachine.transition(to: .paused)
                 return
@@ -422,6 +440,7 @@ final class RalphLoopEngine {
     // MARK: - Claude Execution
 
     private func runClaude(prompt: String) async -> Bool {
+        RidlerLogger.loop.debug("Invoking Claude for story=\(self.currentStoryId ?? "unknown", privacy: .public), workDir=\(self.workingDirectory, privacy: .public)")
         do {
             let result = try await processManager.run(
                 prompt: prompt,
@@ -435,8 +454,10 @@ final class RalphLoopEngine {
                     }
                 }
             }
+            RidlerLogger.loop.debug("Claude process exited with code \(result.exitCode) for story=\(self.currentStoryId ?? "unknown", privacy: .public)")
             return result.success
         } catch {
+            RidlerLogger.loop.error("Claude process error: \(error.localizedDescription, privacy: .public), story=\(self.currentStoryId ?? "unknown", privacy: .public)")
             addLogEntry(.error("Claude process error: \(error.localizedDescription)"))
             return false
         }

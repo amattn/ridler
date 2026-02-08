@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum ClaudeProcessError: Error, LocalizedError {
     case processNotRunning
@@ -179,8 +180,11 @@ final class ClaudeProcessManager {
 
     func run(prompt: String, workingDirectory: String, onLine: (@Sendable (String) -> Void)? = nil) async throws -> ClaudeProcessResult {
         guard !isRunning else {
+            RidlerLogger.process.error("Attempted to spawn Claude while already running")
             throw ClaudeProcessError.processAlreadyRunning
         }
+
+        RidlerLogger.process.info("Spawning Claude process, workDir=\(workingDirectory, privacy: .public)")
 
         await MainActor.run {
             self.isRunning = true
@@ -210,19 +214,23 @@ final class ClaudeProcessManager {
             }
 
             if !result.success {
+                RidlerLogger.process.error("Claude process exited with code \(result.exitCode)")
                 throw ClaudeProcessError.processFailedWithExitCode(result.exitCode, stderr: result.stderr)
             }
 
+            RidlerLogger.process.info("Claude process completed successfully")
             return result
         } catch {
             await MainActor.run {
                 self.isRunning = false
             }
+            RidlerLogger.process.error("Claude process threw error: \(error.localizedDescription, privacy: .public)")
             throw error
         }
     }
 
     func cancel() {
+        RidlerLogger.process.info("Cancelling Claude process")
         spawner.terminate()
     }
 

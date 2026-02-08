@@ -39,6 +39,7 @@
 		A10000010000000000000030 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000030 /* SettingsManager.swift */; };
 		A10000010000000000000031 /* CodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000031 /* CodeHighlighter.swift */; };
 		A10000010000000000000032 /* DebugWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000032 /* DebugWindowView.swift */; };
+		A10000010000000000000033 /* RidlerLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000033 /* RidlerLogger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 		A10000020000000000000030 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A10000020000000000000031 /* CodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeHighlighter.swift; sourceTree = "<group>"; };
 		A10000020000000000000032 /* DebugWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugWindowView.swift; sourceTree = "<group>"; };
+		A10000020000000000000033 /* RidlerLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidlerLogger.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -165,6 +167,7 @@
 				A10000020000000000000028 /* NotificationManager.swift */,
 				A10000020000000000000030 /* SettingsManager.swift */,
 				A10000020000000000000031 /* CodeHighlighter.swift */,
+				A10000020000000000000033 /* RidlerLogger.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -289,6 +292,7 @@
 				A10000010000000000000030 /* SettingsManager.swift in Sources */,
 				A10000010000000000000031 /* CodeHighlighter.swift in Sources */,
 				A10000010000000000000032 /* DebugWindowView.swift in Sources */,
+				A10000010000000000000033 /* RidlerLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

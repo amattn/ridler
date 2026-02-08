@@ -1,4 +1,5 @@
 import AppKit
+import os
 import UniformTypeIdentifiers
 
 struct PRDTab: Identifiable, Equatable {
@@ -89,6 +90,7 @@ final class PRDManager {
 
         // Already open — switch to it
         if let existing = tabs.first(where: { $0.filePath == normalizedPath }) {
+            RidlerLogger.prd.debug("PRD already open, switching to tab: \(normalizedPath, privacy: .public)")
             selectedTabId = existing.id
             return
         }
@@ -98,6 +100,7 @@ final class PRDManager {
         tabs.append(tab)
         selectedTabId = tab.id
 
+        RidlerLogger.prd.info("Opened PRD: \(tab.name, privacy: .public), path=\(normalizedPath, privacy: .public)")
         fileWatcher.watch(directory: tab.directory)
         addToRecentFiles(normalizedPath)
         persistOpenedPRDs()
@@ -114,6 +117,7 @@ final class PRDManager {
         tabs.append(tab)
         selectedTabId = tab.id
 
+        RidlerLogger.prd.info("Created new PRD: \(name, privacy: .public), path=\(prdPath, privacy: .public)")
         fileWatcher.watch(directory: PRDFileManager.companionDirectory(for: prdPath))
         persistOpenedPRDs()
     }
@@ -137,6 +141,8 @@ final class PRDManager {
     func closeTab(id: String) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         let tab = tabs[index]
+
+        RidlerLogger.prd.info("Closing PRD tab: \(tab.name, privacy: .public)")
 
         // Stop engine if running
         if let engine = engines[id] {
@@ -172,6 +178,8 @@ final class PRDManager {
         let directory = tab.directory
         let fm = FileManager.default
 
+        RidlerLogger.prd.info("Deleting PRD: \(tab.name, privacy: .public), directory=\(directory, privacy: .public)")
+
         // Close the tab first (stops engine, watcher, etc.)
         closeTab(id: tabId)
 
@@ -195,6 +203,7 @@ final class PRDManager {
         do {
             try openPRD(filePath: url.path)
         } catch {
+            RidlerLogger.prd.error("Failed to open PRD: \(error.localizedDescription, privacy: .public)")
             openErrorMessage = error.localizedDescription
             showOpenError = true
         }
@@ -272,11 +281,13 @@ final class PRDManager {
         let engine: RalphLoopEngine
         if let existing = engines[tabId], existing.stateMachine.state == .paused || existing.stateMachine.state == .stopped || existing.stateMachine.state == .error {
             engine = existing
+            RidlerLogger.prd.info("Resuming loop for PRD: \(tab.name, privacy: .public)")
             await engine.resume()
             notifyIfComplete(engine: engine, prdName: tab.name)
             return
         }
 
+        RidlerLogger.prd.info("Starting loop for PRD: \(tab.name, privacy: .public), maxIterations: \(maxIter)")
         engine = RalphLoopEngine(
             prdFilePath: jsonPath,
             workingDirectory: tab.directory,
@@ -354,7 +365,11 @@ final class PRDManager {
         guard let index = tabs.firstIndex(where: { $0.id == tabId }) else { return }
         let tab = tabs[index]
 
-        guard let (project, jsonPath) = try? PRDFileManager.loadFromCompanion(filePath: tab.filePath) else { return }
+        guard let (project, jsonPath) = try? PRDFileManager.loadFromCompanion(filePath: tab.filePath) else {
+            RidlerLogger.prd.error("Failed to reload PRD: \(tab.name, privacy: .public)")
+            return
+        }
+        RidlerLogger.prd.debug("Reloaded PRD: \(tab.name, privacy: .public)")
         tabs[index] = PRDTab(filePath: tab.filePath, prdProject: project, jsonPath: jsonPath)
     }
 
