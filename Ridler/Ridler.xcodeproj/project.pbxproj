@@ -14,6 +14,8 @@
 		A10000010000000000000005 /* PRDModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000005 /* PRDModelsTests.swift */; };
 		A10000010000000000000006 /* LoopState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000006 /* LoopState.swift */; };
 		A10000010000000000000007 /* LoopStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000007 /* LoopStateTests.swift */; };
+		A10000010000000000000008 /* ClaudeProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000008 /* ClaudeProcessManager.swift */; };
+		A10000010000000000000009 /* ClaudeProcessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000009 /* ClaudeProcessManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +36,8 @@
 		A10000020000000000000005 /* PRDModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDModelsTests.swift; sourceTree = "<group>"; };
 		A10000020000000000000006 /* LoopState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopState.swift; sourceTree = "<group>"; };
 		A10000020000000000000007 /* LoopStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopStateTests.swift; sourceTree = "<group>"; };
+		A10000020000000000000008 /* ClaudeProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProcessManager.swift; sourceTree = "<group>"; };
+		A10000020000000000000009 /* ClaudeProcessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProcessManagerTests.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -89,6 +93,7 @@
 			children = (
 				A10000020000000000000005 /* PRDModelsTests.swift */,
 				A10000020000000000000007 /* LoopStateTests.swift */,
+				A10000020000000000000009 /* ClaudeProcessManagerTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -99,6 +104,7 @@
 				A10000020000000000000003 /* PRDProject.swift */,
 				A10000020000000000000004 /* PRDFileManager.swift */,
 				A10000020000000000000006 /* LoopState.swift */,
+				A10000020000000000000008 /* ClaudeProcessManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -187,6 +193,7 @@
 				A10000010000000000000003 /* PRDProject.swift in Sources */,
 				A10000010000000000000004 /* PRDFileManager.swift in Sources */,
 				A10000010000000000000006 /* LoopState.swift in Sources */,
+				A10000010000000000000008 /* ClaudeProcessManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,6 +203,7 @@
 			files = (
 				A10000010000000000000005 /* PRDModelsTests.swift in Sources */,
 				A10000010000000000000007 /* LoopStateTests.swift in Sources */,
+				A10000010000000000000009 /* ClaudeProcessManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
