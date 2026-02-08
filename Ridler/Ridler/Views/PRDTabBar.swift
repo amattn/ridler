@@ -19,7 +19,7 @@ struct PRDTabBar: View {
             // + button with menu
             Menu {
                 Button("Open PRD...") {
-                    // Placeholder — will be implemented in US-017
+                    prdManager.openFilePanel()
                 }
                 Button("New PRD...") {
                     // Placeholder — will be implemented in US-018

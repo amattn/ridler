@@ -1,4 +1,5 @@
-import Foundation
+import AppKit
+import UniformTypeIdentifiers
 
 struct PRDTab: Identifiable, Equatable {
     let id: String
@@ -31,6 +32,12 @@ final class PRDManager {
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
     private let persistenceKey = "com.amattn.ridler.openedPRDs"
+    private let recentFilesKey = "com.amattn.ridler.recentPRDs"
+    private let maxRecentFiles = 10
+
+    var recentFiles: [String] {
+        UserDefaults.standard.stringArray(forKey: recentFilesKey) ?? []
+    }
 
     var selectedTab: PRDTab? {
         guard let id = selectedTabId else { return nil }
@@ -64,6 +71,7 @@ final class PRDManager {
         selectedTabId = tab.id
 
         fileWatcher.watch(directory: tab.directory)
+        addToRecentFiles(normalizedPath)
         persistOpenedPRDs()
     }
 
@@ -102,6 +110,36 @@ final class PRDManager {
         }
 
         persistOpenedPRDs()
+    }
+
+    // MARK: - File Open
+
+    func openFilePanel() {
+        let panel = NSOpenPanel()
+        panel.title = "Open PRD"
+        var types: [UTType] = []
+        if let md = UTType(filenameExtension: "md") { types.append(md) }
+        if let json = UTType(filenameExtension: "json") { types.append(json) }
+        panel.allowedContentTypes = types
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? openPRD(filePath: url.path)
+    }
+
+    func clearRecentFiles() {
+        UserDefaults.standard.removeObject(forKey: recentFilesKey)
+    }
+
+    private func addToRecentFiles(_ path: String) {
+        var recents = UserDefaults.standard.stringArray(forKey: recentFilesKey) ?? []
+        recents.removeAll { $0 == path }
+        recents.insert(path, at: 0)
+        if recents.count > maxRecentFiles {
+            recents = Array(recents.prefix(maxRecentFiles))
+        }
+        UserDefaults.standard.set(recents, forKey: recentFilesKey)
     }
 
     // MARK: - Loop State

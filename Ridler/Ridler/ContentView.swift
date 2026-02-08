@@ -1,9 +1,11 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @State private var prdManager = PRDManager()
+    @Bindable var prdManager: PRDManager
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var loopStartDate: Date?
+    @State private var isDragOver = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +34,17 @@ struct ContentView: View {
             if prdManager.selectedTab != nil {
                 StatusBarView(activityMessage: activityMessage,
                              loopState: currentLoopState)
+            }
+        }
+        .onDrop(of: [.fileURL], isTargeted: $isDragOver) { providers in
+            handleDrop(providers: providers)
+        }
+        .overlay {
+            if isDragOver {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.accentColor, lineWidth: 3)
+                    .background(Color.accentColor.opacity(0.1))
+                    .padding(4)
             }
         }
     }
@@ -86,7 +99,7 @@ struct ContentView: View {
 
             HStack(spacing: 16) {
                 Button("Open PRD") {
-                    // Placeholder — will be implemented in US-017
+                    prdManager.openFilePanel()
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -154,8 +167,27 @@ struct ContentView: View {
         }
         return nil
     }
+
+    // MARK: - Drag and Drop
+
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        for provider in providers {
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
+                guard let data = data as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+
+                let ext = url.pathExtension.lowercased()
+                guard ext == "md" || ext == "json" else { return }
+
+                DispatchQueue.main.async {
+                    try? prdManager.openPRD(filePath: url.path)
+                }
+            }
+        }
+        return true
+    }
 }
 
 #Preview {
-    ContentView()
+    ContentView(prdManager: PRDManager())
 }
