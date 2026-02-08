@@ -18,6 +18,8 @@
 		A10000010000000000000009 /* ClaudeProcessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000009 /* ClaudeProcessManagerTests.swift */; };
 		A10000010000000000000010 /* StreamingJSONLogParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000010 /* StreamingJSONLogParser.swift */; };
 		A10000010000000000000011 /* StreamingJSONLogParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000011 /* StreamingJSONLogParserTests.swift */; };
+		A10000010000000000000012 /* RalphLoopEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000012 /* RalphLoopEngine.swift */; };
+		A10000010000000000000013 /* RalphLoopEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000013 /* RalphLoopEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +44,8 @@
 		A10000020000000000000009 /* ClaudeProcessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProcessManagerTests.swift; sourceTree = "<group>"; };
 		A10000020000000000000010 /* StreamingJSONLogParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONLogParser.swift; sourceTree = "<group>"; };
 		A10000020000000000000011 /* StreamingJSONLogParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONLogParserTests.swift; sourceTree = "<group>"; };
+		A10000020000000000000012 /* RalphLoopEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngine.swift; sourceTree = "<group>"; };
+		A10000020000000000000013 /* RalphLoopEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngineTests.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -99,6 +103,7 @@
 				A10000020000000000000007 /* LoopStateTests.swift */,
 				A10000020000000000000009 /* ClaudeProcessManagerTests.swift */,
 				A10000020000000000000011 /* StreamingJSONLogParserTests.swift */,
+				A10000020000000000000013 /* RalphLoopEngineTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -111,6 +116,7 @@
 				A10000020000000000000006 /* LoopState.swift */,
 				A10000020000000000000008 /* ClaudeProcessManager.swift */,
 				A10000020000000000000010 /* StreamingJSONLogParser.swift */,
+				A10000020000000000000012 /* RalphLoopEngine.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -201,6 +207,7 @@
 				A10000010000000000000006 /* LoopState.swift in Sources */,
 				A10000010000000000000008 /* ClaudeProcessManager.swift in Sources */,
 				A10000010000000000000010 /* StreamingJSONLogParser.swift in Sources */,
+				A10000010000000000000012 /* RalphLoopEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -212,6 +219,7 @@
 				A10000010000000000000007 /* LoopStateTests.swift in Sources */,
 				A10000010000000000000009 /* ClaudeProcessManagerTests.swift in Sources */,
 				A10000010000000000000011 /* StreamingJSONLogParserTests.swift in Sources */,
+				A10000010000000000000013 /* RalphLoopEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
