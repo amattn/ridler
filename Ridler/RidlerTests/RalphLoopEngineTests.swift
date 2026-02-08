@@ -625,4 +625,215 @@ final class RalphLoopEngineTests: XCTestCase {
         XCTAssertTrue(finalPrd.userStories[0].passes)
         XCTAssertTrue(finalPrd.userStories[1].passes)
     }
+
+    // MARK: - Auto-Retry Tests
+
+    func testAutoRetryDisabledGoesDirectlyToError() async {
+        let mock = MockProcessSpawner()
+        mock.exitCode = 1
+        mock.outputLines = []
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = false
+
+        await engine.start()
+
+        XCTAssertEqual(engine.stateMachine.state, .error)
+        // Should have no retry log entries
+        let retryEntries = engine.logEntries.filter {
+            if case .system(let msg) = $0.type { return msg.contains("Retry") }
+            return false
+        }
+        XCTAssertEqual(retryEntries.count, 0)
+    }
+
+    func testAutoRetrySucceedsOnSecondAttempt() async {
+        let mock = SequentialExitCodeSpawner(exitCodes: [1, 0])
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = true
+
+        await engine.start()
+
+        XCTAssertEqual(engine.stateMachine.state, .complete)
+        let updatedPrd = try! PRDFileManager.load(from: prdPath)
+        XCTAssertTrue(updatedPrd.userStories[0].passes)
+
+        // Should have retry log entries
+        let retryEntries = engine.logEntries.filter {
+            if case .system(let msg) = $0.type { return msg.contains("Retry") }
+            return false
+        }
+        XCTAssertTrue(retryEntries.count >= 1)
+    }
+
+    func testAutoRetryExhaustsAllRetries() async {
+        // All 4 calls fail (initial + 3 retries)
+        let mock = SequentialExitCodeSpawner(exitCodes: [1, 1, 1, 1])
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = true
+
+        await engine.start()
+
+        XCTAssertEqual(engine.stateMachine.state, .error)
+
+        // Should have "All retries exhausted" message
+        let exhaustedEntries = engine.logEntries.filter {
+            if case .error(let msg) = $0.type { return msg.contains("All retries exhausted") }
+            return false
+        }
+        XCTAssertEqual(exhaustedEntries.count, 1)
+    }
+
+    func testAutoRetrySucceedsOnThirdAttempt() async {
+        // Fail initial, fail retry 1, fail retry 2, succeed retry 3
+        let mock = SequentialExitCodeSpawner(exitCodes: [1, 1, 1, 0])
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = true
+
+        await engine.start()
+
+        XCTAssertEqual(engine.stateMachine.state, .complete)
+        let updatedPrd = try! PRDFileManager.load(from: prdPath)
+        XCTAssertTrue(updatedPrd.userStories[0].passes)
+    }
+
+    func testAutoRetryStopIsNeverRetried() async {
+        let mock = MockProcessSpawner()
+        mock.exitCode = 0
+        mock.outputLines = ["{\"type\":\"system\",\"message\":\"working\"}"]
+        mock.lineDelay = 0.5
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = true
+
+        let task = Task {
+            await engine.start()
+        }
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        engine.stop()
+
+        await task.value
+
+        XCTAssertEqual(engine.stateMachine.state, .stopped)
+
+        // Should have no retry log entries
+        let retryEntries = engine.logEntries.filter {
+            if case .system(let msg) = $0.type { return msg.contains("Retry") }
+            return false
+        }
+        XCTAssertEqual(retryEntries.count, 0)
+    }
+
+    func testAutoRetryLogEntriesShowInLogPanel() async {
+        let mock = SequentialExitCodeSpawner(exitCodes: [1, 0])
+
+        let stories = [makeStory(id: "US-001", priority: 1, passes: false)]
+        let prdPath = createPRD(stories: stories)
+        let processManager = ClaudeProcessManager(spawner: mock)
+        let engine = RalphLoopEngine(
+            prdFilePath: prdPath,
+            workingDirectory: tempDir,
+            maxIterations: 10,
+            processManager: processManager
+        )
+        engine.autoRetryOverride = true
+
+        await engine.start()
+
+        // Check for retry waiting log entry
+        let waitEntries = engine.logEntries.filter {
+            if case .system(let msg) = $0.type { return msg.contains("Retry 1/3") }
+            return false
+        }
+        XCTAssertEqual(waitEntries.count, 1)
+
+        // Check for retry succeeded log entry
+        let successEntries = engine.logEntries.filter {
+            if case .system(let msg) = $0.type { return msg.contains("Retry 1 succeeded") }
+            return false
+        }
+        XCTAssertEqual(successEntries.count, 1)
+    }
+}
+
+// MARK: - Sequential Exit Code Spawner (for retry tests)
+
+/// A mock spawner that returns different exit codes for each successive call
+final class SequentialExitCodeSpawner: ProcessSpawning, @unchecked Sendable {
+    private let lock = NSLock()
+    private var callIndex = 0
+    private var _terminated = false
+    private let exitCodes: [Int32]
+
+    init(exitCodes: [Int32]) {
+        self.exitCodes = exitCodes
+    }
+
+    func spawn(
+        executablePath: String,
+        arguments: [String],
+        workingDirectory: String,
+        onOutput: @escaping @Sendable (String) -> Void
+    ) async throws -> ClaudeProcessResult {
+        lock.lock()
+        let idx = callIndex
+        callIndex += 1
+        lock.unlock()
+
+        let code = idx < exitCodes.count ? exitCodes[idx] : exitCodes.last!
+        if code == 0 {
+            onOutput("{\"type\":\"system\",\"message\":\"done\"}")
+        }
+        return ClaudeProcessResult(exitCode: code)
+    }
+
+    func terminate() {
+        lock.lock()
+        _terminated = true
+        lock.unlock()
+    }
 }

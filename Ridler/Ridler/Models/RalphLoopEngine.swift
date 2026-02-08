@@ -48,6 +48,16 @@ final class RalphLoopEngine {
     private var pauseRequested = false
     private var stopRequested = false
 
+    static let maxRetries = 3
+    static let retryDelays: [TimeInterval] = [0, 5, 15]
+
+    /// Allows tests to override SettingsManager.autoRetryEnabled
+    var autoRetryOverride: Bool?
+
+    private var isAutoRetryEnabled: Bool {
+        autoRetryOverride ?? SettingsManager.shared.autoRetryEnabled
+    }
+
     init(
         prdFilePath: String,
         workingDirectory: String,
@@ -218,19 +228,112 @@ final class RalphLoopEngine {
                     // Continue to next iteration
                 }
             } else {
-                // Claude failed — mark story not in progress, transition to error
-                do {
-                    var updatedPrd = try PRDFileManager.load(from: prdFilePath)
-                    if let idx = updatedPrd.userStories.firstIndex(where: { $0.id == story.id }) {
-                        updatedPrd.userStories[idx].inProgress = false
+                // Claude failed — attempt auto-retry if enabled
+                if isAutoRetryEnabled && !stopRequested {
+                    var retrySucceeded = false
+                    for retryAttempt in 1...Self.maxRetries {
+                        if stopRequested { break }
+
+                        let delay = Self.retryDelays[min(retryAttempt - 1, Self.retryDelays.count - 1)]
+                        addLogEntry(.system("Retry \(retryAttempt)/\(Self.maxRetries) for \(story.id) (waiting \(Int(delay))s)"))
+
+                        if delay > 0 {
+                            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        }
+
+                        if stopRequested { break }
+
+                        let retryResult = await runClaude(prompt: prompt)
+
+                        if stopRequested { break }
+
+                        if retryResult {
+                            addLogEntry(.system("Retry \(retryAttempt) succeeded for \(story.id)"))
+                            retrySucceeded = true
+                            break
+                        } else {
+                            addLogEntry(.error("Retry \(retryAttempt)/\(Self.maxRetries) failed for \(story.id)"))
+                        }
                     }
-                    try PRDFileManager.save(updatedPrd, to: prdFilePath)
-                } catch {
-                    // Best effort
+
+                    if stopRequested {
+                        do {
+                            var updatedPrd = try PRDFileManager.load(from: prdFilePath)
+                            if let idx = updatedPrd.userStories.firstIndex(where: { $0.id == story.id }) {
+                                updatedPrd.userStories[idx].inProgress = false
+                            }
+                            try PRDFileManager.save(updatedPrd, to: prdFilePath)
+                        } catch {
+                            // Best effort
+                        }
+                        stateMachine.transition(to: .stopped)
+                        return
+                    }
+
+                    if retrySucceeded {
+                        // Mark story as complete (same as success path)
+                        do {
+                            var updatedPrd = try PRDFileManager.load(from: prdFilePath)
+                            if let idx = updatedPrd.userStories.firstIndex(where: { $0.id == story.id }) {
+                                updatedPrd.userStories[idx].passes = true
+                                updatedPrd.userStories[idx].inProgress = false
+                            }
+                            try PRDFileManager.save(updatedPrd, to: prdFilePath)
+                            addLogEntry(.system("Story \(story.id) completed successfully"))
+                        } catch {
+                            addLogEntry(.error("Failed to update PRD after completion: \(error.localizedDescription)"))
+                            stateMachine.transition(to: .error)
+                            return
+                        }
+
+                        appendProgress(for: story)
+
+                        if parser.ridlerCompleteDetected {
+                            addLogEntry(.system("Ridler complete signal detected"))
+                            stateMachine.transition(to: .complete)
+                            return
+                        }
+
+                        do {
+                            let finalPrd = try PRDFileManager.load(from: prdFilePath)
+                            if finalPrd.userStories.allSatisfy({ $0.passes }) {
+                                addLogEntry(.system("All stories complete!"))
+                                stateMachine.transition(to: .complete)
+                                return
+                            }
+                        } catch {
+                            // Continue to next iteration
+                        }
+                    } else {
+                        // Retries exhausted — transition to error
+                        do {
+                            var updatedPrd = try PRDFileManager.load(from: prdFilePath)
+                            if let idx = updatedPrd.userStories.firstIndex(where: { $0.id == story.id }) {
+                                updatedPrd.userStories[idx].inProgress = false
+                            }
+                            try PRDFileManager.save(updatedPrd, to: prdFilePath)
+                        } catch {
+                            // Best effort
+                        }
+                        addLogEntry(.error("All retries exhausted for \(story.id)"))
+                        stateMachine.transition(to: .error)
+                        return
+                    }
+                } else {
+                    // Auto-retry disabled — mark story not in progress, transition to error
+                    do {
+                        var updatedPrd = try PRDFileManager.load(from: prdFilePath)
+                        if let idx = updatedPrd.userStories.firstIndex(where: { $0.id == story.id }) {
+                            updatedPrd.userStories[idx].inProgress = false
+                        }
+                        try PRDFileManager.save(updatedPrd, to: prdFilePath)
+                    } catch {
+                        // Best effort
+                    }
+                    addLogEntry(.error("Story \(story.id) iteration failed"))
+                    stateMachine.transition(to: .error)
+                    return
                 }
-                addLogEntry(.error("Story \(story.id) iteration failed"))
-                stateMachine.transition(to: .error)
-                return
             }
 
             // Check pause after iteration completes
