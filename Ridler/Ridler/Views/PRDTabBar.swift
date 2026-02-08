@@ -22,7 +22,7 @@ struct PRDTabBar: View {
                     prdManager.openFilePanel()
                 }
                 Button("New PRD...") {
-                    // Placeholder — will be implemented in US-018
+                    prdManager.showNewPRDSheet = true
                 }
             } label: {
                 Image(systemName: "plus")

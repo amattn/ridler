@@ -47,6 +47,10 @@ struct ContentView: View {
                     .padding(4)
             }
         }
+        .sheet(isPresented: $prdManager.showNewPRDSheet) {
+            NewPRDSheet(isPresented: $prdManager.showNewPRDSheet,
+                        prdManager: prdManager)
+        }
     }
 
     // MARK: - Three-Pane Layout
@@ -104,7 +108,7 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
 
                 Button("New PRD") {
-                    // Placeholder — will be implemented in US-018
+                    prdManager.showNewPRDSheet = true
                 }
                 .buttonStyle(.bordered)
             }

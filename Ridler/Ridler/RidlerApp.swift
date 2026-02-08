@@ -12,6 +12,11 @@ struct RidlerApp: App {
         .defaultSize(width: 1200, height: 700)
         .commands {
             CommandGroup(replacing: .newItem) {
+                Button("New PRD...") {
+                    prdManager.showNewPRDSheet = true
+                }
+                .keyboardShortcut("n")
+
                 Button("Open PRD...") {
                     prdManager.openFilePanel()
                 }

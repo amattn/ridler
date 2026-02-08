@@ -29,6 +29,8 @@ final class PRDManager {
     var selectedTabId: String?
     var selectedStoryId: String?
 
+    var showNewPRDSheet = false
+
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
     private let persistenceKey = "com.amattn.ridler.openedPRDs"
@@ -52,6 +54,14 @@ final class PRDManager {
         self.fileWatcher = fileWatcher
         self.fileWatcher.delegate = self
         restoreOpenedPRDs()
+    }
+
+    // MARK: - Validation
+
+    static func isValidPRDName(_ name: String) -> Bool {
+        guard !name.isEmpty else { return false }
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        return name.unicodeScalars.allSatisfy { allowed.contains($0) }
     }
 
     // MARK: - Tab Management
