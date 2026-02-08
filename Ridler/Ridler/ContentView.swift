@@ -33,7 +33,8 @@ struct ContentView: View {
             if let stories = prdManager.selectedPRD?.userStories {
                 StoriesListView(
                     stories: stories,
-                    selectedStoryId: $prdManager.selectedStoryId
+                    selectedStoryId: $prdManager.selectedStoryId,
+                    loopState: currentLoopState
                 )
             } else {
                 ContentUnavailableView("No Stories",
