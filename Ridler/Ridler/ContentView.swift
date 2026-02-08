@@ -6,22 +6,28 @@ struct ContentView: View {
     @State private var loopStartDate: Date?
 
     var body: some View {
-        if prdManager.selectedTab != nil {
-            threeColumnLayout
-                .navigationTitle(prdManager.selectedTab?.name ?? "Ridler")
-                .toolbar {
-                    LoopToolbar(prdManager: prdManager, loopStartDate: loopStartDate)
-                }
-                .onChange(of: currentLoopState) { oldValue, newValue in
-                    if newValue == .running && oldValue != .running {
-                        loopStartDate = Date()
-                    } else if newValue != .running {
-                        loopStartDate = nil
+        VStack(spacing: 0) {
+            if prdManager.tabs.count > 0 {
+                PRDTabBar(prdManager: prdManager)
+            }
+
+            if prdManager.selectedTab != nil {
+                threeColumnLayout
+                    .navigationTitle(prdManager.selectedTab?.name ?? "Ridler")
+                    .toolbar {
+                        LoopToolbar(prdManager: prdManager, loopStartDate: loopStartDate)
                     }
-                }
-        } else {
-            emptyState
-                .navigationTitle("Ridler")
+                    .onChange(of: currentLoopState) { oldValue, newValue in
+                        if newValue == .running && oldValue != .running {
+                            loopStartDate = Date()
+                        } else if newValue != .running {
+                            loopStartDate = nil
+                        }
+                    }
+            } else {
+                emptyState
+                    .navigationTitle("Ridler")
+            }
         }
     }
 
