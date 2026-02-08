@@ -3,11 +3,22 @@ import SwiftUI
 struct ContentView: View {
     @State private var prdManager = PRDManager()
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var loopStartDate: Date?
 
     var body: some View {
         if prdManager.selectedTab != nil {
             threeColumnLayout
                 .navigationTitle(prdManager.selectedTab?.name ?? "Ridler")
+                .toolbar {
+                    LoopToolbar(prdManager: prdManager, loopStartDate: loopStartDate)
+                }
+                .onChange(of: currentLoopState) { oldValue, newValue in
+                    if newValue == .running && oldValue != .running {
+                        loopStartDate = Date()
+                    } else if newValue != .running {
+                        loopStartDate = nil
+                    }
+                }
         } else {
             emptyState
                 .navigationTitle("Ridler")
@@ -82,6 +93,11 @@ struct ContentView: View {
         guard let storyId = prdManager.selectedStoryId,
               let stories = prdManager.selectedPRD?.userStories else { return nil }
         return stories.first { $0.id == storyId }
+    }
+
+    private var currentLoopState: LoopState {
+        guard let tabId = prdManager.selectedTabId else { return .ready }
+        return prdManager.loopState(for: tabId)
     }
 }
 

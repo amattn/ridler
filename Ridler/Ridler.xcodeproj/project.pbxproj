@@ -29,6 +29,7 @@
 		A10000010000000000000020 /* StoriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000020 /* StoriesListView.swift */; };
 		A10000010000000000000021 /* StoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000021 /* StoryDetailView.swift */; };
 		A10000010000000000000022 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000022 /* LogPanelView.swift */; };
+		A10000010000000000000023 /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000023 /* ToolbarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 		A10000020000000000000020 /* StoriesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesListView.swift; sourceTree = "<group>"; };
 		A10000020000000000000021 /* StoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryDetailView.swift; sourceTree = "<group>"; };
 		A10000020000000000000022 /* LogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogPanelView.swift; sourceTree = "<group>"; };
+		A10000020000000000000023 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
 		A10000030000000000000001 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000030000000000000002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -152,6 +154,7 @@
 				A10000020000000000000020 /* StoriesListView.swift */,
 				A10000020000000000000021 /* StoryDetailView.swift */,
 				A10000020000000000000022 /* LogPanelView.swift */,
+				A10000020000000000000023 /* ToolbarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -249,6 +252,7 @@
 				A10000010000000000000020 /* StoriesListView.swift in Sources */,
 				A10000010000000000000021 /* StoryDetailView.swift in Sources */,
 				A10000010000000000000022 /* LogPanelView.swift in Sources */,
+				A10000010000000000000023 /* ToolbarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
