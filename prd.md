@@ -1,493 +1,442 @@
-# Product Requirements Document: Ridler
+# PRD: Ridler — Native macOS Autonomous PRD Agent
 
-## Native macOS Autonomous PRD Agent
+## Introduction
 
-**Version:** 1.0
-**Date:** 2026-02-07
-**Platform:** macOS 14.0+ (Sonoma and later), Apple Silicon only
-**Language:** Swift / SwiftUI
+Ridler is a native macOS application (Swift/SwiftUI, macOS 14+, Apple Silicon only) that transforms Product Requirements Documents into working code by orchestrating Claude Code in an autonomous loop. It reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file.
 
----
+PRDs can live anywhere on disk. Users open existing PRD files or create new ones at any location. Each opened PRD becomes a tab in the interface. Companion files (`ridl.json`, `progress.md`, `claude.log`) are stored alongside the `prd.md` in the same directory.
 
-## 1. Overview
+## Goals
 
-Ridler is a native macOS application that transforms Product Requirements Documents into working code by orchestrating Claude Code in an autonomous loop. It is a feature-complete native equivalent of [minicodemonkey/chief](https://github.com/minicodemonkey/chief), replacing the terminal-based Bubble Tea TUI with a native SwiftUI interface.
+- Feature-complete native macOS equivalent of [minicodemonkey/chief](https://github.com/minicodemonkey/chief)
+- Full SwiftUI interface with proper macOS conventions (menu bar, keyboard shortcuts, window management, drag-and-drop)
+- Parallel PRD execution with independent loop state per PRD
+- Real-time streaming of Claude's output with syntax highlighting
+- One git commit per completed story
+- Standard macOS Settings window for app-wide preferences
+- PRDs stored anywhere on disk — no fixed project directory structure
 
-The app reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file, preventing context overflow while maintaining project continuity.
+## User Stories
 
-### 1.1 Design Principles
+### US-001: Create Xcode Project and App Shell
+**Description:** As a developer, I want a properly configured Xcode project so that I have the foundation for building Ridler.
 
-- **Native-first:** Full SwiftUI interface with proper macOS conventions (menu bar, keyboard shortcuts, window management, drag-and-drop).
-- **Feature parity:** Every capability of the original Chief CLI is present — parallel PRD execution, log streaming, protected branch detection, auto-retry, audio notifications.
-- **Zero configuration:** No global config files. PRD state lives alongside the PRD files wherever the user stores them. App-wide preferences stored in the app's container.
-- **Non-blocking:** Multiple PRDs can run simultaneously with independent loop state. The UI stays responsive during long-running iterations.
-- **Transparent:** Real-time streaming of Claude's output with syntax highlighting. Every action is visible and controllable.
-
----
-
-## 2. User Personas
-
-| Persona | Description | Key Need |
-|---------|-------------|----------|
-| **Solo Developer** | Indie dev building side projects with Claude | Hands-off execution of well-defined features; watch progress or walk away |
-| **Tech Lead** | Manages a team and uses Claude to prototype features | Run multiple PRDs in parallel, review clean git history of one-commit-per-story |
-| **AI-Assisted Developer** | Uses Claude daily but hits context limits on large tasks | Break large features into agent-sized stories that execute reliably without context overflow |
-| **Non-Terminal User** | Developer who prefers GUI tools over CLI workflows | Native Mac app with familiar UI patterns instead of terminal commands |
+**Acceptance Criteria:**
+- [ ] Xcode project created with SwiftUI App lifecycle targeting macOS 14.0+, Apple Silicon only
+- [ ] App launches and displays an empty window with the title "Ridler"
+- [ ] Project builds and runs without warnings or errors
+- [ ] Bundle identifier and app name configured
+- [ ] Typecheck passes
 
 ---
 
-## 3. Functional Requirements
+### US-002: PRD Data Models and JSON Parsing
+**Description:** As a developer, I want Swift data models for the PRD format so that the app can read and write `ridl.json` files from any location on disk.
 
-### 3.1 PRD Management
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| PM-1 | Open an existing PRD via File > Open (`⌘O`), which presents a file picker for selecting a `prd.md` or `ridl.json` file at any location on disk | P0 |
-| PM-2 | Each opened PRD becomes a tab in the interface; multiple PRDs from different locations can be open simultaneously | P0 |
-| PM-3 | Create a new PRD via File > New (`⌘N`), which prompts the user to choose a save location and PRD name, then creates an empty `prd.md` file there | P0 |
-| PM-4 | Edit an existing PRD by clicking an "Edit PRD" button in the UI, which launches Claude Code with the PRD context loaded | P0 |
-| PM-5 | Close a PRD tab (removes it from the interface but does not delete files on disk) | P0 |
-| PM-6 | Delete a PRD's files on disk (with confirmation dialog) | P1 |
-| PM-7 | Display PRD completion status: total stories, passed, in-progress, pending | P0 |
-| PM-8 | Watch each opened PRD's files for filesystem changes and auto-reload when files change externally | P0 |
-| PM-9 | Support the two-file PRD format: `prd.md` (human-readable) and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file | P0 |
-| PM-10 | Auto-convert `prd.md` to `ridl.json` when the markdown source is newer than the JSON | P1 |
-| PM-11 | Companion files (`ridl.json`, `progress.md`, `claude.log`) are stored alongside the `prd.md` in the same directory | P0 |
-| PM-12 | Remember recently opened PRDs and display them in File > Open Recent | P1 |
-| PM-13 | Drag-and-drop a `prd.md` or `ridl.json` file onto the app icon to open it as a tab | P1 |
-
-### 3.2 The Ralph Loop (Autonomous Execution Engine)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| RL-1 | Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat | P0 |
-| RL-2 | Each iteration invokes Claude Code as a fresh subprocess with `--dangerously-skip-permissions --output-format stream-json` flags | P0 |
-| RL-3 | Select the next story by filtering `passes: false`, sorting by `priority` ascending, and picking the first | P0 |
-| RL-4 | Build the prompt from: target story details (ID, title, description, acceptance criteria), embedded agent instructions, and `progress.md` context | P0 |
-| RL-5 | Parse Claude's streaming JSON output in real-time and display in the log view | P0 |
-| RL-6 | On story completion, set `passes: true` and `inProgress: false` in `ridl.json` | P0 |
-| RL-7 | On all stories complete, transition to the Complete state and play an audio notification | P0 |
-| RL-8 | Support configurable max iterations per PRD (default: remaining stories + 5, minimum 5) | P0 |
-| RL-9 | Allow runtime adjustment of max iterations via UI controls (+5 / -5) | P1 |
-| RL-10 | Auto-retry on Claude Code crashes with backoff (configurable, can be disabled) | P1 |
-| RL-11 | Detect the `<ridler-complete/>` signal from Claude to exit the loop early when all stories are done | P0 |
-| RL-12 | Create one git commit per completed story using the format `feat: [US-001] - Story Title` | P0 |
-| RL-13 | Append implementation details, file changes, and learnings to `progress.md` after each iteration | P0 |
-
-### 3.3 Parallel PRD Execution
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| PX-1 | Support running multiple PRDs simultaneously, each with independent loop state, iteration count, timing, and error tracking | P0 |
-| PX-2 | Switching between PRDs in the UI only changes the view — it does not stop other running loops | P0 |
-| PX-3 | Loop controls (start, pause, stop) apply to the currently viewed PRD | P0 |
-| PX-4 | Display real-time state indicators for all PRDs in the tab bar / sidebar | P0 |
-
-### 3.4 Loop State Machine
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| LS-1 | Support six loop states: Ready, Running, Paused, Stopped, Complete, Error | P0 |
-| LS-2 | Ready → Running: User presses Start | P0 |
-| LS-3 | Running → Paused: User presses Pause; loop finishes current iteration then pauses | P0 |
-| LS-4 | Running → Stopped: User presses Stop; loop halts immediately | P0 |
-| LS-5 | Running → Complete: All stories pass | P0 |
-| LS-6 | Running → Error: Claude Code fails or crashes (after retry exhaustion if retries enabled) | P0 |
-| LS-7 | Paused/Stopped/Error → Running: User presses Start to resume | P0 |
-| LS-8 | Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red) | P0 |
-
-### 3.5 Git Integration
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| GI-1 | Detect if the project is on a protected branch (main/master) before starting a loop | P0 |
-| GI-2 | Show a warning dialog offering three options: create a `ridler/{prd-name}` branch (recommended), continue on current branch, or cancel | P0 |
-| GI-3 | Allow editing the suggested branch name in the warning dialog | P1 |
-| GI-4 | Create one commit per completed story with message format `feat: [US-001] - Story Title` | P0 |
-
-### 3.6 User Interface
-
-#### 3.6.1 Window Layout
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│  Toolbar: [▶ Start] [⏸ Pause] [⏹ Stop]  |  Iteration: 3/10  2m34s                    │
-├──────────────────────────────────────────────────────────────────────────────────────┤
-│  [PRD Tab 1 ●] [PRD Tab 2 ▶3] [PRD Tab 3 ✓] [+]                                      │
-├──────────────┬──────────────────────────┬────────────────────────────────────────────┤
-│              │                          │                                            │
-│  Stories     │  Story Detail            │  Log View                                  │
-│              │                          │                                            │
-│  ✓ US-001    │  Title: Add login endpt  │  ▸ Read src/auth.ts                        │
-│  ● US-002    │  Status: ● In Progress   │  ▸ Edit src/auth.ts (lines 12-45)          │
-│  ○ US-003    │  Priority: 2             │  Claude: Adding JWT validation...          │
-│  ○ US-004    │  ────────────────────    │  ▸ Bash: npm test                          │
-│              │  Description:            │  ✓ 14 tests passed                         │
-│              │  As a user, I want to    │  ▸ Write src/routes/login.ts               │
-│              │  log in so that...       │  Claude: Now implementing the              │
-│              │                          │  login endpoint handler...                 │
-│              │  Acceptance Criteria:    │                                            │
-│              │  • POST /login → JWT     │                                            │
-│  ──────────  │  • Invalid creds → 401   │                                            │
-│  ████░░ 25%  │  • Typecheck passes      │                                            │
-│  1/4 stories │                          │                                            │
-├──────────────┴──────────────────────────┴────────────────────────────────────────────┤
-│  Working on: US-002 - Add login endpoint                                             │
-└──────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 3.6.2 Toolbar
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-T1 | Display Start/Pause/Stop buttons that are enabled/disabled based on current loop state | P0 |
-| UI-T2 | Show iteration counter: current iteration / max iterations | P0 |
-| UI-T3 | Show elapsed time since loop started (format: `Xh Ym Zs`) | P0 |
-| UI-T4 | Show color-coded state badge: `[Ready]`, `[Running]`, `[Paused]`, `[Stopped]`, `[Complete]`, `[Error]` | P0 |
-| UI-T5 | Display +/- stepper control to adjust max iterations at runtime | P1 |
-
-#### 3.6.3 PRD Tab Bar
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-TB1 | Display a horizontal tab bar below the toolbar showing all currently opened PRDs | P0 |
-| UI-TB2 | Each tab shows: PRD name, state indicator icon (● active, ▶ running + iteration count, ⏸ paused, ✓ complete, ✗ error, ■ stopped) | P0 |
-| UI-TB3 | Clicking a tab switches the view to that PRD without affecting other running loops | P0 |
-| UI-TB4 | A `[+]` button at the end of the tab bar opens a menu with "Open PRD..." and "New PRD..." options | P0 |
-| UI-TB5 | Right-click context menu on a tab: Start, Pause, Stop, Edit, Close, Delete | P1 |
-| UI-TB6 | Support keyboard shortcuts `⌘1`–`⌘9` to switch to PRD by tab position | P1 |
-
-#### 3.6.4 Stories Panel (Left Pane)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-S1 | Display a scrollable list of all user stories for the selected PRD | P0 |
-| UI-S2 | Each row shows: status icon (✓ passed, ● in-progress, ○ pending, ✗ failed), story ID, and title | P0 |
-| UI-S3 | Highlight the currently selected story | P0 |
-| UI-S4 | Show a progress bar at the bottom: filled portion, percentage, and count (e.g., `2/4 stories`) | P0 |
-| UI-S5 | Clicking a story selects it and shows its detail in the middle pane | P0 |
-| UI-S6 | Show a yellow warning banner if a story has `inProgress: true` from a previously interrupted session | P1 |
-
-#### 3.6.5 Story Detail Panel (Middle Pane)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-D1 | Display the selected story's title (bold) | P0 |
-| UI-D2 | Display status badge and priority number | P0 |
-| UI-D3 | Display the full description with word wrapping | P0 |
-| UI-D4 | Display acceptance criteria as a bulleted list | P0 |
-| UI-D5 | When no PRD is loaded, show instructions to create or open a project | P0 |
-| UI-D6 | When an error occurs, show error details and a tip to check `claude.log` | P0 |
-
-#### 3.6.6 Log Panel (Right Pane)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-L1 | Always visible alongside the story detail panel — no toggle needed | P0 |
-| UI-L2 | Display Claude's streaming JSON output parsed into readable entries: assistant text, tool calls, tool results, errors | P0 |
-| UI-L3 | Apply syntax highlighting to code blocks in Claude's output | P1 |
-| UI-L4 | Display tool call entries with icons per tool type (Read, Edit, Write, Bash, etc.) | P1 |
-| UI-L5 | Auto-scroll to follow new output while the loop is running | P0 |
-| UI-L6 | Allow manual scrolling; disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom | P0 |
-| UI-L7 | Show an indicator for auto-scroll vs. manual-scroll mode | P1 |
-| UI-L8 | Show story transition events, iteration starts, completion messages, and retry events in the log | P0 |
-
-#### 3.6.7 Status Bar (Bottom)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| UI-SB1 | Display the last activity message (e.g., "Working on: US-002 - Add login endpoint") | P0 |
-| UI-SB2 | Color the activity message based on current state (cyan for running, yellow for paused, red for error) | P1 |
-
-### 3.7 Empty State & New PRD Creation
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| ES-1 | On launch with no previously opened PRDs, show an empty state with "Open PRD..." and "New PRD..." buttons | P0 |
-| ES-2 | "New PRD..." prompts for a PRD name (text field, allows letters, numbers, `-`, `_`) and a save location (directory picker) | P0 |
-| ES-3 | Creates an empty `prd.md` file at the chosen location and opens it as a tab | P0 |
-| ES-4 | User can then click "Edit PRD" to launch Claude Code interactively and author the PRD content | P0 |
-
-### 3.8 Audio & Notifications
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| AN-1 | Play an audio notification when a PRD reaches the Complete state | P0 |
-| AN-2 | Option to disable audio notifications in the app (menu bar toggle or preferences) | P1 |
-| AN-3 | Post a macOS notification when a PRD completes (if the app is not frontmost) | P1 |
-
-### 3.9 Menu Bar & Keyboard Shortcuts
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| KB-1 | `⌘N` — Create new PRD | P0 |
-| KB-2 | `⌘O` — Open an existing PRD file | P0 |
-| KB-3 | `⌘R` or `⌘↩` — Start/Resume loop for current PRD | P0 |
-| KB-4 | `⌘.` — Pause loop | P0 |
-| KB-5 | `⌘⇧.` — Stop loop | P0 |
-| KB-6 | `⌘1`–`⌘9` — Switch to PRD by tab position | P1 |
-| KB-7 | `⌘L` — Focus Log Panel | P1 |
-| KB-8 | `⌘E` — Edit current PRD (launch Claude Code) | P1 |
-| KB-9 | Standard macOS menu bar with File, Edit, View, PRD, Window, Help menus | P0 |
+**Acceptance Criteria:**
+- [ ] `PRDProject` model with fields: project (string), description (string), user stories array
+- [ ] `UserStory` model with fields: id (e.g. "US-001"), title, description, acceptanceCriteria (string array), priority (integer), passes (bool), inProgress (bool), lastPrompt (string, optional)
+- [ ] Models conform to `Codable` for JSON serialization/deserialization
+- [ ] Can round-trip read → decode → encode → write a `ridl.json` without data loss
+- [ ] Given a `prd.md` or `ridl.json` file path, can locate and load companion files from the same directory
+- [ ] Unit tests for decoding a sample `ridl.json` and verifying all fields
+- [ ] Unit tests for encoding and round-trip fidelity
+- [ ] Typecheck passes
 
 ---
 
-## 4. Non-Functional Requirements
+### US-003: Loop State Machine
+**Description:** As a developer, I want a state machine that manages the Ralph Loop lifecycle so that loop transitions are predictable and correct.
 
-### 4.1 Performance
-
-| ID | Requirement | Target |
-|----|-------------|--------|
-| NF-P1 | App launch to ready state | < 2 seconds |
-| NF-P2 | UI responsiveness during active Claude loop (no frame drops) | 60 fps |
-| NF-P3 | Memory usage with 10 PRDs loaded, 1 active loop | < 200 MB resident |
-| NF-P4 | Log view streaming latency (Claude output to displayed text) | < 100 ms |
-| NF-P5 | File watcher detection of external PRD file changes | < 1 second |
-
-### 4.2 Privacy & Security
-
-| ID | Requirement |
-|----|-------------|
-| NF-S1 | No telemetry, analytics, or crash reporting that transmits data externally |
-| NF-S2 | PRD-specific data (ridl.json, progress.md, claude.log) stays alongside the PRD file. App-wide preferences stored in the app's container via UserDefaults |
-| NF-S3 | Claude Code authentication is delegated to the Claude Code CLI — the app does not store API keys |
-
-
-### 4.3 Compatibility
-
-| ID | Requirement |
-|----|-------------|
-| NF-C1 | macOS 14.0 (Sonoma) and later |
-| NF-C2 | Apple Silicon only (M1, M2, M3, M4 families) |
-| NF-C3 | Requires Claude Code CLI installed and authenticated (`claude` command available in PATH) |
+**Acceptance Criteria:**
+- [ ] `LoopState` enum with six cases: ready, running, paused, stopped, complete, error
+- [ ] State machine enforces valid transitions only: ready→running, running→paused, running→stopped, running→complete, running→error, paused→running, stopped→running, error→running
+- [ ] Invalid transitions are rejected (no-op or error)
+- [ ] Each state exposes a color property: ready (gray), running (cyan), paused (yellow), stopped (gray), complete (green), error (red)
+- [ ] Each state exposes a display label: "Ready", "Running", "Paused", "Stopped", "Complete", "Error"
+- [ ] State machine is observable (publishes changes for SwiftUI binding)
+- [ ] Unit tests for every valid transition
+- [ ] Unit tests confirming invalid transitions are rejected
+- [ ] Typecheck passes
 
 ---
 
-## 5. Technical Architecture
+### US-004: Claude Code Process Manager
+**Description:** As a developer, I want a process manager that spawns Claude Code as a subprocess and streams its JSON output so that the Ralph Loop can execute stories.
 
-### 5.1 High-Level Component Diagram
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                      SwiftUI App                              │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │ PRD Tab Bar  │  │ Stories List  │  │ Detail / Log View   │ │
-│  └──────┬──────┘  └──────┬───────┘  └──────────┬──────────┘ │
-│         └────────────┬───┘                      │            │
-│                 ViewModel Layer                  │            │
-│         ┌────────────┴───────────────┐          │            │
-│         │       PRD Manager          │          │            │
-│         │  (parallel loop tracking)  │          │            │
-│         └────────────┬───────────────┘          │            │
-│    ┌─────────────────┼─────────────────┐        │            │
-│    ▼                 ▼                 ▼        ▼            │
-│ ┌────────┐   ┌─────────────┐   ┌───────────────────┐       │
-│ │ PRD    │   │ Ralph Loop  │   │ Log Stream Parser  │       │
-│ │ Store  │   │ Engine      │   │ (JSON → entries)   │       │
-│ │(JSON/MD│   │             │   └───────────────────┘       │
-│ │ r/w)   │   │ ┌─────────┐│                                │
-│ └────────┘   │ │ Claude  ││                                │
-│              │ │ Process ││                                │
-│              │ │ Manager ││                                │
-│              │ └─────────┘│                                │
-│              └─────────────┘                                │
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ File Watcher │  │ Git Manager  │  │ Audio / Notif.   │  │
-│  │ (FSEvents)   │  │              │  │ Manager          │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Key Dependencies
-
-| Component | Library / Framework | Notes |
-|-----------|-------------------|-------|
-| UI framework | SwiftUI (macOS 14+) | NavigationSplitView, TabView, toolbar modifiers |
-| Process management | Foundation `Process` | Launch and stream Claude Code CLI subprocess |
-| JSON streaming | Foundation `JSONDecoder` | Line-by-line parsing of Claude's `stream-json` output |
-| File watching | FSEvents / DispatchSource | Monitor each opened PRD's directory for external changes |
-| Git operations | `Process` calling `git` CLI | Branch detection, commit creation |
-| Syntax highlighting | Native or swift-syntax | Code block highlighting in log view |
-| Audio playback | AVFoundation `AVAudioPlayer` | Completion notification sound |
-| Notifications | UserNotifications framework | macOS notification center integration |
-| Persistence | FileManager + Codable | PRD JSON/Markdown read/write, no database needed |
-
-### 5.3 Claude Code Invocation Pipeline
-
-```
-PRD Manager selects next story
-  │
-  ▼
-Build prompt (story + agent instructions + progress.md)
-  │
-  ▼
-Spawn Process: claude --dangerously-skip-permissions --output-format stream-json
-  │
-  ▼
-Read stdout line-by-line (streaming JSON)
-  │
-  ├── Parse message type: text, tool_use, tool_result, error
-  │     │
-  │     ▼
-  │   Append to Log View entries
-  │
-  ▼
-Process exits
-  │
-  ├── Success → update ridl.json (passes: true), git commit, append progress.md
-  │
-  ├── Failure + retries remaining → backoff, retry
-  │
-  └── Failure + no retries → transition to Error state
-```
+**Acceptance Criteria:**
+- [ ] `ClaudeProcessManager` class that spawns `claude` with `--dangerously-skip-permissions --output-format stream-json` flags
+- [ ] Accepts a prompt string and working directory as input
+- [ ] Reads stdout line-by-line and publishes each line as it arrives
+- [ ] Detects process exit and reports success (exit code 0) or failure (non-zero)
+- [ ] Supports cancellation — can terminate a running process immediately
+- [ ] Does not block the main thread (runs on a background thread/task)
+- [ ] Cleans up child process on dealloc or app quit (no zombie processes)
+- [ ] Unit tests with a mock process that simulates normal exit, crash, and slow output
+- [ ] Typecheck passes
 
 ---
 
-## 6. Settings
+### US-005: Streaming JSON Log Parser
+**Description:** As a developer, I want a parser that converts Claude Code's streaming JSON output into structured log entries so that the UI can display them.
 
-Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferences. Per-PRD settings such as max iterations are also accessible inline via toolbar controls.
-
-### 6.1 Settings Reference
-
-#### App-Wide Settings (Settings Window)
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Audio notifications | Toggle | On | Play sound on PRD completion |
-| Auto-retry on crash | Toggle | Off | Automatically retry when Claude Code crashes |
-| Verbose log | Toggle | Off | Show raw Claude JSON in log view |
-
-#### Per-PRD Settings (Toolbar / Inline)
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Max iterations | Stepper (integer) | Remaining stories + 5 | Per-PRD iteration limit; adjustable at runtime |
+**Acceptance Criteria:**
+- [ ] `LogEntry` model with types: assistantText, toolUse (tool name, input), toolResult (output), error, system (for iteration events like story transitions, retries)
+- [ ] Parser consumes raw JSON lines from Claude's `stream-json` output and emits `LogEntry` values
+- [ ] Handles malformed or incomplete JSON lines gracefully (logs a warning, does not crash)
+- [ ] Detects the `<ridler-complete/>` signal in assistant text output
+- [ ] Unit tests with captured real Claude `stream-json` output samples
+- [ ] Unit tests for malformed input (partial JSON, empty lines, garbage data)
+- [ ] Unit test confirming `<ridler-complete/>` detection
+- [ ] Typecheck passes
 
 ---
 
-## 7. User Flows
+### US-006: Ralph Loop Engine
+**Description:** As a developer, I want the core Ralph Loop engine that orchestrates story execution so that PRDs can be processed autonomously.
 
-### 7.1 First Launch — Creating a New PRD
-
-1. User opens Ridler for the first time. App shows empty state with "Open PRD..." and "New PRD..." buttons.
-2. User clicks "New PRD...". A dialog prompts for a PRD name and a save location.
-3. User enters a name and picks a directory. App creates an empty `prd.md` file there and opens it as a tab.
-4. User clicks "Edit PRD" in the UI. App launches Claude Code interactively with the PRD context.
-5. User describes the project. Claude populates the `prd.md` and generates `ridl.json`.
-6. Claude Code exits. App detects the file changes, loads the PRD and user stories, and displays them.
-
-### 7.2 Opening an Existing PRD
-
-1. User clicks File > Open (`⌘O`). A file picker appears filtering for `prd.md` / `ridl.json` files.
-2. User selects a PRD file from any location on disk.
-3. App opens it as a new tab, loads the stories, and displays them in the main window.
-4. User can repeat to open additional PRDs from different locations — each becomes its own tab.
-
-### 7.3 Running the Loop
-
-1. User has one or more PRD tabs open.
-2. User clicks Start (or presses `⌘R`). App detects protected branch → shows warning dialog.
-3. User chooses "Create branch". App creates `ridler/{prd-name}` branch.
-4. Loop begins. Stories execute one by one. Log view streams Claude's output.
-5. User monitors story detail in the middle pane and Claude's streaming output in the log pane simultaneously.
-6. All stories complete. App transitions to Complete state and plays a sound.
-
-### 7.4 Parallel PRDs
-
-1. User has three PRD tabs open: auth, dashboard, api (each from different directories).
-2. User starts the auth loop, switches to the dashboard tab, starts that loop too.
-3. Both loops run independently. Tab bar shows `▶2` on auth and `▶1` on dashboard.
-4. Auth completes first → tab shows `✓`. Dashboard continues running.
-5. User clicks the auth tab to review its completed stories while dashboard continues.
-
-### 7.5 Resuming After Interruption
-
-1. User quits the app while a loop was running.
-2. User re-opens Ridler. App restores previously opened PRD tabs (from Open Recent / persisted state).
-3. App detects `inProgress: true` on US-003. Stories panel shows a yellow warning banner.
-4. User clicks Start. Loop resumes from US-003.
+**Acceptance Criteria:**
+- [ ] `RalphLoopEngine` that takes a `ridl.json` file path, working directory, and max iterations as input
+- [ ] Selects the next story by filtering `passes == false`, sorting by `priority` ascending, picking the first
+- [ ] Builds the prompt from: story details (ID, title, description, acceptance criteria), agent instructions, and `progress.md` content (read from the same directory as `ridl.json`)
+- [ ] After building the prompt, stores it in the story's `lastPrompt` field in `ridl.json` before invoking Claude
+- [ ] Invokes `ClaudeProcessManager` with the built prompt
+- [ ] On story completion: sets `passes: true` and `inProgress: false` in `ridl.json`, writes the file to disk
+- [ ] On iteration start: sets `inProgress: true` on the current story
+- [ ] Appends implementation summary to `progress.md` (alongside the `ridl.json`) after each iteration
+- [ ] Transitions to complete state when all stories pass or `<ridler-complete/>` is detected
+- [ ] Respects max iterations limit — stops and transitions to stopped state when reached
+- [ ] Integrates with `LoopState` state machine for all transitions
+- [ ] Supports pause (finishes current iteration then pauses) and stop (halts immediately)
+- [ ] Typecheck passes
 
 ---
 
-## 8. Release Milestones
+### US-007: Git Manager
+**Description:** As a developer, I want a Git manager that handles branch detection and per-story commits so that the loop produces a clean git history.
 
-### v0.1 — Core Loop & Minimal UI
-
-- Open PRD file from any location on disk
-- Display stories list and story detail
-- Start/Pause/Stop loop controls
-- Ralph loop execution (single PRD)
-- Claude Code subprocess management with streaming JSON parsing
-- Log view with streaming output
-- Git commit per story
-
-### v0.2 — PRD Management & Tab Bar
-
-- PRD tab bar with state indicators
-- Create new PRD (choose save location, create empty prd.md)
-- Edit existing PRD (launch Claude Code)
-- File watcher for external PRD changes
-- Empty state with Open/New PRD buttons
-- Protected branch detection and warning dialog
-
-### v0.3 — Parallel Execution & Polish
-
-- Parallel PRD execution with independent loop state
-- Runtime iteration adjustment (+/-)
-- Auto-retry on Claude crashes
-- Audio notifications on completion
-- macOS notifications when app is backgrounded
-- Syntax highlighting in log view
-- Interrupted story detection and warning
-
-### v0.4 — Release Ready
-
-- Keyboard shortcuts (`⌘R`, `⌘.`, `⌘1`–`⌘9`, etc.)
-- Full menu bar (File, Edit, View, PRD, Window, Help)
-- Open Recent PRDs
-- Right-click context menus on PRD tabs
-- App icon, notarization, DMG distribution
+**Acceptance Criteria:**
+- [ ] `GitManager` class that shells out to the `git` CLI
+- [ ] Detects current branch name
+- [ ] Detects if current branch is protected (main or master)
+- [ ] Creates a new branch with a given name (e.g. `ridler/{prd-name}`)
+- [ ] Creates a commit with all staged and unstaged changes using the format `feat: [US-001] - Story Title`
+- [ ] Reports errors clearly when git operations fail (not a git repo, uncommitted conflicts, etc.)
+- [ ] Unit tests for branch name detection and protected branch check
+- [ ] Typecheck passes
 
 ---
 
-## 9. Resolved Questions
+### US-008: File Watcher
+**Description:** As a developer, I want a file watcher that monitors each opened PRD's directory so that the app auto-reloads when PRD files are changed externally.
 
-| # | Question | Decision |
-|---|----------|----------|
-| 1 | Should the app support remote execution (SSH) like the original Chief CLI? | **No, never.** Local-only is the permanent design. No plans for remote support. |
-| 2 | Should the app include a built-in PRD text editor? | **No.** PRD editing is done via Claude Code interactive sessions (same as the original Chief CLI). The app is an execution dashboard, not an editor. |
-| 3 | Should settings be in a dedicated Settings window? | **Yes.** A dedicated macOS Settings/Preferences window (`⌘,`) for app-wide configuration. |
-| 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, claude.log) stays alongside the PRD file. |
-| 5 | Should the responsive layout from the TUI (stacked vs. side-by-side) be replicated? | **No.** SwiftUI's NavigationSplitView handles window resizing natively. The sidebar collapses automatically on narrow windows. |
-
-## 10. Open Questions
-
-| # | Question | Notes |
-|---|----------|-------|
-| 1 | Distribution strategy? | Options: DMG only, DMG first with Mac App Store later, Mac App Store only, or both from day one. |
+**Acceptance Criteria:**
+- [ ] `FileWatcher` class using FSEvents or DispatchSource to monitor a specific directory
+- [ ] Can watch multiple directories simultaneously (one per opened PRD)
+- [ ] Detects file creation, modification, and deletion within each watched directory
+- [ ] Publishes change events that include the affected file path so the app knows which PRD changed
+- [ ] Debounces rapid changes (e.g. multiple writes within 500ms coalesce into one event)
+- [ ] Starts and stops watching individual directories cleanly (when PRD tabs are opened/closed)
+- [ ] No leaked file descriptors or watchers
+- [ ] Typecheck passes
 
 ---
 
-## 11. Critical Test Areas
+### US-009: PRD Manager (ViewModel Layer)
+**Description:** As a developer, I want a PRD Manager that manages opened PRD tabs and ties together the data models, loop engine, and file watcher so that the UI has a single source of truth.
 
-| Area | Risk if broken | Suggested test approach |
-|------|---------------|----------------------|
-| Ralph Loop engine (story selection, iteration cycle, state transitions) | Core functionality — the entire app exists to run this loop correctly. Wrong story selection, skipped stories, or stuck loops make the app useless | Unit tests for story selection algorithm, state machine transition tests for all 6 states and every valid transition, integration tests with mock Claude process |
-| Claude Code process management (spawn, stream, kill) | Zombie processes, lost output, app hangs on process crash | Integration tests with mock processes that simulate: normal exit, crash, hang, slow output. Verify cleanup on app quit |
-| Streaming JSON parser | Garbled log view, missed completion signals, crashes on malformed input | Unit tests with captured real Claude output. Fuzz testing with malformed JSON lines. Test partial reads and buffer boundaries |
-| PRD JSON read/write (`ridl.json` state updates) | Data loss — stories marked as passed when they aren't, or completed work lost | Unit tests for every field update. Round-trip tests (read → modify → write → read). Concurrent access tests (file watcher + loop writing simultaneously) |
-| Git integration (branch detection, commit creation) | Commits to wrong branch (main/master), malformed commits, data loss from bad git state | Integration tests with real git repos. Test protected branch detection on main, master, and custom branches. Verify commit message format |
-| Parallel PRD execution | Race conditions — loops interfering with each other, state corruption, UI showing wrong PRD's data | Concurrent execution tests with 3+ PRDs. Verify independent state isolation. Test rapid tab switching during active loops |
+**Acceptance Criteria:**
+- [ ] `PRDManager` as an `@Observable` class that the SwiftUI views bind to
+- [ ] Maintains a list of currently opened PRD tabs, each referencing a file path on disk
+- [ ] Opens a PRD from any file path (prd.md or ridl.json) and adds it as a tab
+- [ ] Creates a new PRD at a user-specified location (creates empty `prd.md`, opens as tab)
+- [ ] Closes a PRD tab (stops its file watcher, does not delete files)
+- [ ] Exposes each opened PRD's current loop state, story progress, and iteration count
+- [ ] Tracks the currently selected PRD tab and currently selected story
+- [ ] Provides start/pause/stop actions that delegate to the `RalphLoopEngine` for the selected PRD
+- [ ] Subscribes to `FileWatcher` events and reloads affected PRDs when files change externally
+- [ ] Supports multiple simultaneous running loops with independent state per PRD
+- [ ] Calculates default max iterations (remaining stories + 5, minimum 5)
+- [ ] Persists the list of opened PRD file paths so they can be restored on next launch
+- [ ] Typecheck passes
 
 ---
 
-## 12. Success Metrics
+### US-010: Main Window Layout with Three-Pane Split
+**Description:** As a user, I want the main window to display stories, story detail, and log output in a three-pane layout so that I can see everything at once.
 
-| Metric | Target |
-|--------|--------|
-| Feature parity with original Chief CLI | 100% of core features (loop, PRD management, parallel execution, git integration) |
-| App crash rate | < 0.1% of sessions |
-| Loop reliability (stories complete without manual intervention) | > 95% of stories (matching the original Chief CLI's rate) |
-| Cold start to ready state | < 2 seconds |
-| Log streaming latency | < 100 ms from Claude output to displayed entry |
+**Acceptance Criteria:**
+- [ ] Main window uses `NavigationSplitView` or equivalent to create three panes: stories list (left), story detail (middle), log view (right)
+- [ ] Panes resize with the window — sidebar collapses automatically on narrow windows
+- [ ] Window has a reasonable default size (e.g. 1200x700)
+- [ ] Window title shows the current PRD name
+- [ ] When no PRD is loaded, the middle pane shows an empty state with "Open PRD..." and "New PRD..." buttons
+- [ ] Typecheck passes
+
+---
+
+### US-011: Toolbar with Loop Controls
+**Description:** As a user, I want Start/Pause/Stop buttons and status indicators in the toolbar so that I can control and monitor the loop.
+
+**Acceptance Criteria:**
+- [ ] Toolbar displays Start, Pause, and Stop buttons
+- [ ] Buttons are enabled/disabled based on current loop state (e.g. Pause disabled when not running)
+- [ ] Toolbar shows iteration counter: current iteration / max iterations
+- [ ] Toolbar shows elapsed time since loop started (format: `Xh Ym Zs`)
+- [ ] Toolbar shows color-coded state badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red)
+- [ ] Buttons trigger the corresponding actions on `PRDManager` for the currently selected PRD
+- [ ] Typecheck passes
+
+---
+
+### US-012: Stories Panel (Left Pane)
+**Description:** As a user, I want a scrollable list of user stories with status icons and a progress bar so that I can see overall progress at a glance.
+
+**Acceptance Criteria:**
+- [ ] Scrollable list displays all user stories for the selected PRD
+- [ ] Each row shows: status icon (✓ passed, ● in-progress, ○ pending), story ID, and title
+- [ ] Clicking a story selects it and updates the detail pane
+- [ ] Arrow keys (up/down) navigate the story list and update the selection
+- [ ] Currently selected story is visually highlighted
+- [ ] Progress bar at the bottom shows: filled portion, percentage, and count (e.g. `2/4 stories`)
+- [ ] Yellow warning banner shown on stories with `inProgress: true` from a previously interrupted session
+- [ ] Typecheck passes
+
+---
+
+### US-013: Story Detail Panel (Middle Pane)
+**Description:** As a user, I want to see the full details of a selected story so that I can understand what the loop is working on.
+
+**Acceptance Criteria:**
+- [ ] Displays the selected story's title in bold
+- [ ] Displays status badge and priority number
+- [ ] Displays the full description with word wrapping
+- [ ] Displays acceptance criteria as a bulleted list
+- [ ] When no story is selected, shows a placeholder message
+- [ ] When an error occurs, shows error details and a tip to check `claude.log`
+- [ ] Typecheck passes
+
+---
+
+### US-014: Log Panel (Right Pane)
+**Description:** As a user, I want a real-time streaming log of Claude's output so that I can see exactly what the agent is doing.
+
+**Acceptance Criteria:**
+- [ ] Always visible alongside the story detail panel — no toggle needed
+- [ ] Displays parsed `LogEntry` values as readable entries: assistant text, tool calls (with tool name), tool results, errors
+- [ ] Tool call entries show an icon per tool type (Read, Edit, Write, Bash, etc.)
+- [ ] Shows story transition events, iteration starts, completion messages, and retry events
+- [ ] Auto-scrolls to follow new output while the loop is running
+- [ ] Disables auto-scroll when user scrolls up manually; re-enables when user scrolls to bottom
+- [ ] Shows an indicator for auto-scroll vs. manual-scroll mode
+- [ ] Typecheck passes
+
+---
+
+### US-015: PRD Tab Bar
+**Description:** As a user, I want a tab bar showing all currently opened PRDs so that I can switch between them and see their status.
+
+**Acceptance Criteria:**
+- [ ] Horizontal tab bar displayed below the toolbar showing all currently opened PRDs
+- [ ] Each tab shows: PRD name and state indicator icon (● ready, ▶ running + iteration count, ⏸ paused, ✓ complete, ✗ error, ■ stopped)
+- [ ] Clicking a tab switches the view to that PRD without affecting other running loops
+- [ ] A `[+]` button at the end of the tab bar opens a menu with "Open PRD..." and "New PRD..." options
+- [ ] Right-click context menu on a tab: Start, Pause, Stop, Edit, Close, Delete
+- [ ] Typecheck passes
+
+---
+
+### US-016: Status Bar (Bottom)
+**Description:** As a user, I want a status bar at the bottom of the window showing the current activity so that I always know what the loop is doing.
+
+**Acceptance Criteria:**
+- [ ] Displays the last activity message (e.g. "Working on: US-002 - Add login endpoint")
+- [ ] Activity message color changes based on current state: cyan for running, yellow for paused, red for error
+- [ ] Updates in real-time as the loop progresses
+- [ ] Typecheck passes
+
+---
+
+### US-017: Open Existing PRD
+**Description:** As a user, I want to open an existing PRD file from any location on disk so that I can work with PRDs stored anywhere.
+
+**Acceptance Criteria:**
+- [ ] File > Open (`⌘O`) presents a file picker dialog filtering for `prd.md` and `ridl.json` files
+- [ ] Selecting a file opens it as a new tab and loads its stories
+- [ ] Drag-and-drop a `prd.md` or `ridl.json` file onto the app icon opens it as a tab
+- [ ] Recently opened PRDs are stored and displayed in File > Open Recent
+- [ ] Opening a PRD that is already open switches to its existing tab
+- [ ] Typecheck passes
+
+---
+
+### US-018: Create New PRD
+**Description:** As a user, I want to create a new PRD at any location so that I can start a new project.
+
+**Acceptance Criteria:**
+- [ ] File > New (`⌘N`) or empty state "New PRD..." button triggers the creation flow
+- [ ] Prompts for a PRD name (text field, allows letters, numbers, `-`, `_`) and a save location (directory picker)
+- [ ] Validates the PRD name — rejects empty or invalid names
+- [ ] Creates an empty `prd.md` file at the chosen location and opens it as a tab
+- [ ] User can then click "Edit PRD" to launch Claude Code interactively and author the PRD content
+- [ ] Typecheck passes
+
+---
+
+### US-019: Protected Branch Warning Dialog
+**Description:** As a user, I want a warning when starting the loop on main/master so that I don't accidentally commit directly to a protected branch.
+
+**Acceptance Criteria:**
+- [ ] When the user presses Start and the current branch is main or master, show a warning dialog
+- [ ] Dialog offers three options: create a `ridler/{prd-name}` branch (recommended), continue on current branch, or cancel
+- [ ] Branch name is editable in the dialog before confirming
+- [ ] If "Create branch" is chosen, the branch is created and checked out before the loop starts
+- [ ] If "Continue" is chosen, the loop starts on the current branch
+- [ ] If "Cancel" is chosen, the loop does not start
+- [ ] Typecheck passes
+
+---
+
+### US-020: Edit PRD via Claude Code
+**Description:** As a user, I want to edit an existing PRD by launching an interactive Claude Code session from the app.
+
+**Acceptance Criteria:**
+- [ ] "Edit PRD" button visible in the UI for the currently selected PRD
+- [ ] Clicking "Edit PRD" (or `⌘E`) launches Claude Code in a Terminal window with the PRD context loaded (prd.md path passed to Claude)
+- [ ] After Claude Code exits, the app reloads the PRD data (via file watcher or explicit reload)
+- [ ] Companion files (`ridl.json`, `progress.md`, `claude.log`) are read from the same directory as the `prd.md`
+- [ ] Typecheck passes
+
+---
+
+### US-021: Close and Delete PRD
+**Description:** As a user, I want to close a PRD tab or delete its files so that I can manage my workspace.
+
+**Acceptance Criteria:**
+- [ ] Close tab option available via right-click context menu, `⌘W`, or a close button on the tab
+- [ ] Closing a tab removes it from the interface but does not delete files on disk
+- [ ] If a loop is running for that PRD, prompt confirmation before closing and stop the loop
+- [ ] Delete option available via right-click context menu on a PRD tab
+- [ ] Delete shows a confirmation dialog ("Delete PRD '{name}' and all its files? This cannot be undone.")
+- [ ] On confirm, deletes the `prd.md` and all companion files in its directory
+- [ ] After close or delete, switches to another open PRD tab or shows the empty state
+- [ ] Typecheck passes
+
+---
+
+### US-022: Audio and macOS Notifications
+**Description:** As a user, I want audio and system notifications when a PRD completes so that I know when the work is done without watching the screen.
+
+**Acceptance Criteria:**
+- [ ] Plays an audio notification sound when a PRD reaches the Complete state
+- [ ] Audio can be disabled via the Settings window
+- [ ] Posts a macOS notification via UserNotifications framework when a PRD completes and the app is not frontmost
+- [ ] Notification shows the PRD name and completion status
+- [ ] Typecheck passes
+
+---
+
+### US-023: Settings Window
+**Description:** As a user, I want a standard macOS Settings window so that I can configure app-wide preferences.
+
+**Acceptance Criteria:**
+- [ ] Settings window opens via `⌘,` or Ridler > Settings menu item
+- [ ] Contains toggles for: Audio notifications (default: On), Auto-retry on crash (default: Off), Verbose log (default: Off)
+- [ ] Settings are persisted using UserDefaults or equivalent
+- [ ] Settings changes take effect immediately without restart
+- [ ] Typecheck passes
+
+---
+
+### US-024: Keyboard Shortcuts and Menu Bar
+**Description:** As a user, I want standard macOS keyboard shortcuts and a full menu bar so that I can control the app efficiently.
+
+**Acceptance Criteria:**
+- [ ] `⌘N` — Create new PRD
+- [ ] `⌘O` — Open an existing PRD file
+- [ ] `⌘W` — Close current PRD tab
+- [ ] `⌘R` or `⌘↩` — Start/Resume loop for current PRD
+- [ ] `⌘.` — Pause loop
+- [ ] `⌘⇧.` — Stop loop
+- [ ] `⌘1`–`⌘9` — Switch to PRD by tab position
+- [ ] `⌘L` — Focus Log Panel
+- [ ] `⌘E` — Edit current PRD (launch Claude Code)
+- [ ] `⌘,` — Open Settings
+- [ ] Standard macOS menu bar with File, Edit, View, PRD, Window, Help menus
+- [ ] Menu items are enabled/disabled appropriately based on app state
+- [ ] Typecheck passes
+
+---
+
+### US-025: Syntax Highlighting in Log View
+**Description:** As a user, I want code blocks in Claude's output to be syntax highlighted so that the log view is easier to read.
+
+**Acceptance Criteria:**
+- [ ] Code blocks in assistant text output are detected and rendered with syntax highlighting
+- [ ] Supports common languages (Swift, TypeScript, Python, JSON, etc.)
+- [ ] Non-code text remains plain
+- [ ] Highlighting does not degrade scroll performance
+- [ ] Typecheck passes
+
+---
+
+### US-026: Auto-Retry on Claude Code Crashes
+**Description:** As a user, I want the option to automatically retry when Claude Code crashes so that transient failures don't stop my progress.
+
+**Acceptance Criteria:**
+- [ ] When enabled in Settings (default: Off), automatically retries on Claude Code process failure
+- [ ] Retries up to 3 times with progressive backoff (0s, 5s, 15s)
+- [ ] Retry events are shown in the log panel
+- [ ] After retry exhaustion, transitions to Error state
+- [ ] Intentional stops (user pressing Stop) are never retried
+- [ ] Typecheck passes
+
+---
+
+## Functional Requirements
+
+- FR-1: Open an existing PRD file (`prd.md` or `ridl.json`) from any location on disk via File > Open or drag-and-drop
+- FR-2: Create a new PRD at a user-chosen location with an empty `prd.md`
+- FR-3: Each opened PRD becomes a tab; multiple PRDs from different locations can be open simultaneously
+- FR-4: Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat
+- FR-5: Each iteration invokes Claude Code as a fresh subprocess with `--dangerously-skip-permissions --output-format stream-json` flags
+- FR-6: Parse Claude's streaming JSON output in real-time and display in the log view
+- FR-7: Support six loop states: Ready, Running, Paused, Stopped, Complete, Error
+- FR-8: Support running multiple PRDs simultaneously with independent loop state
+- FR-9: Create one git commit per completed story with format `feat: [US-001] - Story Title`
+- FR-10: Detect protected branches (main/master) and warn before starting
+- FR-11: Store built prompts in the story's `lastPrompt` field in `ridl.json`
+- FR-12: Append implementation details and learnings to `progress.md` after each iteration
+- FR-13: Standard macOS Settings window (`⌘,`) for app-wide preferences
+- FR-14: Watch each opened PRD's directory for filesystem changes and auto-reload
+- FR-15: Companion files (`ridl.json`, `progress.md`, `claude.log`) stored alongside the `prd.md`
+
+## Non-Goals (Out of Scope)
+
+- Remote execution via SSH — local-only is the permanent design
+- Built-in PRD text editor — editing is done via Claude Code sessions
+- App Sandbox — not required
+- Mac App Store distribution (for now — open question)
+- Intel Mac support — Apple Silicon only
+- Fixed project directory structure — PRDs can live anywhere
+
+## Technical Considerations
+
+- **Platform:** macOS 14.0+ (Sonoma), Apple Silicon only
+- **Language:** Swift / SwiftUI
+- **Process management:** Foundation `Process` for spawning Claude Code CLI
+- **JSON streaming:** Line-by-line parsing of Claude's `stream-json` output via `JSONDecoder`
+- **File watching:** FSEvents / DispatchSource for monitoring each opened PRD's directory
+- **Git operations:** Shell out to `git` CLI via `Process`
+- **Audio:** AVFoundation `AVAudioPlayer` for completion sounds
+- **Notifications:** UserNotifications framework for macOS notification center
+- **Persistence:** FileManager + Codable for PRD JSON/Markdown read/write; UserDefaults for app-wide preferences and recently opened PRD paths
+- **No database needed** — all state is file-based
+
+## Success Metrics
+
+- Feature parity with original Chief CLI: 100% of core features
+- App crash rate: < 0.1% of sessions
+- Loop reliability: > 95% of stories complete without manual intervention
+- Cold start to ready state: < 2 seconds
+- Log streaming latency: < 100 ms from Claude output to displayed entry
