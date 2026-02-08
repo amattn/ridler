@@ -42,7 +42,7 @@ struct LoopToolbar: CustomizableToolbarContent {
                 Button {
                     guard let tabId = prdManager.selectedTabId else { return }
                     Task {
-                        await prdManager.start(tabId: tabId)
+                        await prdManager.checkBranchAndStart(tabId: tabId)
                     }
                 } label: {
                     Label("Start", systemImage: "play.fill")

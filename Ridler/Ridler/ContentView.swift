@@ -51,6 +51,15 @@ struct ContentView: View {
             NewPRDSheet(isPresented: $prdManager.showNewPRDSheet,
                         prdManager: prdManager)
         }
+        .sheet(isPresented: $prdManager.showBranchWarning) {
+            BranchWarningSheet(
+                isPresented: $prdManager.showBranchWarning,
+                prdManager: prdManager,
+                tabId: prdManager.branchWarningTabId ?? "",
+                currentBranch: prdManager.branchWarningCurrentBranch,
+                suggestedBranch: prdManager.branchWarningSuggestedBranch
+            )
+        }
     }
 
     // MARK: - Three-Pane Layout

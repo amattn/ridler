@@ -30,9 +30,14 @@ final class PRDManager {
     var selectedStoryId: String?
 
     var showNewPRDSheet = false
+    var showBranchWarning = false
+    var branchWarningTabId: String?
+    var branchWarningCurrentBranch: String = ""
+    var branchWarningSuggestedBranch: String = ""
 
     private(set) var engines: [String: RalphLoopEngine] = [:]
     private let fileWatcher: FileWatcher
+    private let gitManager: GitManager
     private let persistenceKey = "com.amattn.ridler.openedPRDs"
     private let recentFilesKey = "com.amattn.ridler.recentPRDs"
     private let maxRecentFiles = 10
@@ -50,8 +55,9 @@ final class PRDManager {
         selectedTab?.prdProject
     }
 
-    init(fileWatcher: FileWatcher = FileWatcher()) {
+    init(fileWatcher: FileWatcher = FileWatcher(), gitManager: GitManager = GitManager()) {
         self.fileWatcher = fileWatcher
+        self.gitManager = gitManager
         self.fileWatcher.delegate = self
         restoreOpenedPRDs()
     }
@@ -171,6 +177,36 @@ final class PRDManager {
 
     // MARK: - Loop Controls
 
+    func checkBranchAndStart(tabId: String) async {
+        guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
+
+        // If resuming an existing engine, no branch check needed
+        if let existing = engines[tabId],
+           existing.stateMachine.state == .paused || existing.stateMachine.state == .stopped || existing.stateMachine.state == .error {
+            await start(tabId: tabId)
+            return
+        }
+
+        // Check if on a protected branch
+        do {
+            let isProtected = try await gitManager.isProtectedBranch(workingDirectory: tab.directory)
+            if isProtected {
+                let branch = try await gitManager.currentBranchName(workingDirectory: tab.directory)
+                await MainActor.run {
+                    branchWarningTabId = tabId
+                    branchWarningCurrentBranch = branch
+                    branchWarningSuggestedBranch = "ridler/\(tab.name)"
+                    showBranchWarning = true
+                }
+                return
+            }
+        } catch {
+            // If git check fails (e.g. not a git repo), proceed without warning
+        }
+
+        await start(tabId: tabId)
+    }
+
     func start(tabId: String) async {
         guard let tab = tabs.first(where: { $0.id == tabId }),
               let jsonPath = tab.jsonPath else { return }
@@ -191,6 +227,19 @@ final class PRDManager {
         )
         engines[tabId] = engine
         await engine.start()
+    }
+
+    func createBranchAndStart(tabId: String, branchName: String) async {
+        guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
+
+        do {
+            try await gitManager.createBranch(name: branchName, workingDirectory: tab.directory)
+        } catch {
+            // Branch creation failed — don't start
+            return
+        }
+
+        await start(tabId: tabId)
     }
 
     func pause(tabId: String) {

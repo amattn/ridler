@@ -114,7 +114,7 @@ struct PRDTabBar: View {
 
         Button("Start") {
             Task {
-                await prdManager.start(tabId: tab.id)
+                await prdManager.checkBranchAndStart(tabId: tab.id)
             }
         }
         .disabled(!canStart)
