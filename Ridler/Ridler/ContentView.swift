@@ -43,7 +43,9 @@ struct ContentView: View {
             }
         } content: {
             // Middle pane: Story detail
-            StoryDetailView(story: selectedStory)
+            StoryDetailView(story: selectedStory,
+                           loopState: currentLoopState,
+                           lastErrorMessage: lastErrorMessage)
         } detail: {
             // Right pane: Log panel
             let tabId = prdManager.selectedTabId ?? ""
@@ -99,6 +101,17 @@ struct ContentView: View {
     private var currentLoopState: LoopState {
         guard let tabId = prdManager.selectedTabId else { return .ready }
         return prdManager.loopState(for: tabId)
+    }
+
+    private var lastErrorMessage: String? {
+        guard let tabId = prdManager.selectedTabId,
+              let engine = prdManager.engines[tabId],
+              let entry = engine.logEntries.last(where: { if case .error = $0.type { return true } else { return false } })
+        else { return nil }
+        if case .error(let message) = entry.type {
+            return message
+        }
+        return nil
     }
 }
 

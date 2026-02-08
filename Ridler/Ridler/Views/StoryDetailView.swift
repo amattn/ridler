@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StoryDetailView: View {
     let story: UserStory?
+    var loopState: LoopState = .ready
+    var lastErrorMessage: String?
 
     var body: some View {
         if let story {
@@ -22,6 +24,11 @@ struct StoryDetailView: View {
                         Text("Priority: \(story.priority)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                    }
+
+                    // Error details
+                    if loopState == .error {
+                        errorSection
                     }
 
                     Divider()
@@ -53,5 +60,30 @@ struct StoryDetailView: View {
                                    systemImage: "doc.text",
                                    description: Text("Select a story from the list to view its details."))
         }
+    }
+
+    // MARK: - Error Section
+
+    private var errorSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Error", systemImage: "exclamationmark.triangle.fill")
+                .font(.headline)
+                .foregroundStyle(.red)
+
+            if let errorMessage = lastErrorMessage {
+                Text(errorMessage)
+                    .font(.body)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
+
+            Label("Check claude.log in the PRD directory for more details.",
+                  systemImage: "doc.text.magnifyingglass")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }
