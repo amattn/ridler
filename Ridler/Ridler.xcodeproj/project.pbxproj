@@ -27,9 +27,12 @@
 		A10018 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20020 /* DirectoryMonitor.swift */; };
 		A10019 /* ProjectFileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20021 /* ProjectFileWatcher.swift */; };
 		A10020 /* LoopToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20022 /* LoopToolbarView.swift */; };
+		A10021 /* ProcessManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20023 /* ProcessManaging.swift */; };
+		A10022 /* ClaudeCodeProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024 /* ClaudeCodeProcessManager.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
+		C10004 /* ProcessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20005 /* ProcessManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,9 +68,12 @@
 		A20020 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 		A20021 /* ProjectFileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileWatcher.swift; sourceTree = "<group>"; };
 		A20022 /* LoopToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopToolbarView.swift; sourceTree = "<group>"; };
+		A20023 /* ProcessManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessManaging.swift; sourceTree = "<group>"; };
+		A20024 /* ClaudeCodeProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeProcessManager.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
+		C20005 /* ProcessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessManagerTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -154,6 +160,7 @@
 				A20013 /* FileSystemPRDStore.swift */,
 				A20020 /* DirectoryMonitor.swift */,
 				A20021 /* ProjectFileWatcher.swift */,
+				A20024 /* ClaudeCodeProcessManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -171,6 +178,7 @@
 			isa = PBXGroup;
 			children = (
 				A20012 /* PRDStore.swift */,
+				A20023 /* ProcessManaging.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
@@ -189,6 +197,7 @@
 				C20001 /* ModelTests.swift */,
 				C20003 /* PRDStoreTests.swift */,
 				C20004 /* FileWatcherTests.swift */,
+				C20005 /* ProcessManagerTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -303,6 +312,8 @@
 				A10018 /* DirectoryMonitor.swift in Sources */,
 				A10019 /* ProjectFileWatcher.swift in Sources */,
 				A10020 /* LoopToolbarView.swift in Sources */,
+				A10021 /* ProcessManaging.swift in Sources */,
+				A10022 /* ClaudeCodeProcessManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,6 +324,7 @@
 				C10001 /* ModelTests.swift in Sources */,
 				C10002 /* PRDStoreTests.swift in Sources */,
 				C10003 /* FileWatcherTests.swift in Sources */,
+				C10004 /* ProcessManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

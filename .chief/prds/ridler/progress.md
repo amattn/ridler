@@ -33,6 +33,13 @@
 - ContentView owns `@State sidebarSelection: SidebarSelection?` and passes binding to SidebarView
 - LoopState has `validTransitions`, `canTransition(to:)`, `transition(to:)`, `badgeColor`, `displayName` — use these instead of hardcoding colors or transitions
 - PRDProject runtime-only properties now include: loopState, iterationCount, pauseAfterStory, maxIterations, loopStartDate, directoryURL — all must be preserved in `reloadAllProjects()`
+- ProcessManaging protocol in `Protocols/ProcessManaging.swift` defines interface for spawning, streaming, and killing subprocesses
+- ClaudeCodeProcessManager in `Managers/ClaudeCodeProcessManager.swift` spawns Claude Code with `--dangerously-skip-permissions --output-format stream-json` flags via `/usr/bin/env claude`
+- Process stdout streamed line-by-line via Combine PassthroughSubject; stderr captured via Data buffer synchronized with DispatchQueue
+- ProcessExitResult struct carries exitCode, stderr, and command for error reporting
+- Log file created per-PRD at specified URL; raw stdout/stderr appended with session separator
+- Process kill: `terminate()` first, then `interrupt()` after 2-second timeout for force kill
+- pbxproj IDs: A10021/A20023 (ProcessManaging), A10022/A20024 (ClaudeCodeProcessManager), C10004/C20005 (ProcessManagerTests)
 
 ---
 
@@ -281,4 +288,21 @@
   - `onChange(of: project.loopState)` uses the new two-parameter closure syntax (`{ _, newState in }`)
   - pbxproj IDs: A10020 (build file), A20022 (file ref) for LoopToolbarView.swift
   - All 67 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-018
+- **What was implemented:** Claude Code process manager — ProcessManaging protocol and ClaudeCodeProcessManager that spawns, streams, and kills Claude Code subprocesses
+- **Files changed:**
+  - `Ridler/Ridler/Protocols/ProcessManaging.swift` — New protocol defining interface: `spawn(prompt:workingDirectory:logFileURL:)`, `kill()`, `isRunning`, `exitPublisher`; plus `ProcessExitResult` struct with exitCode, stderr, command
+  - `Ridler/Ridler/Managers/ClaudeCodeProcessManager.swift` — Implementation: spawns Claude Code via `/usr/bin/env claude` with `--dangerously-skip-permissions --output-format stream-json -p <prompt>` flags; streams stdout line-by-line via Combine PassthroughSubject; captures stderr in thread-safe Data buffer; logs raw output to per-PRD claude.log file; clean kill with terminate + 2-second interrupt fallback; termination handler publishes ProcessExitResult on main thread
+  - `Ridler/RidlerTests/ProcessManagerTests.swift` — 11 unit tests: ProcessExitResult equality/inequality, manager initial state, spawn-and-kill behavior, log file creation, error reporting with exit code/stderr/command, exit publisher availability, real subprocess test with /bin/echo, no-zombie-on-kill test
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added ProcessManaging.swift (A10021/A20023), ClaudeCodeProcessManager.swift (A10022/A20024), ProcessManagerTests.swift (C10004/C20005)
+- **Learnings for future iterations:**
+  - `let` constants cannot be assigned inside a closure (e.g., `queue.sync { }`) — use `var` with initial value instead, or capture the value via a mutable variable
+  - ClaudeCodeProcessManager uses `/usr/bin/env` to find `claude` in PATH — this works regardless of where claude is installed
+  - Process termination handler runs on a background thread — dispatch to main thread for UI-safe state updates
+  - Stdout line buffering: accumulate data in a buffer, split on newline (0x0A), process complete lines, keep partial data for next read
+  - Log file uses `FileHandle.seekToEndOfFile()` to append to existing logs across sessions
+  - Process.terminate() sends SIGTERM; Process.interrupt() sends SIGINT — use terminate first, then interrupt as fallback
+  - All 78 tests pass (67 existing + 11 new)
 ---

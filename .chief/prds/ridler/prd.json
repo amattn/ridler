@@ -288,7 +288,8 @@
         "Capture full raw stdout/stderr to per-PRD claude.log file"
       ],
       "priority": 18,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-019",
