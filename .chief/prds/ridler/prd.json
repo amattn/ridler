@@ -620,7 +620,8 @@
         "Removes the tab from the interface after deletion"
       ],
       "priority": 41,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-042",

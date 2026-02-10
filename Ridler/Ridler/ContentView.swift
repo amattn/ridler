@@ -221,6 +221,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openDebugWindow)) { _ in
             showDebugWindow = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .deletePRD)) { _ in
+            if let project = selectedProject {
+                projectToDelete = project
+                showDeleteConfirmation = true
+            }
+        }
         .onReceive(fileWatcher.$changeToken.dropFirst()) { _ in
             reloadAllProjects()
         }

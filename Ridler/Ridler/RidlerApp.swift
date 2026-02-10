@@ -89,6 +89,13 @@ struct RidlerApp: App {
                 }
                 .keyboardShortcut("e")
                 .disabled(hasProject != true)
+
+                Divider()
+
+                Button("Delete PRD...") {
+                    NotificationCenter.default.post(name: .deletePRD, object: nil)
+                }
+                .disabled(hasProject != true || projectLoopState == .running)
             }
 
             // MARK: - Window Menu
@@ -128,4 +135,5 @@ extension Notification.Name {
     static let focusLogPanel = Notification.Name("focusLogPanel")
     static let editPRD = Notification.Name("editPRD")
     static let openDebugWindow = Notification.Name("openDebugWindow")
+    static let deletePRD = Notification.Name("deletePRD")
 }

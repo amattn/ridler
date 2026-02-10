@@ -702,3 +702,16 @@
   - pbxproj IDs: A10037/A20039 (ClaudeTerminalManager), A10038/A20040 (ClaudeTerminalView)
   - All 193 tests pass (no new tests needed — terminal interaction is a UI/process feature that requires a running app and Claude CLI)
 ---
+
+## 2026-02-09 - US-041
+- **What was implemented:** Delete PRD files feature — most functionality was already implemented in US-036 (tab context menu with Delete option, confirmation dialog, file deletion, tab removal). Added a "Delete PRD..." option to the PRD menu bar for better discoverability, with a new `.deletePRD` notification and handler in ContentView.
+- **Files changed:**
+  - `Ridler/Ridler/RidlerApp.swift` — Added "Delete PRD..." menu item in PRD menu (disabled when no project or loop is running); added `.deletePRD` notification name
+  - `Ridler/Ridler/ContentView.swift` — Added `.onReceive` handler for `.deletePRD` notification that triggers the existing delete confirmation dialog for the selected project
+  - `.chief/prds/ridler/prd.json` — Marked US-041 as passes: true
+- **Learnings for future iterations:**
+  - US-036 already implemented the complete delete flow (context menu, confirmation, file deletion, tab cleanup) — US-041 only needed a PRD menu entry for discoverability
+  - The `deleteProject()` method reuses `closeProject()` for cleanup then calls `FileManager.removeItem` — this ensures engine stop, watcher unwatch, terminal terminate, and tab removal all happen before disk deletion
+  - Delete is disabled when loop is running (`project.loopState == .running`) in both the context menu and PRD menu to prevent deleting files mid-execution
+  - All 193 tests pass (no new tests needed — the feature was already implemented and tested via context menu)
+---
