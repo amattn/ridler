@@ -69,6 +69,24 @@ struct ContentView: View {
             ForEach(openProjects) { project in
                 tabItem(for: project)
             }
+
+            Menu {
+                Button("Open PRD...") {
+                    isFilePickerPresented = true
+                }
+                Button("New PRD...") {
+                    isNewPRDPresented = true
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 4)
+
             Spacer()
         }
         .frame(height: 32)
@@ -78,9 +96,42 @@ struct ContentView: View {
         }
     }
 
+    private func stateIndicator(for project: PRDProject) -> some View {
+        Group {
+            switch project.loopState {
+            case .ready:
+                Image(systemName: "circle.fill")
+                    .foregroundStyle(.gray)
+            case .running:
+                HStack(spacing: 2) {
+                    Image(systemName: "play.fill")
+                        .foregroundStyle(.cyan)
+                    Text("\(project.iterationCount)")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.cyan)
+                }
+            case .paused:
+                Image(systemName: "pause.fill")
+                    .foregroundStyle(.yellow)
+            case .stopped:
+                Image(systemName: "stop.fill")
+                    .foregroundStyle(.gray)
+            case .complete:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .error:
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+            }
+        }
+        .font(.system(size: 9))
+    }
+
     private func tabItem(for project: PRDProject) -> some View {
         let isSelected = selectedProjectID == project.id
         return HStack(spacing: 6) {
+            stateIndicator(for: project)
+
             Text(project.name ?? project.id)
                 .font(.system(size: 12))
                 .lineLimit(1)

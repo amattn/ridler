@@ -142,7 +142,7 @@
         "Close tab removes PRD from interface but does not delete files on disk"
       ],
       "priority": 9,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-010",

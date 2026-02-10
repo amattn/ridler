@@ -144,3 +144,15 @@
   - PRD name validation regex: `/^[a-zA-Z0-9\-_]+$/` in NewPRDSheet
   - All 43 tests still pass
 ---
+
+## 2026-02-09 - US-009
+- **What was implemented:** Enhanced PRD tab bar with state indicator icons and a [+] button with menu for Open/New PRD
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Added `stateIndicator(for:)` view builder that renders per-state icons (gray dot for ready, cyan play + iteration count for running, yellow pause for paused, gray stop for stopped, green checkmark for complete, red X for error); added Menu-based [+] button at end of tab bar with "Open PRD..." and "New PRD..." options
+- **Learnings for future iterations:**
+  - Tab bar state indicators use the project's `loopState` property — currently all projects start as `.ready` (gray dot)
+  - Running state shows both a play icon and iteration count inline using HStack
+  - SwiftUI `Menu` component works well for dropdown button — no popover/sheet needed
+  - Close tab was already implemented in US-007; clicking a tab already switches view without affecting other loops
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---
