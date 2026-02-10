@@ -18,7 +18,10 @@
 - URL comparison gotcha: `deletingLastPathComponent()` adds trailing slash — use `.standardizedFileURL` for comparisons
 - DecodingError mapping: use `mapDecodingError()` pattern to convert Swift DecodingError into RidlerError.jsonDecoding with file, key, jsonPath
 - Views are in `Ridler/Ridler/Views/`: SidebarView, DetailView, LogPanelView, EmptyStateView, NewPRDSheet
-- ContentView conditionally shows EmptyStateView (no PRD loaded) or NavigationSplitView (PRD loaded)
+- ContentView conditionally shows EmptyStateView (no PRDs open) or tab bar + NavigationSplitView (PRDs open)
+- ContentView uses `openProjects: [PRDProject]` array + `selectedProjectID: String?` for multi-PRD tab support
+- Menu commands (Cmd+O, Cmd+N) use NotificationCenter (.openPRD, .newPRD) to communicate from RidlerApp to ContentView
+- Duplicate project detection uses `.standardizedFileURL` for reliable URL comparison
 - pbxproj IDs for views: A10012-A10016 (build files), A20014-A20018 (file refs)
 - Use `import UniformTypeIdentifiers` when using `.fileImporter` with `UTType` content types
 
@@ -114,5 +117,19 @@
   - PRD name validation uses Swift Regex: `/^[a-zA-Z0-9\-_]+$/`
   - NewPRDSheet creates the directory structure and empty prd.md, then returns a PRDProject to the caller
   - ContentView uses `@State private var currentProject: PRDProject?` to toggle between empty state and three-pane layout
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-007
+- **What was implemented:** File > Open flow with multi-PRD tab support, error alerts for invalid files, and Cmd+O/Cmd+N keyboard shortcuts via menu bar
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Changed from single `currentProject` to `openProjects` array + `selectedProjectID` for multi-PRD support; added tab bar showing open PRDs with close buttons; added error alert for load failures; added `onReceive` for menu command notifications
+  - `Ridler/Ridler/RidlerApp.swift` — Added `.commands()` modifier with File > Open PRD (Cmd+O) and New PRD (Cmd+N) menu items using NotificationCenter to trigger actions in ContentView
+- **Learnings for future iterations:**
+  - SwiftUI `.commands()` modifier on WindowGroup replaces default File menu items; use `CommandGroup(replacing: .newItem)` to customize
+  - NotificationCenter is a clean pattern for App → View communication for menu commands: post from `.commands()`, receive with `.onReceive()` in ContentView
+  - Duplicate project prevention: compare `directoryURL?.standardizedFileURL` to avoid opening the same PRD twice
+  - `PRDProject.id` uses `name ?? directoryURL?.lastPathComponent ?? UUID().uuidString` — works well for tab identification
+  - Tab close behavior: when closing the selected tab, auto-select the first remaining tab
   - All 43 tests still pass (pure UI story — no new tests needed)
 ---
