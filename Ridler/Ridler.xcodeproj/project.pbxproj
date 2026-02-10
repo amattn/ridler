@@ -37,6 +37,7 @@
 		A10028 /* GitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20030 /* GitManager.swift */; };
 		A10029 /* BranchWarningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20031 /* BranchWarningSheet.swift */; };
 		A10030 /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20032 /* StatusBarView.swift */; };
+		A10031 /* SyntaxHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20033 /* SyntaxHighlighter.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -45,6 +46,7 @@
 		C10006 /* LogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20007 /* LogStoreTests.swift */; };
 		C10007 /* RalphLoopEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20008 /* RalphLoopEngineTests.swift */; };
 		C10008 /* GitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20009 /* GitManagerTests.swift */; };
+		C10009 /* SyntaxHighlighterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20010 /* SyntaxHighlighterTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,6 +92,7 @@
 		A20030 /* GitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManager.swift; sourceTree = "<group>"; };
 		A20031 /* BranchWarningSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BranchWarningSheet.swift; sourceTree = "<group>"; };
 		A20032 /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
+		A20033 /* SyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighter.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -98,6 +101,7 @@
 		C20007 /* LogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStoreTests.swift; sourceTree = "<group>"; };
 		C20008 /* RalphLoopEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngineTests.swift; sourceTree = "<group>"; };
 		C20009 /* GitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManagerTests.swift; sourceTree = "<group>"; };
+		C20010 /* SyntaxHighlighterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighterTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -192,6 +196,7 @@
 				A20027 /* LogStore.swift */,
 				A20028 /* RalphLoopEngine.swift */,
 				A20030 /* GitManager.swift */,
+				A20033 /* SyntaxHighlighter.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -234,6 +239,7 @@
 				C20007 /* LogStoreTests.swift */,
 				C20008 /* RalphLoopEngineTests.swift */,
 				C20009 /* GitManagerTests.swift */,
+				C20010 /* SyntaxHighlighterTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -358,6 +364,7 @@
 				A10028 /* GitManager.swift in Sources */,
 				A10029 /* BranchWarningSheet.swift in Sources */,
 				A10030 /* StatusBarView.swift in Sources */,
+				A10031 /* SyntaxHighlighter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,6 +380,7 @@
 				C10006 /* LogStoreTests.swift in Sources */,
 				C10007 /* RalphLoopEngineTests.swift in Sources */,
 				C10008 /* GitManagerTests.swift in Sources */,
+				C10009 /* SyntaxHighlighterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

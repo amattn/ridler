@@ -100,16 +100,43 @@ private struct LogEntryRow: View {
             entryIcon
                 .frame(width: 16, alignment: .center)
 
+            contentView
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(backgroundColor)
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        let segments = SyntaxHighlighter.parseSegments(entry.content)
+        let hasCodeBlocks = segments.contains { if case .codeBlock = $0 { return true } else { return false } }
+
+        if hasCodeBlocks {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                    switch segment {
+                    case .text(let text):
+                        if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(text)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(textColor)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    case .codeBlock(let language, let code):
+                        HighlightedCodeView(code: code, language: language)
+                    }
+                }
+            }
+        } else {
             Text(entry.content)
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(textColor)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(backgroundColor)
     }
 
     private var entryIcon: some View {
@@ -196,12 +223,65 @@ private struct LogEntryRow: View {
     }
 }
 
+// MARK: - Highlighted Code View
+
+private struct HighlightedCodeView: NSViewRepresentable {
+    let code: String
+    let language: String?
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = false
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.drawsBackground = false
+
+        let textView = NSTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = true
+        textView.backgroundColor = NSColor.black.withAlphaComponent(0.06)
+        textView.textContainerInset = NSSize(width: 8, height: 6)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.lineFragmentPadding = 0
+
+        scrollView.documentView = textView
+
+        let highlighted = SyntaxHighlighter.highlight(code: code, language: language)
+        textView.textStorage?.setAttributedString(highlighted)
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        let highlighted = SyntaxHighlighter.highlight(code: code, language: language)
+        textView.textStorage?.setAttributedString(highlighted)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
+        guard let textView = nsView.documentView as? NSTextView,
+              let layoutManager = textView.layoutManager,
+              let textContainer = textView.textContainer else { return nil }
+
+        let width = proposal.width ?? 300
+        textContainer.containerSize = NSSize(width: max(width - 16, 50), height: CGFloat.greatestFiniteMagnitude)
+        layoutManager.ensureLayout(for: textContainer)
+        let usedRect = layoutManager.usedRect(for: textContainer)
+
+        return CGSize(width: width, height: usedRect.height + 12) // 6pt top + 6pt bottom inset
+    }
+}
+
 #Preview {
     LogPanelView(
         entries: [
             LogEntry(type: .system, content: "Starting iteration 1"),
             LogEntry(type: .system, content: "Working on: US-020 - Log view with streaming output"),
-            LogEntry(type: .assistantText, content: "I'll implement the log view with streaming output."),
+            LogEntry(type: .assistantText, content: "I'll implement the log view with streaming output.\n\n```swift\nfunc highlight(code: String) -> NSAttributedString {\n    let result = NSMutableAttributedString(string: code)\n    return result\n}\n```\n\nThat should work."),
             LogEntry(type: .toolUse, content: "Tool: Read\nRidler/Ridler/Views/LogPanelView.swift"),
             LogEntry(type: .toolResult, content: "File contents..."),
             LogEntry(type: .toolUse, content: "Tool: Bash\n$ xcodebuild build"),
