@@ -17,6 +17,11 @@ struct ContentView: View {
         return openProjects.first { $0.id == id }
     }
 
+    private var selectedProjectIndex: Int? {
+        guard let id = selectedProjectID else { return nil }
+        return openProjects.firstIndex { $0.id == id }
+    }
+
     var body: some View {
         Group {
             if openProjects.isEmpty {
@@ -27,6 +32,10 @@ struct ContentView: View {
             } else {
                 VStack(spacing: 0) {
                     tabBar
+
+                    if let selectedIndex = selectedProjectIndex {
+                        LoopToolbarView(project: $openProjects[selectedIndex])
+                    }
 
                     NavigationSplitView(columnVisibility: $columnVisibility) {
                         SidebarView(project: selectedProject, selection: $sidebarSelection)
@@ -204,6 +213,8 @@ struct ContentView: View {
                 updated.loopState = openProjects[index].loopState
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
+                updated.maxIterations = openProjects[index].maxIterations
+                updated.loopStartDate = openProjects[index].loopStartDate
                 openProjects[index] = updated
             } catch {
                 // File may be mid-write; ignore transient errors

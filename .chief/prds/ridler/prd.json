@@ -270,7 +270,8 @@
         "\"Pause after story\" toggle (checkbox or switch), default off"
       ],
       "priority": 17,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-018",

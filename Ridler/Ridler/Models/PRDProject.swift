@@ -12,11 +12,19 @@ struct PRDProject: Codable, Identifiable, Equatable {
     var iterationCount: Int
 
     var pauseAfterStory: Bool
+    var maxIterations: Int
+    var loopStartDate: Date?
 
     var directoryURL: URL?
 
     enum CodingKeys: String, CodingKey {
         case name, project, description, userStories, milestones
+    }
+
+    /// Default max iterations: remaining stories + 5, minimum 5
+    var defaultMaxIterations: Int {
+        let remaining = userStories.filter { !$0.passes }.count
+        return max(remaining + 5, 5)
     }
 
     init(
@@ -28,6 +36,8 @@ struct PRDProject: Codable, Identifiable, Equatable {
         loopState: LoopState = .ready,
         iterationCount: Int = 0,
         pauseAfterStory: Bool = false,
+        maxIterations: Int = 0,
+        loopStartDate: Date? = nil,
         directoryURL: URL? = nil
     ) {
         self.name = name
@@ -38,6 +48,8 @@ struct PRDProject: Codable, Identifiable, Equatable {
         self.loopState = loopState
         self.iterationCount = iterationCount
         self.pauseAfterStory = pauseAfterStory
+        self.maxIterations = maxIterations
+        self.loopStartDate = loopStartDate
         self.directoryURL = directoryURL
     }
 
@@ -51,6 +63,8 @@ struct PRDProject: Codable, Identifiable, Equatable {
         loopState = .ready
         iterationCount = 0
         pauseAfterStory = false
+        maxIterations = 0
+        loopStartDate = nil
         directoryURL = nil
     }
 

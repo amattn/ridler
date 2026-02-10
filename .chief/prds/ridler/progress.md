@@ -31,6 +31,8 @@
 - SidebarSelection enum (in Models/SidebarSelection.swift): `.file(PRDFileName)` or `.story(String)` — mutual exclusion between file and story selections
 - PRDFileName enum has `.allCases` for iterating prd.md, ridl.md, ridl.json with icons
 - ContentView owns `@State sidebarSelection: SidebarSelection?` and passes binding to SidebarView
+- LoopState has `validTransitions`, `canTransition(to:)`, `transition(to:)`, `badgeColor`, `displayName` — use these instead of hardcoding colors or transitions
+- PRDProject runtime-only properties now include: loopState, iterationCount, pauseAfterStory, maxIterations, loopStartDate, directoryURL — all must be preserved in `reloadAllProjects()`
 
 ---
 
@@ -247,4 +249,36 @@
   - SwiftUI `.alert` supports multiple buttons — non-cancel buttons appear before the cancel button
   - The `reloadAllProjects()` method intentionally silences transient errors during file watching — this is correct behavior for mid-write filesystem events
   - All 50 tests pass (no new tests needed — the error infrastructure was already well-tested)
+---
+
+## 2026-02-09 - US-016
+- **What was implemented:** Loop state machine with valid transitions, color-coded badges, display names, and "pause after story" mode support
+- **Files changed:**
+  - `Ridler/Ridler/Models/LoopState.swift` — Added `validTransitions` computed property defining allowed state transitions, `canTransition(to:)` and `transition(to:)` methods, `badgeColor` (SwiftUI Color) for UI badges, and `displayName` for human-readable labels
+  - `Ridler/Ridler/Models/PRDProject.swift` — Added `pauseAfterStory: Bool` runtime-only property (excluded from Codable, defaults to false)
+  - `Ridler/Ridler/ContentView.swift` — Updated `stateIndicator(for:)` to use `loopState.badgeColor` instead of hardcoded colors; preserved `pauseAfterStory` in `reloadAllProjects()`
+  - `Ridler/RidlerTests/ModelTests.swift` — Added 17 new tests: 8 valid transition tests (ready→running, running→paused/stopped/complete/error, paused→running, stopped→running, error→running), 6 invalid transition tests (ready→non-running, running→self/ready, paused/stopped/error→non-running, complete→any), badge color test, display name test, validTransitions set test, pauseAfterStory not serialized test
+  - `.chief/prds/ridler/prd.json` — Marked US-016 as passes: true
+- **Learnings for future iterations:**
+  - LoopState is a Hashable enum so `Set<LoopState>` works for `validTransitions` — convenient for transition validation
+  - `import SwiftUI` in LoopState.swift is needed for the `Color` type in `badgeColor`
+  - Runtime-only properties on PRDProject (loopState, iterationCount, pauseAfterStory, directoryURL) must all be preserved in `reloadAllProjects()` — don't forget new runtime properties
+  - The `transition(to:)` method returns `LoopState?` (nil for invalid) rather than throwing — this is simpler for callers who can use `if let`
+  - All 67 tests pass (50 existing + 17 new)
+---
+
+## 2026-02-09 - US-017
+- **What was implemented:** Toolbar with loop controls — Start/Pause/Stop buttons, iteration counter, elapsed time display, color-coded state badge, and "Pause after story" toggle
+- **Files changed:**
+  - `Ridler/Ridler/Views/LoopToolbarView.swift` — New view with: Start/Pause/Stop buttons (enabled/disabled based on `canTransition`), state badge (colored dot + display name), iteration counter (current / max with monospaced font), elapsed time display (Xh Ym Zs format with 1-second timer), "Pause after story" checkbox toggle
+  - `Ridler/Ridler/Models/PRDProject.swift` — Added `maxIterations` (Int, runtime-only) and `loopStartDate` (Date?, runtime-only) properties; added `defaultMaxIterations` computed property (remaining stories + 5, minimum 5)
+  - `Ridler/Ridler/ContentView.swift` — Added `selectedProjectIndex` computed property for binding; inserted `LoopToolbarView` between tab bar and NavigationSplitView; preserved `maxIterations` and `loopStartDate` in `reloadAllProjects()`
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added LoopToolbarView.swift (A10020/A20022) to app target and Views group
+- **Learnings for future iterations:**
+  - `LoopToolbarView` uses `@Binding var project: PRDProject` — needs binding via `$openProjects[selectedIndex]` from ContentView
+  - `selectedProjectIndex` is needed to get a binding to the selected project; `selectedProject` (read-only computed) is insufficient for bindings
+  - Timer-based elapsed time: `Timer.scheduledTimer` updates `@State elapsedTime` every second; timer started/stopped based on state transitions
+  - `onChange(of: project.loopState)` uses the new two-parameter closure syntax (`{ _, newState in }`)
+  - pbxproj IDs: A10020 (build file), A20022 (file ref) for LoopToolbarView.swift
+  - All 67 tests still pass (pure UI story — no new tests needed)
 ---

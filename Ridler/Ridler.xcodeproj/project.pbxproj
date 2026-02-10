@@ -26,6 +26,7 @@
 		A10017 /* SidebarSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019 /* SidebarSelection.swift */; };
 		A10018 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20020 /* DirectoryMonitor.swift */; };
 		A10019 /* ProjectFileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20021 /* ProjectFileWatcher.swift */; };
+		A10020 /* LoopToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20022 /* LoopToolbarView.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -63,6 +64,7 @@
 		A20019 /* SidebarSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelection.swift; sourceTree = "<group>"; };
 		A20020 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 		A20021 /* ProjectFileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileWatcher.swift; sourceTree = "<group>"; };
+		A20022 /* LoopToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopToolbarView.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -134,6 +136,7 @@
 				A20016 /* LogPanelView.swift */,
 				A20017 /* EmptyStateView.swift */,
 				A20018 /* NewPRDSheet.swift */,
+				A20022 /* LoopToolbarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -299,6 +302,7 @@
 				A10017 /* SidebarSelection.swift in Sources */,
 				A10018 /* DirectoryMonitor.swift in Sources */,
 				A10019 /* ProjectFileWatcher.swift in Sources */,
+				A10020 /* LoopToolbarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
