@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var showBranchWarning = false
     @State private var branchWarningIndex: Int?
     @State private var branchWarningBranch: String = ""
+    @State private var showDebugWindow = false
     private let gitManager: GitManaging = GitManager()
 
     private var selectedProject: PRDProject? {
@@ -82,7 +83,9 @@ struct ContentView: View {
 
                     StatusBarView(
                         activityMessage: statusBarMessage(for: selectedProject),
-                        loopState: selectedProject?.loopState ?? .ready
+                        loopState: selectedProject?.loopState ?? .ready,
+                        debugMode: settings.debugMode,
+                        debugInfo: debugStatusInfo(for: selectedProject)
                     )
                 }
             }
@@ -194,8 +197,18 @@ struct ContentView: View {
                 sidebarSelection = .file(.prdMd)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openDebugWindow)) { _ in
+            showDebugWindow = true
+        }
         .onReceive(fileWatcher.$changeToken.dropFirst()) { _ in
             reloadAllProjects()
+        }
+        .sheet(isPresented: $showDebugWindow) {
+            DebugInfoView(
+                projects: openProjects,
+                loopEngines: loopEngines,
+                fileWatcher: fileWatcher
+            )
         }
         .focusedSceneValue(\.selectedProject, selectedProject)
         .focusedSceneValue(\.hasProject, !openProjects.isEmpty)
@@ -554,6 +567,29 @@ struct ContentView: View {
         case .error:
             return "Error — check log for details"
         }
+    }
+
+    private func debugStatusInfo(for project: PRDProject?) -> DebugStatusInfo? {
+        guard settings.debugMode, let project else { return nil }
+        let engine = loopEngines[project.id]
+        let currentStory = project.userStories.first(where: { $0.inProgress })
+
+        var elapsedStr: String?
+        if let startDate = project.loopStartDate, project.loopState == .running {
+            let elapsed = Date().timeIntervalSince(startDate)
+            let iterCount = max(project.iterationCount, 1)
+            let perIter = elapsed / Double(iterCount)
+            let minutes = Int(perIter) / 60
+            let seconds = Int(perIter) % 60
+            elapsedStr = "\(minutes)m \(seconds)s"
+        }
+
+        return DebugStatusInfo(
+            loopStateRawValue: "\(project.loopState)",
+            currentStoryID: currentStory?.id,
+            retryCount: engine?.currentRetryCount ?? 0,
+            elapsedPerIteration: elapsedStr
+        )
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {

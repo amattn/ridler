@@ -4,6 +4,8 @@ import Combine
 final class ProjectFileWatcher: ObservableObject {
     @Published private(set) var changeToken = UUID()
 
+    var watchedCount: Int { monitors.count }
+
     private var monitors: [URL: DirectoryMonitor] = [:]
     private var cancellables: [URL: AnyCancellable] = [:]
 

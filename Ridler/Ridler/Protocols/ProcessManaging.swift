@@ -12,6 +12,9 @@ protocol ProcessManaging {
     /// Whether a subprocess is currently running.
     var isRunning: Bool { get }
 
+    /// The PID of the current subprocess, or nil if none is running.
+    var processIdentifier: Int32? { get }
+
     /// Publisher that emits the process exit result when the process terminates.
     var exitPublisher: AnyPublisher<ProcessExitResult, Never> { get }
 }

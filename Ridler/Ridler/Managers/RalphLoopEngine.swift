@@ -49,6 +49,17 @@ final class RalphLoopEngine: ObservableObject {
         self.gitManager = gitManager
     }
 
+    // MARK: - Debug Properties
+
+    /// Exposes the current retry count for the debug window.
+    var currentRetryCount: Int { retryCount }
+
+    /// Exposes the PID of the active Claude Code subprocess, or nil if none is running.
+    var activeProcessPID: Int32? { currentProcessManager?.processIdentifier }
+
+    /// Exposes the last error message, or nil if no error has occurred.
+    private(set) var lastErrorMessage: String?
+
     // MARK: - Public API
 
     /// Starts the loop for the given project.
@@ -484,6 +495,7 @@ final class RalphLoopEngine: ObservableObject {
     private func transitionToError(_ message: String) {
         Self.logger.error("Loop error: \(message)")
         logSystem("Error: \(message)")
+        lastErrorMessage = message
         loopState = .error
         onStateChange?(.error)
     }

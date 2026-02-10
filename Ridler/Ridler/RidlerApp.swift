@@ -5,6 +5,7 @@ struct RidlerApp: App {
     @FocusedValue(\.selectedProject) private var selectedProject: PRDProject?
     @FocusedValue(\.hasProject) private var hasProject: Bool?
     @StateObject private var recentProjects = RecentProjectsManager.shared
+    @ObservedObject private var settings = SettingsManager.shared
 
     private var projectLoopState: LoopState {
         selectedProject?.loopState ?? .ready
@@ -92,6 +93,13 @@ struct RidlerApp: App {
 
             // MARK: - Window Menu
             CommandGroup(before: .windowList) {
+                Button("Debug Info") {
+                    NotificationCenter.default.post(name: .openDebugWindow, object: nil)
+                }
+                .disabled(!settings.debugMode)
+
+                Divider()
+
                 ForEach(1...9, id: \.self) { index in
                     Button("Switch to PRD \(index)") {
                         NotificationCenter.default.post(name: .switchToTab, object: index)
@@ -119,4 +127,5 @@ extension Notification.Name {
     static let switchToTab = Notification.Name("switchToTab")
     static let focusLogPanel = Notification.Name("focusLogPanel")
     static let editPRD = Notification.Name("editPRD")
+    static let openDebugWindow = Notification.Name("openDebugWindow")
 }

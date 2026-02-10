@@ -17,6 +17,11 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         process?.isRunning ?? false
     }
 
+    var processIdentifier: Int32? {
+        guard let process, process.isRunning else { return nil }
+        return process.processIdentifier
+    }
+
     var exitPublisher: AnyPublisher<ProcessExitResult, Never> {
         exitSubject.eraseToAnyPublisher()
     }

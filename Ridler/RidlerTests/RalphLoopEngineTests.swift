@@ -6,6 +6,7 @@ import Combine
 
 final class MockProcessManager: ProcessManaging {
     var isRunning: Bool = false
+    var processIdentifier: Int32? = nil
     var spawnCallCount = 0
     var lastPrompt: String?
     var lastWorkingDirectory: URL?

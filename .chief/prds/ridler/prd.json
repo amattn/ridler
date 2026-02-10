@@ -576,7 +576,8 @@
         "Debug mode state persisted across launches via UserDefaults"
       ],
       "priority": 38,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-039",

@@ -639,3 +639,25 @@
   - pbxproj IDs: A10034/A20036 (SettingsManager), A10035/A20037 (SettingsView)
   - All 193 tests pass (no new tests needed — Settings is a pure UI/persistence feature with straightforward UserDefaults storage)
 ---
+
+## 2026-02-09 - US-038
+- **What was implemented:** Debug mode and Debug window — when Debug mode is enabled in Settings, a "Debug Info" menu item appears in the Window menu. The Debug window displays: loop state per PRD, engine iteration count, max iterations, active process PIDs, engine retry count, last error per tab, current story, loop start time, story pass counts, file watcher status (watched directory count, change token), and app memory usage. In debug mode, the status bar expands to show: loop state enum value, current story ID, retry count, and elapsed time per iteration.
+- **Files changed:**
+  - `Ridler/Ridler/Views/DebugInfoView.swift` — New view with GroupBox sections for memory usage, per-project debug info, and file watcher status; uses `mach_task_basic_info` for resident memory measurement
+  - `Ridler/Ridler/Views/StatusBarView.swift` — Extended with `debugMode` and `debugInfo: DebugStatusInfo?` parameters; added `debugDetails()` view builder showing state enum, story ID, retry count, and elapsed time per iteration in monospaced font
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Added `currentRetryCount`, `activeProcessPID`, and `lastErrorMessage` debug properties; `lastErrorMessage` set in `transitionToError()`
+  - `Ridler/Ridler/Protocols/ProcessManaging.swift` — Added `processIdentifier: Int32?` property to protocol
+  - `Ridler/Ridler/Managers/ClaudeCodeProcessManager.swift` — Implemented `processIdentifier` returning `process.processIdentifier` when running
+  - `Ridler/Ridler/Managers/ProjectFileWatcher.swift` — Added `watchedCount` computed property
+  - `Ridler/Ridler/RidlerApp.swift` — Added `@ObservedObject settings = SettingsManager.shared`; added "Debug Info" menu item (disabled when debug mode is off) in Window menu; added `.openDebugWindow` notification name
+  - `Ridler/Ridler/ContentView.swift` — Added `showDebugWindow` state; added `.openDebugWindow` notification handler; added debug info sheet; added `debugStatusInfo(for:)` helper; passed debug params to StatusBarView
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — Added `processIdentifier` to MockProcessManager for protocol conformance
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added DebugInfoView.swift (A10036/A20038) to app target and Views group
+- **Learnings for future iterations:**
+  - `mach_task_basic_info` provides `resident_size` for app memory — use `task_info(mach_task_self_, MACH_TASK_BASIC_INFO, ...)` with proper memory rebinding
+  - Adding a property to a protocol (ProcessManaging) requires updating all conforming types including test mocks — check all test files for conformance
+  - Debug window is presented as a sheet from ContentView rather than a separate SwiftUI Window scene — avoids lifecycle complications and keeps access to all ContentView state
+  - `SettingsManager.shared.debugMode` controls both the menu item enable state (in RidlerApp) and the status bar expansion (in ContentView) — single source of truth
+  - Debug mode state is already persisted via UserDefaults from US-037 — no additional persistence needed
+  - pbxproj IDs: A10036/A20038 (DebugInfoView.swift)
+  - All 193 tests pass (no new tests needed — debug views are read-only UI displaying existing state)
