@@ -44,7 +44,11 @@ struct ContentView: View {
                             project: $openProjects[selectedIndex],
                             onStart: { startLoop(for: selectedIndex) },
                             onPause: { pauseLoop(for: selectedIndex) },
-                            onStop: { stopLoop(for: selectedIndex) }
+                            onStop: { stopLoop(for: selectedIndex) },
+                            onMaxIterationsChanged: { newValue in
+                                let project = openProjects[selectedIndex]
+                                loopEngines[project.id]?.updateMaxIterations(newValue)
+                            }
                         )
                     }
 

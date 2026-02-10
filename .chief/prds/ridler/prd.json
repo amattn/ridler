@@ -425,7 +425,8 @@
         "Step size: +5 / -5"
       ],
       "priority": 27,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-028",

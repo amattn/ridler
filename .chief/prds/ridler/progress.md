@@ -453,3 +453,17 @@
   - `XCTestExpectation` with `expectedFulfillmentCount = 3` is useful for waiting on multiple parallel events
   - All 166 tests pass (160 existing + 6 new parallel execution tests)
 ---
+
+## 2026-02-09 - US-027
+- **What was implemented:** Runtime iteration adjustment — +/- stepper control in LoopToolbarView that adjusts max iterations by ±5 at runtime, with immediate effect on the running loop engine
+- **Files changed:**
+  - `Ridler/Ridler/Views/LoopToolbarView.swift` — Added `onMaxIterationsChanged` callback parameter; added +/- buttons (minus and plus icons) next to the iteration counter; added `adjustMaxIterations(by:)` method that updates both the project binding and calls the callback; minus button disabled when max iterations ≤ 5; step size is ±5
+  - `Ridler/Ridler/ContentView.swift` — Wired `onMaxIterationsChanged` callback to call `loopEngines[project.id]?.updateMaxIterations(newValue)` for immediate engine update
+  - `.chief/prds/ridler/prd.json` — Marked US-027 as passes: true
+- **Learnings for future iterations:**
+  - RalphLoopEngine already had `updateMaxIterations(_:)` method from US-021 — no engine changes needed
+  - The `effectiveMaxIterations` computed property (in LoopToolbarView) handles the case where `project.maxIterations` is 0 by falling back to `defaultMaxIterations`
+  - Minimum max iterations is clamped to 5 to prevent setting to 0 or negative values
+  - Callback pattern (`onMaxIterationsChanged`) keeps LoopToolbarView decoupled from engine management — consistent with existing onStart/onPause/onStop pattern
+  - All 166 tests still pass (pure UI story — no new tests needed)
+---

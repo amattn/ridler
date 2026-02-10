@@ -5,6 +5,7 @@ struct LoopToolbarView: View {
     var onStart: () -> Void = {}
     var onPause: () -> Void = {}
     var onStop: () -> Void = {}
+    var onMaxIterationsChanged: ((Int) -> Void)?
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
 
@@ -105,6 +106,25 @@ struct LoopToolbarView: View {
             Text("\(project.iterationCount) / \(effectiveMaxIterations)")
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
+
+            Button {
+                adjustMaxIterations(by: -5)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .buttonStyle(.borderless)
+            .disabled(effectiveMaxIterations <= 5)
+            .help("-5 max iterations")
+
+            Button {
+                adjustMaxIterations(by: 5)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .buttonStyle(.borderless)
+            .help("+5 max iterations")
         }
     }
 
@@ -136,6 +156,13 @@ struct LoopToolbarView: View {
         } else {
             return "\(seconds)s"
         }
+    }
+
+    private func adjustMaxIterations(by delta: Int) {
+        let current = effectiveMaxIterations
+        let newValue = max(5, current + delta)
+        project.maxIterations = newValue
+        onMaxIterationsChanged?(newValue)
     }
 
     private func handleStateChange(_ newState: LoopState) {
