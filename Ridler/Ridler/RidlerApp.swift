@@ -4,6 +4,7 @@ import SwiftUI
 struct RidlerApp: App {
     @FocusedValue(\.selectedProject) private var selectedProject: PRDProject?
     @FocusedValue(\.hasProject) private var hasProject: Bool?
+    @StateObject private var recentProjects = RecentProjectsManager.shared
 
     private var projectLoopState: LoopState {
         selectedProject?.loopState ?? .ready
@@ -25,6 +26,22 @@ struct RidlerApp: App {
                     NotificationCenter.default.post(name: .openPRD, object: nil)
                 }
                 .keyboardShortcut("o")
+
+                Menu("Open Recent") {
+                    ForEach(recentProjects.recentURLs, id: \.absoluteString) { url in
+                        Button(url.lastPathComponent) {
+                            NotificationCenter.default.post(name: .openRecentPRD, object: url)
+                        }
+                    }
+
+                    if !recentProjects.recentURLs.isEmpty {
+                        Divider()
+                        Button("Clear Menu") {
+                            recentProjects.clearRecents()
+                        }
+                    }
+                }
+                .disabled(recentProjects.recentURLs.isEmpty)
             }
 
             // MARK: - View Menu
@@ -88,6 +105,7 @@ struct RidlerApp: App {
 
 extension Notification.Name {
     static let openPRD = Notification.Name("openPRD")
+    static let openRecentPRD = Notification.Name("openRecentPRD")
     static let newPRD = Notification.Name("newPRD")
     static let startLoop = Notification.Name("startLoop")
     static let pauseLoop = Notification.Name("pauseLoop")

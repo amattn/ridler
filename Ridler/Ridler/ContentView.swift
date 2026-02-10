@@ -134,6 +134,18 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openPRD)) { _ in
             isFilePickerPresented = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openRecentPRD)) { notification in
+            if let url = notification.object as? URL {
+                let store = FileSystemPRDStore()
+                do {
+                    let project = try store.loadProject(from: url)
+                    addProject(project)
+                } catch {
+                    errorAlertMessage = error.localizedDescription
+                    showErrorAlert = true
+                }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .newPRD)) { _ in
             isNewPRDPresented = true
         }
@@ -278,6 +290,7 @@ struct ContentView: View {
         selectedProjectID = project.id
         if let dirURL = project.directoryURL {
             fileWatcher.watch(directoryURL: dirURL)
+            RecentProjectsManager.shared.addRecent(dirURL)
         }
     }
 

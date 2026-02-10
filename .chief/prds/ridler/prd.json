@@ -534,7 +534,8 @@
         "Persisted across app launches via UserDefaults"
       ],
       "priority": 35,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-036",

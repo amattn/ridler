@@ -57,6 +57,8 @@
 - SyntaxHighlighter in `Managers/SyntaxHighlighter.swift` — use `parseSegments()` to split content into text/code blocks, `highlight()` to apply NSAttributedString coloring; HighlightedCodeView (NSViewRepresentable) in LogPanelView for rendering
 - pbxproj IDs: A10031/A20033 (SyntaxHighlighter), C10009/C20010 (SyntaxHighlighterTests)
 - FocusedValues for menu state: `FocusedValues.swift` defines `selectedProject` and `hasProject` keys; ContentView publishes via `.focusedSceneValue()`; RidlerApp reads via `@FocusedValue`
+- RecentProjectsManager (`Managers/RecentProjectsManager.swift`) — singleton `ObservableObject` managing recent PRD URLs via UserDefaults with URL bookmarks; `addRecent()` called from ContentView's `addProject()`; accessed via `RecentProjectsManager.shared`
+- pbxproj IDs: A10033/A20035 (RecentProjectsManager)
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
@@ -586,4 +588,21 @@
   - Menu item enable/disable uses `LoopState.canTransition(to:)` — reuses existing state machine logic rather than duplicating conditions
   - pbxproj IDs: A10032/A20034 (FocusedValues.swift)
   - All 193 tests pass (no new tests needed — menu bar is UI-only and uses existing state machine which is already well-tested)
+---
+
+## 2026-02-09 - US-035
+- **What was implemented:** Open Recent PRDs feature — remembers recently opened PRDs and displays them in File > Open Recent submenu, persisted across app launches via UserDefaults using URL bookmarks
+- **Files changed:**
+  - `Ridler/Ridler/Managers/RecentProjectsManager.swift` — New singleton `ObservableObject` that manages recent PRD URLs: stores up to 10 recent URLs as bookmark data in UserDefaults, provides `addRecent()` and `clearRecents()` methods, publishes `recentURLs` for SwiftUI observation
+  - `Ridler/Ridler/RidlerApp.swift` — Added `@StateObject recentProjects` reference; added `Menu("Open Recent")` submenu inside File menu after "Open PRD..." with list of recent URLs and "Clear Menu" option; added `.openRecentPRD` notification name
+  - `Ridler/Ridler/ContentView.swift` — Updated `addProject()` to call `RecentProjectsManager.shared.addRecent()` when a project is added; added `.onReceive` handler for `.openRecentPRD` notification that loads and opens the recent PRD URL
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added RecentProjectsManager.swift (A10033/A20035) to app target and Managers group
+  - `.chief/prds/ridler/prd.json` — Marked US-035 as passes: true
+- **Learnings for future iterations:**
+  - URL bookmarks (`url.bookmarkData()` / `URL(resolvingBookmarkData:)`) are the correct way to persist file URLs across app launches — raw path strings may break if volumes are renamed or files move
+  - `RecentProjectsManager.shared` singleton pattern works well for app-wide state that needs to be accessed from both RidlerApp (menu) and ContentView (recording recents)
+  - SwiftUI `Menu` inside `CommandGroup` creates a submenu in the File menu — use `ForEach` with `.id(\.absoluteString)` for URL-based iteration
+  - `.disabled(recentProjects.recentURLs.isEmpty)` correctly grays out the "Open Recent" submenu when there are no recents
+  - pbxproj IDs: A10033/A20035 (RecentProjectsManager.swift)
+  - All 193 tests pass (no new tests needed — this is a UI/persistence feature with straightforward UserDefaults storage)
 ---
