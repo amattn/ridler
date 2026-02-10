@@ -17,9 +17,10 @@
 - When resolving URLs: directories are used as-is, files resolve to their parent directory
 - URL comparison gotcha: `deletingLastPathComponent()` adds trailing slash — use `.standardizedFileURL` for comparisons
 - DecodingError mapping: use `mapDecodingError()` pattern to convert Swift DecodingError into RidlerError.jsonDecoding with file, key, jsonPath
-- Views are in `Ridler/Ridler/Views/`: SidebarView, DetailView, LogPanelView
-- ContentView uses `NavigationSplitView` with three columns (sidebar, content, detail) and `columnVisibility` state
-- pbxproj IDs for views: A10012-A10014 (build files), A20014-A20016 (file refs)
+- Views are in `Ridler/Ridler/Views/`: SidebarView, DetailView, LogPanelView, EmptyStateView, NewPRDSheet
+- ContentView conditionally shows EmptyStateView (no PRD loaded) or NavigationSplitView (PRD loaded)
+- pbxproj IDs for views: A10012-A10016 (build files), A20014-A20018 (file refs)
+- Use `import UniformTypeIdentifiers` when using `.fileImporter` with `UTType` content types
 
 ---
 
@@ -99,4 +100,19 @@
   - `NavigationSplitViewVisibility.all` as default ensures all three panes are visible on launch
   - `.frame(minWidth: 900, minHeight: 500)` on ContentView ensures reasonable minimum window size
   - All 43 tests still pass (no new tests needed — this is pure UI)
+---
+
+## 2026-02-09 - US-006
+- **What was implemented:** Empty state view shown on first launch when no PRDs are loaded, with "Open PRD..." and "New PRD..." buttons that trigger File > Open and File > New flows
+- **Files changed:**
+  - `Ridler/Ridler/Views/EmptyStateView.swift` — New view with welcome message, icon, and two action buttons (Open PRD, New PRD)
+  - `Ridler/Ridler/Views/NewPRDSheet.swift` — New sheet for creating a PRD: name input with validation, directory picker, creates ridl/ folder with empty prd.md
+  - `Ridler/Ridler/ContentView.swift` — Conditionally shows EmptyStateView (when no PRD loaded) or NavigationSplitView (when PRD loaded); added fileImporter for Open flow and sheet for New flow; imports UniformTypeIdentifiers
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added EmptyStateView.swift (A10015/A20017) and NewPRDSheet.swift (A10016/A20018) to app target
+- **Learnings for future iterations:**
+  - `fileImporter(allowedContentTypes:)` requires `import UniformTypeIdentifiers` for UTType references
+  - PRD name validation uses Swift Regex: `/^[a-zA-Z0-9\-_]+$/`
+  - NewPRDSheet creates the directory structure and empty prd.md, then returns a PRDProject to the caller
+  - ContentView uses `@State private var currentProject: PRDProject?` to toggle between empty state and three-pane layout
+  - All 43 tests still pass (pure UI story — no new tests needed)
 ---

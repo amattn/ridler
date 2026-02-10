@@ -21,6 +21,8 @@
 		A10012 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20014 /* SidebarView.swift */; };
 		A10013 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20015 /* DetailView.swift */; };
 		A10014 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016 /* LogPanelView.swift */; };
+		A10015 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017 /* EmptyStateView.swift */; };
+		A10016 /* NewPRDSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018 /* NewPRDSheet.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 /* End PBXBuildFile section */
@@ -52,6 +54,8 @@
 		A20014 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		A20015 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		A20016 /* LogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogPanelView.swift; sourceTree = "<group>"; };
+		A20017 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		A20018 /* NewPRDSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPRDSheet.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -119,6 +123,8 @@
 				A20014 /* SidebarView.swift */,
 				A20015 /* DetailView.swift */,
 				A20016 /* LogPanelView.swift */,
+				A20017 /* EmptyStateView.swift */,
+				A20018 /* NewPRDSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -276,6 +282,8 @@
 				A10012 /* SidebarView.swift in Sources */,
 				A10013 /* DetailView.swift in Sources */,
 				A10014 /* LogPanelView.swift in Sources */,
+				A10015 /* EmptyStateView.swift in Sources */,
+				A10016 /* NewPRDSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

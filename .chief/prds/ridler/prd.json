@@ -98,7 +98,8 @@
         "When no PRD is loaded, middle pane shows instructions to create or open a project"
       ],
       "priority": 6,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-007",
