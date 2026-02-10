@@ -53,7 +53,13 @@ struct ContentView: View {
                 addProject(project)
             }
         }
-        .alert("Error Opening PRD", isPresented: $showErrorAlert) {
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("Copy") {
+                if let errorAlertMessage {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(errorAlertMessage, forType: .string)
+                }
+            }
             Button("OK", role: .cancel) {}
         } message: {
             if let errorAlertMessage {

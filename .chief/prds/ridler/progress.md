@@ -16,6 +16,9 @@
 - FileSystemPRDStore in `Managers/FileSystemPRDStore.swift` implements disk I/O with ridl/ folder convention
 - When resolving URLs: directories are used as-is, files resolve to their parent directory
 - URL comparison gotcha: `deletingLastPathComponent()` adds trailing slash — use `.standardizedFileURL` for comparisons
+- File watching: `DirectoryMonitor` uses `DispatchSource.makeFileSystemObjectSource` with `.write` event mask; `ProjectFileWatcher` aggregates monitors and debounces changes via Combine
+- DispatchSource `.write` events can fire multiple times per file operation — always debounce or use `.prefix(1)` in tests
+- Use `.id(changeToken)` on SwiftUI views to force re-creation when file content changes externally (ensures disk reads are refreshed)
 - DecodingError mapping: use `mapDecodingError()` pattern to convert Swift DecodingError into RidlerError.jsonDecoding with file, key, jsonPath
 - Views are in `Ridler/Ridler/Views/`: SidebarView, DetailView, LogPanelView, EmptyStateView, NewPRDSheet
 - ContentView conditionally shows EmptyStateView (no PRDs open) or tab bar + NavigationSplitView (PRDs open)
@@ -214,4 +217,34 @@
   - Fallback pattern: try AttributedString markdown → fall back to plain monospaced text → fall back to "File is empty" — ensures no crash on any content
   - `.textSelection(.enabled)` makes read-only text copyable by the user
   - All 43 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-014
+- **What was implemented:** File watcher for external PRD changes using DispatchSource, with auto-reload of project data and UI refresh
+- **Files changed:**
+  - `Ridler/Ridler/Managers/DirectoryMonitor.swift` — New class that watches a single directory using `DispatchSource.makeFileSystemObjectSource` with `.write` event mask; publishes `lastChangeDate` via `@Published` on main thread
+  - `Ridler/Ridler/Managers/ProjectFileWatcher.swift` — New `ObservableObject` that manages multiple `DirectoryMonitor` instances; debounces changes with 300ms delay; publishes `changeToken` (UUID) for view identity invalidation
+  - `Ridler/Ridler/ContentView.swift` — Added `@StateObject fileWatcher`; starts/stops watching in `addProject`/`closeProject`; `reloadAllProjects()` reloads PRD data from disk on change; `.id(fileWatcher.changeToken)` on SidebarView and DetailView forces re-render
+  - `Ridler/RidlerTests/FileWatcherTests.swift` — 7 unit tests: file creation detection, file modification detection, stop prevents notifications, main thread delivery, change token updates, unwatch stops monitoring, duplicate watch ignored
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added DirectoryMonitor.swift (A10018/A20020), ProjectFileWatcher.swift (A10019/A20021), FileWatcherTests.swift (C10003/C20004)
+- **Learnings for future iterations:**
+  - `DispatchSource.makeFileSystemObjectSource` with `.write` event mask detects file changes within a directory — works well for monitoring PRD directories
+  - DispatchSource `.write` events can fire multiple times for a single file operation (e.g., atomic writes create temp file then rename) — use `.debounce()` for production code and `.prefix(1)` for tests
+  - Dictionary literal `[:]` not `[]` for empty dictionaries in Swift — compiler error otherwise
+  - Using `.id(changeToken)` on SwiftUI views forces complete view re-creation when files change — ensures disk reads are refreshed for file content display
+  - `reloadAllProjects()` preserves runtime state (loopState, iterationCount) while refreshing disk-based state (user stories, milestones) — important for not disrupting running loops
+  - All 50 tests pass (43 existing + 7 new)
+---
+
+## 2026-02-09 - US-015
+- **What was implemented:** Error alerts with descriptive messages and a Copy button to copy error text to clipboard
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Changed error alert title from "Error Opening PRD" to generic "Error"; added "Copy" button that copies the full error message to `NSPasteboard.general` (clipboard)
+  - `.chief/prds/ridler/prd.json` — Marked US-015 as passes: true
+- **Learnings for future iterations:**
+  - Most of US-015's acceptance criteria were already satisfied by prior stories (US-002 for LocalizedError conformance, US-003 for JSON/file error details)
+  - `NSPasteboard.general` is available in macOS SwiftUI without additional imports — `clearContents()` then `setString(_:forType: .string)` to copy text
+  - SwiftUI `.alert` supports multiple buttons — non-cancel buttons appear before the cancel button
+  - The `reloadAllProjects()` method intentionally silences transient errors during file watching — this is correct behavior for mid-write filesystem events
+  - All 50 tests pass (no new tests needed — the error infrastructure was already well-tested)
 ---
