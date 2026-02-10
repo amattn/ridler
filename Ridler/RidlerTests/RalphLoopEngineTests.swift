@@ -950,4 +950,427 @@ final class RalphLoopEngineTests: XCTestCase {
 
         XCTAssertTrue(logMessages.contains(where: { $0.contains("Committed:") && $0.contains("US-042") }), "Should log commit message")
     }
+
+    // MARK: - Parallel PRD Execution Tests (US-026)
+
+    /// Helper to create a test project in a unique subdirectory
+    private func createIsolatedTestProject(name: String, stories: [UserStory]) throws -> (PRDProject, URL) {
+        let dir = tempDir.appendingPathComponent(name)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let project = PRDProject(
+            name: name,
+            userStories: stories,
+            directoryURL: dir
+        )
+        let store = FileSystemPRDStore()
+        try store.writeProject(project, to: dir)
+        return (project, dir)
+    }
+
+    func testThreeParallelEnginesRunIndependently() throws {
+        // Create 3 separate projects with distinct stories
+        let (projectA, _) = try createIsolatedTestProject(name: "ProjectA", stories: [
+            UserStory(id: "A-001", title: "A Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "A-002", title: "A Story 2", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "ProjectB", stories: [
+            UserStory(id: "B-001", title: "B Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "ProjectC", stories: [
+            UserStory(id: "C-001", title: "C Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "C-002", title: "C Story 2", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+            UserStory(id: "C-003", title: "C Story 3", description: "d", priority: 3, acceptanceCriteria: ["c"]),
+        ])
+
+        var mockPM_A: MockProcessManager?
+        var mockPM_B: MockProcessManager?
+        var mockPM_C: MockProcessManager?
+
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM_A = pm
+                return pm
+            }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM_B = pm
+                return pm
+            }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM_C = pm
+                return pm
+            }
+        )
+
+        // Track states independently
+        var statesA: [LoopState] = []
+        var statesB: [LoopState] = []
+        var statesC: [LoopState] = []
+
+        let allRunning = XCTestExpectation(description: "All three engines running")
+        allRunning.expectedFulfillmentCount = 3
+
+        engineA.onStateChange = { state in
+            statesA.append(state)
+            if state == .running { allRunning.fulfill() }
+        }
+        engineB.onStateChange = { state in
+            statesB.append(state)
+            if state == .running { allRunning.fulfill() }
+        }
+        engineC.onStateChange = { state in
+            statesC.append(state)
+            if state == .running { allRunning.fulfill() }
+        }
+
+        // Start all three simultaneously
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allRunning], timeout: 3.0)
+
+        // All three should be running independently
+        XCTAssertTrue(statesA.contains(.running), "Engine A should be running")
+        XCTAssertTrue(statesB.contains(.running), "Engine B should be running")
+        XCTAssertTrue(statesC.contains(.running), "Engine C should be running")
+
+        // Each engine should have spawned a process for its own project
+        XCTAssertTrue(mockPM_A?.lastPrompt?.contains("A-001") ?? false, "Engine A should work on A-001")
+        XCTAssertTrue(mockPM_B?.lastPrompt?.contains("B-001") ?? false, "Engine B should work on B-001")
+        XCTAssertTrue(mockPM_C?.lastPrompt?.contains("C-001") ?? false, "Engine C should work on C-001")
+    }
+
+    func testPausingOneEngineDoesNotAffectOthers() throws {
+        let (projectA, _) = try createIsolatedTestProject(name: "PauseA", stories: [
+            UserStory(id: "PA-001", title: "PA Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "PauseB", stories: [
+            UserStory(id: "PB-001", title: "PB Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "PauseC", stories: [
+            UserStory(id: "PC-001", title: "PC Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+
+        var latestStateA: LoopState = .ready
+        var latestStateB: LoopState = .ready
+        var latestStateC: LoopState = .ready
+
+        let allRunning = XCTestExpectation(description: "All running")
+        allRunning.expectedFulfillmentCount = 3
+
+        engineA.onStateChange = { state in
+            latestStateA = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineB.onStateChange = { state in
+            latestStateB = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineC.onStateChange = { state in
+            latestStateC = state
+            if state == .running { allRunning.fulfill() }
+        }
+
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allRunning], timeout: 3.0)
+
+        // Pause only engine B
+        let bPausedExpectation = XCTestExpectation(description: "B paused")
+        engineB.onStateChange = { state in
+            latestStateB = state
+            if state == .paused { bPausedExpectation.fulfill() }
+        }
+        engineB.pause()
+
+        wait(for: [bPausedExpectation], timeout: 2.0)
+
+        // Verify B is paused while A and C remain running
+        XCTAssertEqual(latestStateB, .paused, "Engine B should be paused")
+        XCTAssertEqual(latestStateA, .running, "Engine A should still be running")
+        XCTAssertEqual(latestStateC, .running, "Engine C should still be running")
+    }
+
+    func testStoppingOneEngineDoesNotAffectOthers() throws {
+        let (projectA, _) = try createIsolatedTestProject(name: "StopA", stories: [
+            UserStory(id: "SA-001", title: "SA Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "StopB", stories: [
+            UserStory(id: "SB-001", title: "SB Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "StopC", stories: [
+            UserStory(id: "SC-001", title: "SC Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+
+        var mockPM_A: MockProcessManager?
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM_A = pm
+                return pm
+            }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+
+        var latestStateA: LoopState = .ready
+        var latestStateB: LoopState = .ready
+        var latestStateC: LoopState = .ready
+
+        let allRunning = XCTestExpectation(description: "All running")
+        allRunning.expectedFulfillmentCount = 3
+
+        engineA.onStateChange = { state in
+            latestStateA = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineB.onStateChange = { state in
+            latestStateB = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineC.onStateChange = { state in
+            latestStateC = state
+            if state == .running { allRunning.fulfill() }
+        }
+
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allRunning], timeout: 3.0)
+
+        // Stop only engine A
+        let aStoppedExpectation = XCTestExpectation(description: "A stopped")
+        engineA.onStateChange = { state in
+            latestStateA = state
+            if state == .stopped { aStoppedExpectation.fulfill() }
+        }
+        engineA.stop()
+
+        wait(for: [aStoppedExpectation], timeout: 2.0)
+
+        // A should be stopped, B and C should still be running
+        XCTAssertEqual(latestStateA, .stopped, "Engine A should be stopped")
+        XCTAssertEqual(mockPM_A?.killCallCount, 1, "Engine A's process should be killed")
+        XCTAssertEqual(latestStateB, .running, "Engine B should still be running")
+        XCTAssertEqual(latestStateC, .running, "Engine C should still be running")
+    }
+
+    func testParallelIterationCountsAreIndependent() throws {
+        let (projectA, _) = try createIsolatedTestProject(name: "IterA", stories: [
+            UserStory(id: "IA-001", title: "IA Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "IterB", stories: [
+            UserStory(id: "IB-001", title: "IB Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "IterC", stories: [
+            UserStory(id: "IC-001", title: "IC Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+
+        var iterationA = 0
+        var iterationB = 0
+        var iterationC = 0
+
+        let allIterating = XCTestExpectation(description: "All have iterated")
+        allIterating.expectedFulfillmentCount = 3
+
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+
+        engineA.onIterationChange = { count in
+            iterationA = count
+            if count == 1 { allIterating.fulfill() }
+        }
+        engineB.onIterationChange = { count in
+            iterationB = count
+            if count == 1 { allIterating.fulfill() }
+        }
+        engineC.onIterationChange = { count in
+            iterationC = count
+            if count == 1 { allIterating.fulfill() }
+        }
+
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allIterating], timeout: 3.0)
+
+        // Each engine should have its own iteration count
+        XCTAssertEqual(iterationA, 1, "Engine A iteration should be 1")
+        XCTAssertEqual(iterationB, 1, "Engine B iteration should be 1")
+        XCTAssertEqual(iterationC, 1, "Engine C iteration should be 1")
+    }
+
+    func testParallelLogEntriesAreIsolatedByProjectID() throws {
+        let (projectA, _) = try createIsolatedTestProject(name: "LogA", stories: [
+            UserStory(id: "LA-001", title: "LA Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "LogB", stories: [
+            UserStory(id: "LB-001", title: "LB Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "LogC", stories: [
+            UserStory(id: "LC-001", title: "LC Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+
+        var logsA: [(LogEntry, String)] = []
+        var logsB: [(LogEntry, String)] = []
+        var logsC: [(LogEntry, String)] = []
+
+        let allRunning = XCTestExpectation(description: "All running")
+        allRunning.expectedFulfillmentCount = 3
+
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+
+        engineA.onLogEntry = { entry, projectID in
+            logsA.append((entry, projectID))
+        }
+        engineB.onLogEntry = { entry, projectID in
+            logsB.append((entry, projectID))
+        }
+        engineC.onLogEntry = { entry, projectID in
+            logsC.append((entry, projectID))
+        }
+
+        engineA.onStateChange = { state in if state == .running { allRunning.fulfill() } }
+        engineB.onStateChange = { state in if state == .running { allRunning.fulfill() } }
+        engineC.onStateChange = { state in if state == .running { allRunning.fulfill() } }
+
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allRunning], timeout: 3.0)
+
+        // Each engine's log entries should only reference its own project ID
+        XCTAssertTrue(logsA.allSatisfy { $0.1 == "LogA" }, "Engine A logs should all reference LogA")
+        XCTAssertTrue(logsB.allSatisfy { $0.1 == "LogB" }, "Engine B logs should all reference LogB")
+        XCTAssertTrue(logsC.allSatisfy { $0.1 == "LogC" }, "Engine C logs should all reference LogC")
+    }
+
+    func testParallelErrorInOneDoesNotAffectOthers() throws {
+        let (projectA, _) = try createIsolatedTestProject(name: "ErrA", stories: [
+            UserStory(id: "EA-001", title: "EA Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectB, _) = try createIsolatedTestProject(name: "ErrB", stories: [
+            UserStory(id: "EB-001", title: "EB Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+        let (projectC, _) = try createIsolatedTestProject(name: "ErrC", stories: [
+            UserStory(id: "EC-001", title: "EC Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ])
+
+        var mockPM_B: MockProcessManager?
+
+        let engineA = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+        let engineB = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM_B = pm
+                return pm
+            }
+        )
+        let engineC = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: { MockProcessManager() }
+        )
+
+        var latestStateA: LoopState = .ready
+        var latestStateB: LoopState = .ready
+        var latestStateC: LoopState = .ready
+
+        let allRunning = XCTestExpectation(description: "All running")
+        allRunning.expectedFulfillmentCount = 3
+
+        engineA.onStateChange = { state in
+            latestStateA = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineB.onStateChange = { state in
+            latestStateB = state
+            if state == .running { allRunning.fulfill() }
+        }
+        engineC.onStateChange = { state in
+            latestStateC = state
+            if state == .running { allRunning.fulfill() }
+        }
+
+        engineA.start(project: projectA)
+        engineB.start(project: projectB)
+        engineC.start(project: projectC)
+
+        wait(for: [allRunning], timeout: 3.0)
+
+        // Simulate error in engine B only
+        let bErrorExpectation = XCTestExpectation(description: "B error")
+        engineB.onStateChange = { state in
+            latestStateB = state
+            if state == .error { bErrorExpectation.fulfill() }
+        }
+
+        mockPM_B?.sendExit(code: 1, stderr: "Claude crashed")
+
+        wait(for: [bErrorExpectation], timeout: 3.0)
+
+        // B should be in error, A and C should still be running
+        XCTAssertEqual(latestStateB, .error, "Engine B should be in error state")
+        XCTAssertEqual(latestStateA, .running, "Engine A should still be running")
+        XCTAssertEqual(latestStateC, .running, "Engine C should still be running")
+    }
 }

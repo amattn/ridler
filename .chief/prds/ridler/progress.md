@@ -440,3 +440,16 @@
   - pbxproj IDs: A10030 (build file), A20032 (file ref) for StatusBarView.swift
   - All 160 tests still pass (pure UI story — no new tests needed)
 ---
+
+## 2026-02-09 - US-026
+- **What was implemented:** Parallel PRD execution — verified and tested that multiple PRDs can run simultaneously with independent loop state, iteration counts, timing, error tracking, and log entries. Fixed `closeProject` to properly stop engine and clean up when closing a running tab.
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Updated `closeProject()` to stop the engine and remove it from `loopEngines` dictionary before removing the project, preventing orphaned running processes
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — Added 6 concurrent execution tests: `testThreeParallelEnginesRunIndependently` (3 engines running with correct story prompts), `testPausingOneEngineDoesNotAffectOthers` (B paused, A and C still running), `testStoppingOneEngineDoesNotAffectOthers` (A stopped with kill, B and C still running), `testParallelIterationCountsAreIndependent` (each engine tracks its own count), `testParallelLogEntriesAreIsolatedByProjectID` (logs tagged with correct project IDs), `testParallelErrorInOneDoesNotAffectOthers` (B errors, A and C still running)
+- **Learnings for future iterations:**
+  - The parallel execution architecture was mostly already in place from prior stories — `loopEngines: [String: RalphLoopEngine]` dictionary with `getOrCreateEngine(for:)` already provided per-project engine isolation
+  - Key fix: `closeProject` must stop the engine and clean up the `loopEngines` dictionary entry, otherwise orphaned engines continue running in the background
+  - `createIsolatedTestProject(name:stories:)` helper creates projects in unique subdirectories within `tempDir` — essential for parallel tests that need separate file systems
+  - `XCTestExpectation` with `expectedFulfillmentCount = 3` is useful for waiting on multiple parallel events
+  - All 166 tests pass (160 existing + 6 new parallel execution tests)
+---

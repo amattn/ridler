@@ -232,6 +232,11 @@ struct ContentView: View {
     }
 
     private func closeProject(_ project: PRDProject) {
+        // Stop the engine if it's running
+        if let engine = loopEngines[project.id] {
+            engine.stop()
+            loopEngines.removeValue(forKey: project.id)
+        }
         if let dirURL = project.directoryURL {
             fileWatcher.unwatch(directoryURL: dirURL)
         }
