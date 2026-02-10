@@ -340,7 +340,8 @@
         "Detect \u003cridler-complete/\u003e signal to exit loop early"
       ],
       "priority": 21,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-022",

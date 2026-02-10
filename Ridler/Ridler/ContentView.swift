@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showErrorAlert = false
     @StateObject private var fileWatcher = ProjectFileWatcher()
     @StateObject private var logStore = LogStore()
+    @State private var loopEngines: [String: RalphLoopEngine] = [:]
 
     private var selectedProject: PRDProject? {
         guard let id = selectedProjectID else { return nil }
@@ -35,7 +36,12 @@ struct ContentView: View {
                     tabBar
 
                     if let selectedIndex = selectedProjectIndex {
-                        LoopToolbarView(project: $openProjects[selectedIndex])
+                        LoopToolbarView(
+                            project: $openProjects[selectedIndex],
+                            onStart: { startLoop(for: selectedIndex) },
+                            onPause: { pauseLoop(for: selectedIndex) },
+                            onStop: { stopLoop(for: selectedIndex) }
+                        )
                     }
 
                     NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -223,6 +229,78 @@ struct ContentView: View {
             } catch {
                 // File may be mid-write; ignore transient errors
             }
+        }
+    }
+
+    private func getOrCreateEngine(for project: PRDProject) -> RalphLoopEngine {
+        if let existing = loopEngines[project.id] {
+            return existing
+        }
+        let engine = RalphLoopEngine()
+        engine.onStateChange = { [self] newState in
+            if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
+                openProjects[idx].loopState = newState
+            }
+        }
+        engine.onIterationChange = { [self] count in
+            if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
+                openProjects[idx].iterationCount = count
+            }
+        }
+        engine.onLogEntry = { [self] entry, projectID in
+            logStore.append(entry, for: projectID)
+        }
+        engine.onProjectUpdated = { [self] updatedProject in
+            if let idx = openProjects.firstIndex(where: { $0.id == updatedProject.id }) {
+                let currentState = openProjects[idx].loopState
+                let currentIteration = openProjects[idx].iterationCount
+                let currentPause = openProjects[idx].pauseAfterStory
+                let currentMax = openProjects[idx].maxIterations
+                let currentStart = openProjects[idx].loopStartDate
+                openProjects[idx] = updatedProject
+                openProjects[idx].loopState = currentState
+                openProjects[idx].iterationCount = currentIteration
+                openProjects[idx].pauseAfterStory = currentPause
+                openProjects[idx].maxIterations = currentMax
+                openProjects[idx].loopStartDate = currentStart
+            }
+        }
+        loopEngines[project.id] = engine
+        return engine
+    }
+
+    private func startLoop(for index: Int) {
+        let project = openProjects[index]
+        let engine = getOrCreateEngine(for: project)
+
+        if project.maxIterations == 0 {
+            openProjects[index].maxIterations = project.defaultMaxIterations
+        }
+        if project.loopStartDate == nil {
+            openProjects[index].loopStartDate = Date()
+        }
+
+        openProjects[index].loopState = .running
+
+        let projectToStart = openProjects[index]
+        if project.loopState == .paused || project.loopState == .stopped || project.loopState == .error {
+            engine.resume(project: projectToStart)
+        } else {
+            engine.start(project: projectToStart)
+        }
+    }
+
+    private func pauseLoop(for index: Int) {
+        let project = openProjects[index]
+        if let engine = loopEngines[project.id] {
+            engine.pause()
+        }
+    }
+
+    private func stopLoop(for index: Int) {
+        let project = openProjects[index]
+        if let engine = loopEngines[project.id] {
+            engine.stop()
         }
     }
 

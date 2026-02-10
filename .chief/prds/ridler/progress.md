@@ -47,6 +47,9 @@
 - LogStore (ObservableObject) in `Managers/LogStore.swift` — stores `[LogEntry]` per project ID; used by ContentView as `@StateObject` and passed to LogPanelView
 - LogPanelView accepts `entries: [LogEntry]` and `isRunning: Bool` — renders typed log entries with icons, auto-scroll via ScrollViewReader
 - macOS 14.0 deployment target means `onScrollGeometryChange` is NOT available — use `onAppear`/`onDisappear` on a bottom sentinel view for scroll detection instead
+- RalphLoopEngine in `Managers/RalphLoopEngine.swift` — use callbacks (onStateChange, onIterationChange, onLogEntry, onProjectUpdated) to communicate back to ContentView; one engine per project stored in `loopEngines: [String: RalphLoopEngine]`
+- LoopToolbarView accepts onStart/onPause/onStop closures — delegates control to ContentView which manages engine lifecycle
+- pbxproj IDs: A10026/A20028 (RalphLoopEngine), C10007/C20008 (RalphLoopEngineTests)
 
 ---
 
@@ -347,4 +350,23 @@
   - LogStore is a separate ObservableObject (not part of PRDProject) because it holds UI state not persisted to JSON
   - pbxproj IDs: A10025/A20027 (LogStore), C10006/C20007 (LogStoreTests)
   - All 123 tests pass (113 existing + 10 new)
+---
+
+## 2026-02-09 - US-021
+- **What was implemented:** Ralph loop engine — the autonomous execution engine that orchestrates story execution through Claude Code. Implements the full loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — New `RalphLoopEngine` class (ObservableObject) implementing the full autonomous loop: story selection (filter passes: false, sort by priority), prompt building with embedded agent instructions, Claude Code subprocess spawning via ProcessManaging, streaming output parsing via StreamingJSONParser, completion detection (`<ridler-complete/>` signal), state transitions (running/paused/stopped/complete/error), pause-after-story support, configurable max iterations, audio notification on completion (NSSound.beep)
+  - `Ridler/Ridler/ContentView.swift` — Added `loopEngines: [String: RalphLoopEngine]` dictionary for per-project engines; `getOrCreateEngine(for:)` factory with callbacks for state change, iteration change, log entries, and project updates; `startLoop(for:)`, `pauseLoop(for:)`, `stopLoop(for:)` methods; wired LoopToolbarView with onStart/onPause/onStop callbacks
+  - `Ridler/Ridler/Views/LoopToolbarView.swift` — Added `onStart`, `onPause`, `onStop` callback parameters; removed internal `startLoop()`, `pauseLoop()`, `stopLoop()` methods; button actions now delegate to callbacks from ContentView
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — 14 unit tests: story selection (highest priority with passes: false), completion when all pass, state transitions (start→running, pause→paused, stop→stopped with kill), iteration count increment, max iterations stop, prompt content (story details, acceptance criteria, completion signal), system log messages, working directory (parent of PRD dir), story inProgress marking, process exit error handling, completion detection via ridler-complete signal, pause-after-story behavior
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added RalphLoopEngine.swift (A10026/A20028) and RalphLoopEngineTests.swift (C10007/C20008)
+- **Learnings for future iterations:**
+  - RalphLoopEngine uses callbacks (`onStateChange`, `onIterationChange`, `onLogEntry`, `onProjectUpdated`) instead of @Published properties — this avoids the complexity of ObservableObject across view hierarchies and simplifies state synchronization with ContentView's `@State` arrays
+  - `NSSound.beep()` requires `import AppKit` — Foundation alone is insufficient
+  - LoopToolbarView can accept callback closures (onStart/onPause/onStop) to delegate control logic to the parent view — this separates presentation (toolbar) from business logic (engine management in ContentView)
+  - The engine's `getOrCreateEngine(for:)` pattern stores engines in a `[String: RalphLoopEngine]` dictionary keyed by project ID — ensures one engine per project for parallel execution support
+  - Working directory for Claude Code is set to the parent of the PRD directory (directoryURL.deletingLastPathComponent()) — this matches the expected project root location
+  - MockProcessManager is useful for testing — expose `sendLine()` and `sendExit()` helper methods for simulating subprocess behavior
+  - pbxproj IDs: A10026/A20028 (RalphLoopEngine), C10007/C20008 (RalphLoopEngineTests)
+  - All 137 tests pass (123 existing + 14 new)
 ---

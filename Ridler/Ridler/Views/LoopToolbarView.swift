@@ -2,6 +2,9 @@ import SwiftUI
 
 struct LoopToolbarView: View {
     @Binding var project: PRDProject
+    var onStart: () -> Void = {}
+    var onPause: () -> Void = {}
+    var onStop: () -> Void = {}
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
 
@@ -50,7 +53,7 @@ struct LoopToolbarView: View {
         HStack(spacing: 4) {
             // Start/Resume button
             Button {
-                startLoop()
+                onStart()
             } label: {
                 Image(systemName: "play.fill")
                     .font(.system(size: 12))
@@ -61,7 +64,7 @@ struct LoopToolbarView: View {
 
             // Pause button
             Button {
-                pauseLoop()
+                onPause()
             } label: {
                 Image(systemName: "pause.fill")
                     .font(.system(size: 12))
@@ -72,7 +75,7 @@ struct LoopToolbarView: View {
 
             // Stop button
             Button {
-                stopLoop()
+                onStop()
             } label: {
                 Image(systemName: "stop.fill")
                     .font(.system(size: 12))
@@ -132,34 +135,6 @@ struct LoopToolbarView: View {
             return "\(minutes)m \(seconds)s"
         } else {
             return "\(seconds)s"
-        }
-    }
-
-    private func startLoop() {
-        if let newState = project.loopState.transition(to: .running) {
-            project.loopState = newState
-            if project.maxIterations == 0 {
-                project.maxIterations = project.defaultMaxIterations
-            }
-            if project.loopStartDate == nil {
-                project.loopStartDate = Date()
-                elapsedTime = 0
-            }
-            startTimer()
-        }
-    }
-
-    private func pauseLoop() {
-        if let newState = project.loopState.transition(to: .paused) {
-            project.loopState = newState
-            stopTimer()
-        }
-    }
-
-    private func stopLoop() {
-        if let newState = project.loopState.transition(to: .stopped) {
-            project.loopState = newState
-            stopTimer()
         }
     }
 
