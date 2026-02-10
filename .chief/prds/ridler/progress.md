@@ -24,6 +24,10 @@
 - Duplicate project detection uses `.standardizedFileURL` for reliable URL comparison
 - pbxproj IDs for views: A10012-A10016 (build files), A20014-A20018 (file refs)
 - Use `import UniformTypeIdentifiers` when using `.fileImporter` with `UTType` content types
+- SidebarView accepts `project: PRDProject?` and `selection: Binding<SidebarSelection?>` for file/story selection
+- SidebarSelection enum (in Models/SidebarSelection.swift): `.file(PRDFileName)` or `.story(String)` — mutual exclusion between file and story selections
+- PRDFileName enum has `.allCases` for iterating prd.md, ridl.md, ridl.json with icons
+- ContentView owns `@State sidebarSelection: SidebarSelection?` and passes binding to SidebarView
 
 ---
 
@@ -154,5 +158,33 @@
   - Running state shows both a play icon and iteration count inline using HStack
   - SwiftUI `Menu` component works well for dropdown button — no popover/sheet needed
   - Close tab was already implemented in US-007; clicking a tab already switches view without affecting other loops
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-010
+- **What was implemented:** PRD file browser in the left sidebar pane with collapsible "PRD Files" header, three file rows (prd.md, ridl.md, ridl.json), file-type icons, dimmed appearance for missing files, and mutual exclusion with story selection
+- **Files changed:**
+  - `Ridler/Ridler/Models/SidebarSelection.swift` — New enum for sidebar selection: `.file(PRDFileName)` or `.story(String)` with `PRDFileName` enum defining the three PRD files with icons
+  - `Ridler/Ridler/Views/SidebarView.swift` — Replaced placeholder with full file browser: collapsible header, file rows with existence checks, selection highlighting, dimmed missing files with "(not yet created)" note
+  - `Ridler/Ridler/ContentView.swift` — Added `sidebarSelection` state and passes project + selection binding to SidebarView
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added SidebarSelection.swift (A10017/A20019) to app target and Models group
+- **Learnings for future iterations:**
+  - SidebarView now requires `project: PRDProject?` and `selection: Binding<SidebarSelection?>` — update callers when modifying
+  - PRDFileName.allCases iterates in declaration order: prdMd, ridlMd, ridlJson
+  - File existence checked via `FileManager.default.fileExists(atPath:)` using `project.directoryURL` + filename
+  - pbxproj IDs: A10017 (build file), A20019 (file ref) for SidebarSelection.swift
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-011
+- **What was implemented:** Stories list in left pane with scrollable story rows, status icons, selection highlighting, progress bar, and milestone grouping support
+- **Files changed:**
+  - `Ridler/Ridler/Views/SidebarView.swift` — Replaced placeholder "Stories" section with full implementation: `storiesSection()` renders either flat list or milestone-grouped list; `storyRow()` shows status icon + story ID + title with selection highlight; `milestoneGroup()` renders collapsible headers with pass count summary; `progressBar()` shows filled bar with percentage and count; `storyStatusIcon()` renders checkmark (passed), filled dot (in-progress), or circle (pending)
+- **Learnings for future iterations:**
+  - Story status icons: `checkmark.circle.fill` (green, passed), `circle.inset.filled` (cyan, in-progress), `circle` (secondary, pending)
+  - Milestone grouping uses `@State collapsedMilestones: Set<String>` to track collapsed state
+  - Ungrouped stories (not in any milestone) are shown after all milestone groups
+  - Progress bar uses GeometryReader to calculate filled width as fraction of total width
+  - Selection is mutual exclusion between file and story via shared `SidebarSelection?` binding
   - All 43 tests still pass (pure UI story — no new tests needed)
 ---

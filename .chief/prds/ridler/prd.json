@@ -175,7 +175,8 @@
         "If no milestones, display as flat list"
       ],
       "priority": 11,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-012",
