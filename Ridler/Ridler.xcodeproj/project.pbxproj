@@ -18,6 +18,9 @@
 		A10009 /* RidlerError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20011 /* RidlerError.swift */; };
 		A10010 /* PRDStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20012 /* PRDStore.swift */; };
 		A10011 /* FileSystemPRDStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20013 /* FileSystemPRDStore.swift */; };
+		A10012 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20014 /* SidebarView.swift */; };
+		A10013 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20015 /* DetailView.swift */; };
+		A10014 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016 /* LogPanelView.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 /* End PBXBuildFile section */
@@ -46,6 +49,9 @@
 		A20011 /* RidlerError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RidlerError.swift; sourceTree = "<group>"; };
 		A20012 /* PRDStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStore.swift; sourceTree = "<group>"; };
 		A20013 /* FileSystemPRDStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemPRDStore.swift; sourceTree = "<group>"; };
+		A20014 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		A20015 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		A20016 /* LogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogPanelView.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -110,6 +116,9 @@
 		A40003 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A20014 /* SidebarView.swift */,
+				A20015 /* DetailView.swift */,
+				A20016 /* LogPanelView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -264,6 +273,9 @@
 				A10009 /* RidlerError.swift in Sources */,
 				A10010 /* PRDStore.swift in Sources */,
 				A10011 /* FileSystemPRDStore.swift in Sources */,
+				A10012 /* SidebarView.swift in Sources */,
+				A10013 /* DetailView.swift in Sources */,
+				A10014 /* LogPanelView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

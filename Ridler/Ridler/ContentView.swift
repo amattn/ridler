@@ -1,9 +1,17 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+
     var body: some View {
-        Text("Ridler")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SidebarView()
+        } content: {
+            DetailView()
+        } detail: {
+            LogPanelView()
+        }
+        .frame(minWidth: 900, minHeight: 500)
     }
 }
 

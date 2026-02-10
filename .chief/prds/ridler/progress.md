@@ -17,6 +17,9 @@
 - When resolving URLs: directories are used as-is, files resolve to their parent directory
 - URL comparison gotcha: `deletingLastPathComponent()` adds trailing slash — use `.standardizedFileURL` for comparisons
 - DecodingError mapping: use `mapDecodingError()` pattern to convert Swift DecodingError into RidlerError.jsonDecoding with file, key, jsonPath
+- Views are in `Ridler/Ridler/Views/`: SidebarView, DetailView, LogPanelView
+- ContentView uses `NavigationSplitView` with three columns (sidebar, content, detail) and `columnVisibility` state
+- pbxproj IDs for views: A10012-A10014 (build files), A20014-A20016 (file refs)
 
 ---
 
@@ -81,4 +84,19 @@
   - For concurrent tests, use `DispatchQueue` with `.concurrent` attribute and `XCTestExpectation` with `expectedFulfillmentCount`
   - After concurrent writes, always verify the file remains valid JSON by loading it back
   - All 43 tests pass (22 model + 21 PRDStore)
+---
+
+## 2026-02-09 - US-005
+- **What was implemented:** Three-pane window layout using NavigationSplitView
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Replaced single Text view with NavigationSplitView using three columns (sidebar, content, detail) with columnVisibility state binding
+  - `Ridler/Ridler/Views/SidebarView.swift` — Left pane placeholder with "PRD Files" and "Stories" sections, min width 200
+  - `Ridler/Ridler/Views/DetailView.swift` — Middle pane placeholder for story detail / file content, min width 300
+  - `Ridler/Ridler/Views/LogPanelView.swift` — Right pane placeholder for log view / Claude terminal, min width 250
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added 3 view files to app target (A10012-A10014, A20014-A20016)
+- **Learnings for future iterations:**
+  - NavigationSplitView with three columns uses sidebar/content/detail pattern — sidebar auto-collapses on narrow windows
+  - `NavigationSplitViewVisibility.all` as default ensures all three panes are visible on launch
+  - `.frame(minWidth: 900, minHeight: 500)` on ContentView ensures reasonable minimum window size
+  - All 43 tests still pass (no new tests needed — this is pure UI)
 ---
