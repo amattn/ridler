@@ -170,6 +170,8 @@ struct ContentView: View {
         .onReceive(fileWatcher.$changeToken.dropFirst()) { _ in
             reloadAllProjects()
         }
+        .focusedSceneValue(\.selectedProject, selectedProject)
+        .focusedSceneValue(\.hasProject, !openProjects.isEmpty)
     }
 
     private var tabBar: some View {

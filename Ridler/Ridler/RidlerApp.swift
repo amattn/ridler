@@ -2,66 +2,85 @@ import SwiftUI
 
 @main
 struct RidlerApp: App {
+    @FocusedValue(\.selectedProject) private var selectedProject: PRDProject?
+    @FocusedValue(\.hasProject) private var hasProject: Bool?
+
+    private var projectLoopState: LoopState {
+        selectedProject?.loopState ?? .ready
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
         .commands {
+            // MARK: - File Menu
             CommandGroup(replacing: .newItem) {
-                Button("Open PRD...") {
-                    NotificationCenter.default.post(name: .openPRD, object: nil)
-                }
-                .keyboardShortcut("o")
-
                 Button("New PRD...") {
                     NotificationCenter.default.post(name: .newPRD, object: nil)
                 }
                 .keyboardShortcut("n")
+
+                Button("Open PRD...") {
+                    NotificationCenter.default.post(name: .openPRD, object: nil)
+                }
+                .keyboardShortcut("o")
             }
 
-            CommandGroup(after: .newItem) {
-                Divider()
+            // MARK: - View Menu
+            CommandGroup(after: .toolbar) {
+                Button("Focus Log Panel") {
+                    NotificationCenter.default.post(name: .focusLogPanel, object: nil)
+                }
+                .keyboardShortcut("l")
+                .disabled(hasProject != true)
+            }
 
+            // MARK: - PRD Menu
+            CommandMenu("PRD") {
                 Button("Start/Resume Loop") {
                     NotificationCenter.default.post(name: .startLoop, object: nil)
                 }
                 .keyboardShortcut("r")
+                .disabled(hasProject != true || !projectLoopState.canTransition(to: .running))
 
                 Button("Start/Resume Loop") {
                     NotificationCenter.default.post(name: .startLoop, object: nil)
                 }
                 .keyboardShortcut(.return)
+                .disabled(hasProject != true || !projectLoopState.canTransition(to: .running))
 
                 Button("Pause Loop") {
                     NotificationCenter.default.post(name: .pauseLoop, object: nil)
                 }
                 .keyboardShortcut(".")
+                .disabled(hasProject != true || !projectLoopState.canTransition(to: .paused))
 
                 Button("Stop Loop") {
                     NotificationCenter.default.post(name: .stopLoop, object: nil)
                 }
                 .keyboardShortcut(".", modifiers: [.command, .shift])
+                .disabled(hasProject != true || !projectLoopState.canTransition(to: .stopped))
 
                 Divider()
-
-                Button("Focus Log Panel") {
-                    NotificationCenter.default.post(name: .focusLogPanel, object: nil)
-                }
-                .keyboardShortcut("l")
 
                 Button("Edit Current PRD") {
                     NotificationCenter.default.post(name: .editPRD, object: nil)
                 }
                 .keyboardShortcut("e")
+                .disabled(hasProject != true)
+            }
 
-                Divider()
-
+            // MARK: - Window Menu
+            CommandGroup(before: .windowList) {
                 ForEach(1...9, id: \.self) { index in
                     Button("Switch to PRD \(index)") {
                         NotificationCenter.default.post(name: .switchToTab, object: index)
                     }
                     .keyboardShortcut(KeyEquivalent(Character(String(index))))
                 }
+
+                Divider()
             }
         }
     }

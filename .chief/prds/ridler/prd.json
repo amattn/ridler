@@ -521,7 +521,8 @@
         "Menu items enabled/disabled based on current state"
       ],
       "priority": 34,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-035",

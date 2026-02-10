@@ -56,6 +56,7 @@
 - PRDProject runtime-only properties now include: autoRetryEnabled, audioNotificationsEnabled — must be preserved in `reloadAllProjects()` and `onProjectUpdated`
 - SyntaxHighlighter in `Managers/SyntaxHighlighter.swift` — use `parseSegments()` to split content into text/code blocks, `highlight()` to apply NSAttributedString coloring; HighlightedCodeView (NSViewRepresentable) in LogPanelView for rendering
 - pbxproj IDs: A10031/A20033 (SyntaxHighlighter), C10009/C20010 (SyntaxHighlighterTests)
+- FocusedValues for menu state: `FocusedValues.swift` defines `selectedProject` and `hasProject` keys; ContentView publishes via `.focusedSceneValue()`; RidlerApp reads via `@FocusedValue`
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
@@ -566,4 +567,23 @@
   - Focus Log Panel is implemented by ensuring `columnVisibility = .all` (showing all three panes) — in a future iteration, a more precise focus mechanism (e.g., FocusState) could be used
   - Edit Current PRD selects `.file(.prdMd)` in sidebar — this will trigger the Claude terminal pane when US-040 is implemented; for now it just shows the prd.md file content
   - All 193 tests pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-034
+- **What was implemented:** Full macOS menu bar with properly organized menus: File (New PRD, Open PRD), View (Focus Log Panel), PRD (Start/Resume, Pause, Stop, Edit Current PRD), and Window (Switch to PRD 1-9). Menu items are enabled/disabled based on current loop state using FocusedValue bindings from ContentView to RidlerApp.
+- **Files changed:**
+  - `Ridler/Ridler/RidlerApp.swift` — Reorganized commands from two flat CommandGroups into proper menu structure: File menu (CommandGroup replacing .newItem), View menu (CommandGroup after .toolbar), PRD menu (CommandMenu), Window menu (CommandGroup before .windowList); added @FocusedValue for selectedProject and hasProject; menu items disabled based on loop state via `canTransition(to:)`
+  - `Ridler/Ridler/Models/FocusedValues.swift` — New file defining FocusedProjectKey and FocusedHasProjectKey for SwiftUI FocusedValue bindings between ContentView and menu commands
+  - `Ridler/Ridler/ContentView.swift` — Added `.focusedSceneValue(\.selectedProject, ...)` and `.focusedSceneValue(\.hasProject, ...)` to publish view state to menu commands
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added FocusedValues.swift (A10032/A20034) to app target and Models group
+- **Learnings for future iterations:**
+  - SwiftUI `@FocusedValue` is the proper pattern for communicating view state to menu commands at the App level — replaces the need for a shared ViewModel or more NotificationCenter hacks
+  - `CommandMenu("PRD")` creates a custom top-level menu — use this for app-specific menus that don't fit into standard macOS categories
+  - `CommandGroup(after: .toolbar)` places items in the View menu after the standard toolbar items
+  - `CommandGroup(before: .windowList)` places items in the Window menu before the standard window list
+  - Edit menu (Undo/Redo/Cut/Copy/Paste/Select All) is provided automatically by SwiftUI — no custom code needed
+  - Help menu is provided automatically by SwiftUI — no custom code needed
+  - Menu item enable/disable uses `LoopState.canTransition(to:)` — reuses existing state machine logic rather than duplicating conditions
+  - pbxproj IDs: A10032/A20034 (FocusedValues.swift)
+  - All 193 tests pass (no new tests needed — menu bar is UI-only and uses existing state machine which is already well-tested)
 ---
