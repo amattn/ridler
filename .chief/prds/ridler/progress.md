@@ -68,6 +68,9 @@
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
+- Distribution: `scripts/distribute.sh` handles archive → sign → notarize → DMG; use `--skip-notarize` for local dev
+- Icon generation: `scripts/generate_icon.swift` creates all 10 macOS icon PNGs programmatically via AppKit
+- Release build has `ENABLE_HARDENED_RUNTIME = YES` (required for notarization)
 - pbxproj IDs: A10027/A20029 (GitManaging), A10028/A20030 (GitManager), A10029/A20031 (BranchWarningSheet), C10008/C20009 (GitManagerTests)
 
 ---
@@ -738,4 +741,24 @@
   - `.help()` modifier adds a macOS native tooltip on hover — good for discoverability without cluttering the UI
   - `.animation(.easeInOut(duration: 0.2), value: autoScroll)` on the label content animates color and background transitions smoothly
   - All 193 tests pass (no new tests needed — this is a pure UI enhancement)
+---
+
+## 2026-02-09 - US-044
+- **What was implemented:** Custom app icon, notarization configuration, and DMG distribution script
+- **Files changed:**
+  - `Ridler/Ridler/Assets.xcassets/AppIcon.appiconset/Contents.json` — Updated with filename references for all 10 icon sizes
+  - `Ridler/Ridler/Assets.xcassets/AppIcon.appiconset/icon_*.png` — 10 PNG icon files (16-1024px) with gradient blue design and stylized "R"
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added ENABLE_HARDENED_RUNTIME and copyright to Release config
+  - `scripts/generate_icon.swift` — Swift script using AppKit/CoreGraphics to programmatically generate icon PNGs
+  - `scripts/distribute.sh` — Distribution script: archive → code sign → notarize → create DMG
+  - `.chief/prds/ridler/prd.json` — Marked US-044 as complete
+- **Learnings for future iterations:**
+  - macOS app icons require 10 PNG files: 5 sizes (16, 32, 128, 256, 512) × 2 scales (1x, 2x)
+  - AppIcon Contents.json needs `filename` field alongside `idiom`, `scale`, `size` for Xcode to pick up images
+  - Hardened runtime (`ENABLE_HARDENED_RUNTIME = YES`) is required in Release for notarization — without it, `xcrun notarytool` rejects the submission
+  - `sips` and `iconutil` are available on macOS for icon manipulation, but a Swift script with AppKit gives full control over the design
+  - Distribution script uses `hdiutil create -format UDZO` for compressed DMGs with `/Applications` symlink for drag-to-install
+  - `codesign --options runtime` enables hardened runtime during ad-hoc signing outside Xcode
+  - The `--skip-notarize` flag is essential for local development without Developer ID certificates
+  - All 193 tests pass — no new tests needed for icon/distribution changes
 ---
