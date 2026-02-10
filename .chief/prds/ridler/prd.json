@@ -254,7 +254,8 @@
         "Unit tests for all valid state transitions and rejection of invalid transitions"
       ],
       "priority": 16,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-017",

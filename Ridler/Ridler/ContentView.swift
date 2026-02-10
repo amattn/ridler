@@ -114,27 +114,27 @@ struct ContentView: View {
             switch project.loopState {
             case .ready:
                 Image(systemName: "circle.fill")
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(project.loopState.badgeColor)
             case .running:
                 HStack(spacing: 2) {
                     Image(systemName: "play.fill")
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(project.loopState.badgeColor)
                     Text("\(project.iterationCount)")
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(project.loopState.badgeColor)
                 }
             case .paused:
                 Image(systemName: "pause.fill")
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(project.loopState.badgeColor)
             case .stopped:
                 Image(systemName: "stop.fill")
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(project.loopState.badgeColor)
             case .complete:
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(project.loopState.badgeColor)
             case .error:
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(project.loopState.badgeColor)
             }
         }
         .font(.system(size: 9))
@@ -203,6 +203,7 @@ struct ContentView: View {
                 var updated = reloaded
                 updated.loopState = openProjects[index].loopState
                 updated.iterationCount = openProjects[index].iterationCount
+                updated.pauseAfterStory = openProjects[index].pauseAfterStory
                 openProjects[index] = updated
             } catch {
                 // File may be mid-write; ignore transient errors

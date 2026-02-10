@@ -11,6 +11,8 @@ struct PRDProject: Codable, Identifiable, Equatable {
     var loopState: LoopState
     var iterationCount: Int
 
+    var pauseAfterStory: Bool
+
     var directoryURL: URL?
 
     enum CodingKeys: String, CodingKey {
@@ -25,6 +27,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         milestones: [Milestone]? = nil,
         loopState: LoopState = .ready,
         iterationCount: Int = 0,
+        pauseAfterStory: Bool = false,
         directoryURL: URL? = nil
     ) {
         self.name = name
@@ -34,6 +37,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         self.milestones = milestones
         self.loopState = loopState
         self.iterationCount = iterationCount
+        self.pauseAfterStory = pauseAfterStory
         self.directoryURL = directoryURL
     }
 
@@ -46,6 +50,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         milestones = try container.decodeIfPresent([Milestone].self, forKey: .milestones)
         loopState = .ready
         iterationCount = 0
+        pauseAfterStory = false
         directoryURL = nil
     }
 

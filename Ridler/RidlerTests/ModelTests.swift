@@ -110,6 +110,129 @@ final class LoopStateTests: XCTestCase {
         XCTAssertEqual(LoopState.complete.rawValue, "complete")
         XCTAssertEqual(LoopState.error.rawValue, "error")
     }
+
+    // MARK: - Valid Transitions
+
+    func testReadyToRunning() {
+        XCTAssertTrue(LoopState.ready.canTransition(to: .running))
+        XCTAssertEqual(LoopState.ready.transition(to: .running), .running)
+    }
+
+    func testRunningToPaused() {
+        XCTAssertTrue(LoopState.running.canTransition(to: .paused))
+        XCTAssertEqual(LoopState.running.transition(to: .paused), .paused)
+    }
+
+    func testRunningToStopped() {
+        XCTAssertTrue(LoopState.running.canTransition(to: .stopped))
+        XCTAssertEqual(LoopState.running.transition(to: .stopped), .stopped)
+    }
+
+    func testRunningToComplete() {
+        XCTAssertTrue(LoopState.running.canTransition(to: .complete))
+        XCTAssertEqual(LoopState.running.transition(to: .complete), .complete)
+    }
+
+    func testRunningToError() {
+        XCTAssertTrue(LoopState.running.canTransition(to: .error))
+        XCTAssertEqual(LoopState.running.transition(to: .error), .error)
+    }
+
+    func testPausedToRunning() {
+        XCTAssertTrue(LoopState.paused.canTransition(to: .running))
+        XCTAssertEqual(LoopState.paused.transition(to: .running), .running)
+    }
+
+    func testStoppedToRunning() {
+        XCTAssertTrue(LoopState.stopped.canTransition(to: .running))
+        XCTAssertEqual(LoopState.stopped.transition(to: .running), .running)
+    }
+
+    func testErrorToRunning() {
+        XCTAssertTrue(LoopState.error.canTransition(to: .running))
+        XCTAssertEqual(LoopState.error.transition(to: .running), .running)
+    }
+
+    // MARK: - Invalid Transitions
+
+    func testReadyCannotTransitionToNonRunning() {
+        let invalidTargets: [LoopState] = [.paused, .stopped, .complete, .error, .ready]
+        for target in invalidTargets {
+            XCTAssertFalse(LoopState.ready.canTransition(to: target), "Ready should not transition to \(target)")
+            XCTAssertNil(LoopState.ready.transition(to: target), "Ready.transition(to: \(target)) should return nil")
+        }
+    }
+
+    func testRunningCannotTransitionToReadyOrSelf() {
+        XCTAssertFalse(LoopState.running.canTransition(to: .ready))
+        XCTAssertNil(LoopState.running.transition(to: .ready))
+        XCTAssertFalse(LoopState.running.canTransition(to: .running))
+        XCTAssertNil(LoopState.running.transition(to: .running))
+    }
+
+    func testPausedCannotTransitionToNonRunning() {
+        let invalidTargets: [LoopState] = [.paused, .stopped, .complete, .error, .ready]
+        for target in invalidTargets {
+            XCTAssertFalse(LoopState.paused.canTransition(to: target), "Paused should not transition to \(target)")
+            XCTAssertNil(LoopState.paused.transition(to: target))
+        }
+    }
+
+    func testStoppedCannotTransitionToNonRunning() {
+        let invalidTargets: [LoopState] = [.paused, .stopped, .complete, .error, .ready]
+        for target in invalidTargets {
+            XCTAssertFalse(LoopState.stopped.canTransition(to: target), "Stopped should not transition to \(target)")
+            XCTAssertNil(LoopState.stopped.transition(to: target))
+        }
+    }
+
+    func testCompleteCannotTransitionAnywhere() {
+        let allStates: [LoopState] = [.ready, .running, .paused, .stopped, .complete, .error]
+        for target in allStates {
+            XCTAssertFalse(LoopState.complete.canTransition(to: target), "Complete should not transition to \(target)")
+            XCTAssertNil(LoopState.complete.transition(to: target))
+        }
+    }
+
+    func testErrorCannotTransitionToNonRunning() {
+        let invalidTargets: [LoopState] = [.paused, .stopped, .complete, .error, .ready]
+        for target in invalidTargets {
+            XCTAssertFalse(LoopState.error.canTransition(to: target), "Error should not transition to \(target)")
+            XCTAssertNil(LoopState.error.transition(to: target))
+        }
+    }
+
+    // MARK: - Badge Color and Display Name
+
+    func testBadgeColorAssignment() {
+        // Just verify each state has a defined color (non-nil SwiftUI Color)
+        XCTAssertNotNil(LoopState.ready.badgeColor)
+        XCTAssertNotNil(LoopState.running.badgeColor)
+        XCTAssertNotNil(LoopState.paused.badgeColor)
+        XCTAssertNotNil(LoopState.stopped.badgeColor)
+        XCTAssertNotNil(LoopState.complete.badgeColor)
+        XCTAssertNotNil(LoopState.error.badgeColor)
+    }
+
+    func testDisplayNames() {
+        XCTAssertEqual(LoopState.ready.displayName, "Ready")
+        XCTAssertEqual(LoopState.running.displayName, "Running")
+        XCTAssertEqual(LoopState.paused.displayName, "Paused")
+        XCTAssertEqual(LoopState.stopped.displayName, "Stopped")
+        XCTAssertEqual(LoopState.complete.displayName, "Complete")
+        XCTAssertEqual(LoopState.error.displayName, "Error")
+    }
+
+    // MARK: - Valid Transitions Set
+
+    func testValidTransitionsSets() {
+        XCTAssertEqual(LoopState.ready.validTransitions, [.running])
+        XCTAssertEqual(LoopState.running.validTransitions, [.paused, .stopped, .complete, .error])
+        XCTAssertEqual(LoopState.paused.validTransitions, [.running])
+        XCTAssertEqual(LoopState.stopped.validTransitions, [.running])
+        XCTAssertEqual(LoopState.complete.validTransitions, [])
+        XCTAssertEqual(LoopState.error.validTransitions, [.running])
+    }
 }
 
 final class MilestoneTests: XCTestCase {
@@ -208,6 +331,7 @@ final class PRDProjectTests: XCTestCase {
             userStories: [],
             loopState: .running,
             iterationCount: 5,
+            pauseAfterStory: true,
             directoryURL: URL(fileURLWithPath: "/tmp/test")
         )
         project.loopState = .running
@@ -219,10 +343,12 @@ final class PRDProjectTests: XCTestCase {
         XCTAssertFalse(jsonString.contains("loopState"))
         XCTAssertFalse(jsonString.contains("iterationCount"))
         XCTAssertFalse(jsonString.contains("directoryURL"))
+        XCTAssertFalse(jsonString.contains("pauseAfterStory"))
 
         let decoded = try JSONDecoder().decode(PRDProject.self, from: data)
         XCTAssertEqual(decoded.loopState, .ready)
         XCTAssertEqual(decoded.iterationCount, 0)
+        XCTAssertFalse(decoded.pauseAfterStory)
         XCTAssertNil(decoded.directoryURL)
     }
 
