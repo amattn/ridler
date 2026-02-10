@@ -52,7 +52,8 @@
         "Unit tests for: valid JSON, missing optional fields, malformed JSON, missing files"
       ],
       "priority": 3,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-004",
