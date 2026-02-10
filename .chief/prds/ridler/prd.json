@@ -128,7 +128,7 @@
         "Opens the new PRD as a tab in the interface"
       ],
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-009",

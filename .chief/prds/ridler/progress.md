@@ -133,3 +133,14 @@
   - Tab close behavior: when closing the selected tab, auto-select the first remaining tab
   - All 43 tests still pass (pure UI story — no new tests needed)
 ---
+
+## 2026-02-09 - US-008
+- **What was implemented:** Verified that Create new PRD via File > New is fully implemented. All acceptance criteria were satisfied by prior work in US-006 (NewPRDSheet with name validation, directory picker, ridl/ folder creation with empty prd.md) and US-007 (Cmd+N keyboard shortcut, tab-based interface for opened PRDs).
+- **Files changed:**
+  - `.chief/prds/ridler/prd.json` — Marked US-008 as passes: true
+- **Learnings for future iterations:**
+  - Some user stories may already be fully implemented by earlier stories — always verify existing code before writing new code
+  - The NewPRDSheet flow: Cmd+N → NotificationCenter → isNewPRDPresented → sheet → createPRD() → onCreate callback → addProject() → appears as tab
+  - PRD name validation regex: `/^[a-zA-Z0-9\-_]+$/` in NewPRDSheet
+  - All 43 tests still pass
+---
