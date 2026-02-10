@@ -16,10 +16,13 @@ struct ContentView: View {
     @StateObject private var logStore = LogStore()
     @ObservedObject private var settings = SettingsManager.shared
     @State private var loopEngines: [String: RalphLoopEngine] = [:]
+    @State private var terminalManagers: [String: ClaudeTerminalManager] = [:]
     @State private var showBranchWarning = false
     @State private var branchWarningIndex: Int?
     @State private var branchWarningBranch: String = ""
     @State private var showDebugWindow = false
+    @State private var showTerminateSessionAlert = false
+    @State private var pendingLoopStartIndex: Int?
     private let gitManager: GitManaging = GitManager()
 
     private var selectedProject: PRDProject? {
@@ -77,10 +80,7 @@ struct ContentView: View {
                         DetailView(project: selectedProject, selection: sidebarSelection)
                             .id(fileWatcher.changeToken)
                     } detail: {
-                        LogPanelView(
-                            entries: logStore.entries(for: selectedProject?.id ?? ""),
-                            isRunning: selectedProject?.loopState == .running
-                        )
+                        rightPaneView
                     }
 
                     StatusBarView(
@@ -150,6 +150,25 @@ struct ContentView: View {
             if let project = projectToDelete {
                 Text("Are you sure you want to delete \"\(project.name ?? project.id)\"? This will permanently delete the PRD files from disk.")
             }
+        }
+        .alert("Active Claude Session", isPresented: $showTerminateSessionAlert) {
+            Button("Terminate and Start") {
+                if let idx = pendingLoopStartIndex {
+                    let project = openProjects[idx]
+                    terminalManagers[project.id]?.terminate()
+                    // Switch sidebar selection to a story to show log view
+                    if case .file = sidebarSelection {
+                        sidebarSelection = nil
+                    }
+                    startLoop(for: idx)
+                }
+                pendingLoopStartIndex = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingLoopStartIndex = nil
+            }
+        } message: {
+            Text("A Claude Code editing session is active. Starting the loop will terminate the current session.")
         }
         .onReceive(NotificationCenter.default.publisher(for: .openPRD)) { _ in
             isFilePickerPresented = true
@@ -246,6 +265,51 @@ struct ContentView: View {
         .overlay(alignment: .bottom) {
             Divider()
         }
+    }
+
+    @ViewBuilder
+    private var rightPaneView: some View {
+        if let project = selectedProject, case .file(let fileName) = sidebarSelection {
+            let manager = getOrCreateTerminalManager(for: project)
+            ClaudeTerminalView(
+                fileName: fileName,
+                project: project,
+                isLoopRunning: project.loopState == .running,
+                terminalManager: manager,
+                onStartSession: { file in
+                    startTerminalSession(file: file, project: project)
+                }
+            )
+        } else {
+            LogPanelView(
+                entries: logStore.entries(for: selectedProject?.id ?? ""),
+                isRunning: selectedProject?.loopState == .running
+            )
+        }
+    }
+
+    private func getOrCreateTerminalManager(for project: PRDProject) -> ClaudeTerminalManager {
+        if let existing = terminalManagers[project.id] {
+            return existing
+        }
+        let manager = ClaudeTerminalManager()
+        terminalManagers[project.id] = manager
+        return manager
+    }
+
+    private func startTerminalSession(file: PRDFileName, project: PRDProject) {
+        guard let dirURL = project.directoryURL else { return }
+        let filePath = dirURL.appendingPathComponent(file.rawValue).path
+        let fileExists = FileManager.default.fileExists(atPath: filePath)
+        let workingDir = dirURL.deletingLastPathComponent()
+
+        let manager = getOrCreateTerminalManager(for: project)
+        manager.start(
+            filePath: filePath,
+            workingDirectory: workingDir,
+            fileExists: fileExists,
+            fileName: file.rawValue
+        )
     }
 
     private func stateIndicator(for project: PRDProject) -> some View {
@@ -391,6 +455,11 @@ struct ContentView: View {
             engine.stop()
             loopEngines.removeValue(forKey: project.id)
         }
+        // Terminate any active terminal session
+        if let manager = terminalManagers[project.id] {
+            manager.terminate()
+            terminalManagers.removeValue(forKey: project.id)
+        }
         if let dirURL = project.directoryURL {
             fileWatcher.unwatch(directoryURL: dirURL)
         }
@@ -476,6 +545,13 @@ struct ContentView: View {
     private func startLoop(for index: Int) {
         let project = openProjects[index]
         Self.logger.info("Start loop requested for: \(project.name ?? project.id), state: \(String(describing: project.loopState))")
+
+        // Check for active Claude terminal session
+        if let manager = terminalManagers[project.id], manager.isRunning {
+            pendingLoopStartIndex = index
+            showTerminateSessionAlert = true
+            return
+        }
 
         // Skip branch check when resuming from paused/stopped/error
         if project.loopState == .paused || project.loopState == .stopped || project.loopState == .error {

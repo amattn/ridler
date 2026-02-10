@@ -63,6 +63,8 @@
 - SettingsManager (`Managers/SettingsManager.swift`) — singleton `ObservableObject` for app-wide UserDefaults settings; accessed via `SettingsManager.shared`; settings: audioNotifications, autoRetryOnCrash, verboseLog, debugMode
 - pbxproj IDs: A10034/A20036 (SettingsManager), A10035/A20037 (SettingsView)
 - os_log: All managers use `Logger(subsystem: "com.amattn.Ridler", category: "<ClassName>")` — use `.error` for failures, `.info` for state transitions, `.debug` for routine ops; in `didSet` blocks, use `self.` prefix for property references in logger string interpolation
+- ClaudeTerminalManager in `Managers/ClaudeTerminalManager.swift` — manages interactive Claude Code sessions via PTY; `terminalManagers: [String: ClaudeTerminalManager]` in ContentView keyed by project ID
+- pbxproj IDs: A10037/A20039 (ClaudeTerminalManager), A10038/A20040 (ClaudeTerminalView)
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
@@ -681,4 +683,22 @@
   - All managers use the same subsystem `com.amattn.Ridler` with different categories for Console.app filtering: ProcessManager, PRDStore, GitManager, DirectoryMonitor, FileWatcher, RecentProjects, Settings, RalphLoopEngine, StreamingJSONParser, ContentView
   - Log levels used consistently: `.error` for failures, `.info` for state transitions and significant events, `.debug` for verbose/routine operations (file reads, writes)
   - No new tests needed — os_log is a side effect and doesn't change observable behavior; existing 193 tests still pass
+---
+
+## 2026-02-09 - US-040
+- **What was implemented:** Claude Code terminal for PRD editing — when a PRD file row is selected in the sidebar, the right pane switches from the log view to an interactive Claude Code terminal. The terminal spawns Claude Code as an interactive process using a pseudo-terminal (PTY) for proper terminal I/O. If the file exists, Claude is launched with the file path as context; if it doesn't exist, Claude is prompted to create it from existing PRD files. While the Ralph loop is running, the terminal pane shows a disabled state with "Pause the loop to edit this file". Switching back to a story row reverts the right pane to the log view. If the user tries to start the loop while a Claude editing session is active, a confirmation dialog appears to terminate the session first.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/ClaudeTerminalManager.swift` — New ObservableObject managing interactive Claude Code sessions via PTY (pseudo-terminal); spawns Claude Code with context-aware prompts; supports input/output streaming; caps output at 500KB to prevent memory issues; clean termination with 2-second fallback
+  - `Ridler/Ridler/Views/ClaudeTerminalView.swift` — New SwiftUI view with header, terminal output (with ANSI code stripping and auto-scroll), input field, and three states: disabled (loop running), idle (start session button), and active (terminal content with stop button)
+  - `Ridler/Ridler/ContentView.swift` — Added `terminalManagers` dictionary for per-project terminal managers; added `rightPaneView` that switches between LogPanelView (story selected) and ClaudeTerminalView (file selected); added confirmation alert for terminating active sessions when starting loop; cleanup on project close
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added ClaudeTerminalManager.swift (A10037/A20039) to Managers group and ClaudeTerminalView.swift (A10038/A20040) to Views group
+- **Learnings for future iterations:**
+  - PTY (pseudo-terminal) via `openpty()` is the correct approach for interactive process I/O on macOS — avoids buffering issues that occur with Pipe for interactive processes
+  - `DispatchSource.makeReadSource` on the primary PTY file descriptor provides efficient non-blocking reads without polling
+  - ANSI escape codes (terminal colors/formatting) should be stripped from PTY output for clean SwiftUI Text display — regex pattern: `\u{1B}\[[0-9;]*[a-zA-Z]`
+  - Output capping (500KB with 400KB retention) prevents memory issues from long-running terminal sessions
+  - The `terminalManagers` dictionary follows the same pattern as `loopEngines` — per-project, keyed by project ID, created lazily, cleaned up on close
+  - `FileHandle(fileDescriptor:closeOnDealloc:false)` is critical when passing PTY FDs to Process — prevents double-close issues
+  - pbxproj IDs: A10037/A20039 (ClaudeTerminalManager), A10038/A20040 (ClaudeTerminalView)
+  - All 193 tests pass (no new tests needed — terminal interaction is a UI/process feature that requires a running app and Claude CLI)
 ---

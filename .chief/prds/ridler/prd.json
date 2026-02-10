@@ -606,7 +606,8 @@
         "If a Claude session is active and user starts the loop, the session is terminated (with confirmation dialog if mid-conversation)"
       ],
       "priority": 40,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-041",
