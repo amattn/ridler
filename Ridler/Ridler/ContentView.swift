@@ -60,6 +60,11 @@ struct ContentView: View {
                             isRunning: selectedProject?.loopState == .running
                         )
                     }
+
+                    StatusBarView(
+                        activityMessage: statusBarMessage(for: selectedProject),
+                        loopState: selectedProject?.loopState ?? .ready
+                    )
                 }
             }
         }
@@ -367,6 +372,31 @@ struct ContentView: View {
         let project = openProjects[index]
         if let engine = loopEngines[project.id] {
             engine.stop()
+        }
+    }
+
+    private func statusBarMessage(for project: PRDProject?) -> String {
+        guard let project else { return "No PRD loaded" }
+        switch project.loopState {
+        case .ready:
+            return "Ready"
+        case .running:
+            if let story = project.userStories.first(where: { $0.inProgress }) {
+                return "Working on: \(story.id) — \(story.title)"
+            }
+            return "Running..."
+        case .paused:
+            if let story = project.userStories.first(where: { $0.inProgress }) {
+                return "Paused on: \(story.id) — \(story.title)"
+            }
+            return "Paused"
+        case .stopped:
+            return "Stopped"
+        case .complete:
+            let passCount = project.userStories.filter { $0.passes }.count
+            return "Complete — \(passCount)/\(project.userStories.count) stories passed"
+        case .error:
+            return "Error — check log for details"
         }
     }
 

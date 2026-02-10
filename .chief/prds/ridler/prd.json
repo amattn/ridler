@@ -396,7 +396,8 @@
         "Color the activity message based on current state (cyan for running, yellow for paused, red for error)"
       ],
       "priority": 25,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-026",

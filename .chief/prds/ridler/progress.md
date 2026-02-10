@@ -426,3 +426,17 @@
   - The commit happens after `appendProgress` but before reloading the project and checking for completion — this ensures progress.md is included in the commit
   - All 160 tests pass (152 existing + 3 git integration + 5 engine tests)
 ---
+
+## 2026-02-09 - US-025
+- **What was implemented:** Status bar at the bottom of the main window that displays the last activity message with state-based coloring (cyan for running, yellow for paused, red for error, gray for other states)
+- **Files changed:**
+  - `Ridler/Ridler/Views/StatusBarView.swift` — New view showing activity message with state-colored text, fixed height 24pt, separator at top
+  - `Ridler/Ridler/ContentView.swift` — Added StatusBarView at bottom of main VStack; added `statusBarMessage(for:)` helper that derives the activity message from project loop state and in-progress story
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added StatusBarView.swift (A10030/A20032) to app target and Views group
+  - `.chief/prds/ridler/prd.json` — Marked US-025 as passes: true
+- **Learnings for future iterations:**
+  - StatusBarView derives its message from `PRDProject` state — no separate state tracking needed; `statusBarMessage(for:)` checks `project.userStories.first(where: { $0.inProgress })` for the current story
+  - LoopState already has `badgeColor` — StatusBarView uses a similar switch but only colors cyan/yellow/red for running/paused/error, defaulting to `.secondary` for other states
+  - pbxproj IDs: A10030 (build file), A20032 (file ref) for StatusBarView.swift
+  - All 160 tests still pass (pure UI story — no new tests needed)
+---

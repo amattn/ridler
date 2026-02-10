@@ -36,6 +36,7 @@
 		A10027 /* GitManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20029 /* GitManaging.swift */; };
 		A10028 /* GitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20030 /* GitManager.swift */; };
 		A10029 /* BranchWarningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20031 /* BranchWarningSheet.swift */; };
+		A10030 /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20032 /* StatusBarView.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -88,6 +89,7 @@
 		A20029 /* GitManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManaging.swift; sourceTree = "<group>"; };
 		A20030 /* GitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManager.swift; sourceTree = "<group>"; };
 		A20031 /* BranchWarningSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BranchWarningSheet.swift; sourceTree = "<group>"; };
+		A20032 /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 				A20018 /* NewPRDSheet.swift */,
 				A20022 /* LoopToolbarView.swift */,
 				A20031 /* BranchWarningSheet.swift */,
+				A20032 /* StatusBarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -354,6 +357,7 @@
 				A10027 /* GitManaging.swift in Sources */,
 				A10028 /* GitManager.swift in Sources */,
 				A10029 /* BranchWarningSheet.swift in Sources */,
+				A10030 /* StatusBarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
