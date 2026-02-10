@@ -23,6 +23,7 @@
 		A10014 /* LogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016 /* LogPanelView.swift */; };
 		A10015 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017 /* EmptyStateView.swift */; };
 		A10016 /* NewPRDSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018 /* NewPRDSheet.swift */; };
+		A10017 /* SidebarSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019 /* SidebarSelection.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 /* End PBXBuildFile section */
@@ -56,6 +57,7 @@
 		A20016 /* LogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogPanelView.swift; sourceTree = "<group>"; };
 		A20017 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A20018 /* NewPRDSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPRDSheet.swift; sourceTree = "<group>"; };
+		A20019 /* SidebarSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelection.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -113,6 +115,7 @@
 				A20009 /* Milestone.swift */,
 				A20010 /* PRDProject.swift */,
 				A20011 /* RidlerError.swift */,
+				A20019 /* SidebarSelection.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -284,6 +287,7 @@
 				A10014 /* LogPanelView.swift in Sources */,
 				A10015 /* EmptyStateView.swift in Sources */,
 				A10016 /* NewPRDSheet.swift in Sources */,
+				A10017 /* SidebarSelection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

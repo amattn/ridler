@@ -158,7 +158,8 @@
         "File rows remain visible and selectable regardless of loop state"
       ],
       "priority": 10,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-011",

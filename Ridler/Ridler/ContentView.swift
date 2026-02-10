@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var selectedProjectID: String?
     @State private var isFilePickerPresented = false
     @State private var isNewPRDPresented = false
+    @State private var sidebarSelection: SidebarSelection?
     @State private var errorAlertMessage: String?
     @State private var showErrorAlert = false
 
@@ -27,7 +28,7 @@ struct ContentView: View {
                     tabBar
 
                     NavigationSplitView(columnVisibility: $columnVisibility) {
-                        SidebarView()
+                        SidebarView(project: selectedProject, selection: $sidebarSelection)
                     } content: {
                         DetailView()
                     } detail: {
