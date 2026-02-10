@@ -205,7 +205,8 @@
         "File content displayed is read-only (no inline editing)"
       ],
       "priority": 13,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-014",

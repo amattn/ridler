@@ -188,3 +188,30 @@
   - Selection is mutual exclusion between file and story via shared `SidebarSelection?` binding
   - All 43 tests still pass (pure UI story — no new tests needed)
 ---
+
+## 2026-02-09 - US-012
+- **What was implemented:** Story detail panel in the middle pane showing full story details when a story is selected from the sidebar
+- **Files changed:**
+  - `Ridler/Ridler/Views/DetailView.swift` — Replaced placeholder with full story detail view: title in bold, status badge (Passed/In Progress/Pending with color-coded icons), priority badge, description with word wrapping, acceptance criteria as bulleted list, error section with claude.log tip when project is in error state
+  - `Ridler/Ridler/ContentView.swift` — Updated to pass `project` and `sidebarSelection` to DetailView
+  - `.chief/prds/ridler/prd.json` — Marked US-012 as passes: true
+- **Learnings for future iterations:**
+  - DetailView now accepts `project: PRDProject?` and `selection: SidebarSelection?` — must update callers when changing signature
+  - Status badge pattern: icon + text in an HStack with colored background using `statusColor.opacity(0.1)` for subtle badge effect
+  - `.fixedSize(horizontal: false, vertical: true)` ensures text wraps properly in VStack layouts within ScrollView
+  - The `.file` case in SidebarSelection falls through to placeholder — US-013 will handle file content display
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-013
+- **What was implemented:** File content view in the middle pane that displays PRD file contents when a file row is selected in the sidebar
+- **Files changed:**
+  - `Ridler/Ridler/Views/DetailView.swift` — Replaced `.file` placeholder with full file content view: header with icon and filename, markdown rendering for .md files using `AttributedString(markdown:)`, pretty-printed JSON for .json files using `JSONSerialization`, empty state for non-existent files, read-only text selection enabled
+  - `.chief/prds/ridler/prd.json` — Marked US-013 as passes: true
+- **Learnings for future iterations:**
+  - `AttributedString(markdown:, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))` renders inline markdown (bold, italic, code, links) while preserving whitespace — good for basic markdown rendering in SwiftUI Text
+  - For JSON pretty-printing, use `JSONSerialization.jsonObject` → `JSONSerialization.data(withJSONObject:options:.prettyPrinted)` round-trip — this handles any valid JSON and reformats it cleanly
+  - Fallback pattern: try AttributedString markdown → fall back to plain monospaced text → fall back to "File is empty" — ensures no crash on any content
+  - `.textSelection(.enabled)` makes read-only text copyable by the user
+  - All 43 tests still pass (pure UI story — no new tests needed)
+---

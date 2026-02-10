@@ -14,8 +14,8 @@ struct DetailView: View {
                     } else {
                         placeholderView
                     }
-                case .file:
-                    placeholderView
+                case .file(let fileName):
+                    fileContentView(fileName: fileName, project: project)
                 }
             } else {
                 placeholderView
@@ -77,6 +77,105 @@ struct DetailView: View {
             }
             .padding()
         }
+    }
+
+    private func fileContentView(fileName: PRDFileName, project: PRDProject) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: fileName.icon)
+                    .foregroundStyle(.secondary)
+                Text(fileName.rawValue)
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            // Content
+            if let directoryURL = project.directoryURL {
+                let fileURL = directoryURL.appendingPathComponent(fileName.rawValue)
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    fileContentBody(fileName: fileName, fileURL: fileURL)
+                } else {
+                    emptyFileView(fileName: fileName)
+                }
+            } else {
+                emptyFileView(fileName: fileName)
+            }
+        }
+    }
+
+    private func fileContentBody(fileName: PRDFileName, fileURL: URL) -> some View {
+        ScrollView {
+            Group {
+                switch fileName {
+                case .prdMd, .ridlMd:
+                    markdownView(fileURL: fileURL)
+                case .ridlJson:
+                    jsonView(fileURL: fileURL)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func markdownView(fileURL: URL) -> some View {
+        Group {
+            if let content = try? String(contentsOf: fileURL, encoding: .utf8), !content.isEmpty {
+                if let attributedString = try? AttributedString(markdown: content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+                    Text(attributedString)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(content)
+                        .font(.body.monospaced())
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                Text("File is empty")
+                    .foregroundStyle(.secondary)
+                    .italic()
+            }
+        }
+    }
+
+    private func jsonView(fileURL: URL) -> some View {
+        Group {
+            if let data = try? Data(contentsOf: fileURL),
+               let jsonObject = try? JSONSerialization.jsonObject(with: data),
+               let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
+               let prettyString = String(data: prettyData, encoding: .utf8) {
+                Text(prettyString)
+                    .font(.body.monospaced())
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let content = try? String(contentsOf: fileURL, encoding: .utf8), !content.isEmpty {
+                Text(content)
+                    .font(.body.monospaced())
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("File is empty")
+                    .foregroundStyle(.secondary)
+                    .italic()
+            }
+        }
+    }
+
+    private func emptyFileView(fileName: PRDFileName) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "doc")
+                .font(.system(size: 32))
+                .foregroundStyle(.secondary)
+            Text("\(fileName.rawValue) does not exist yet")
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func statusBadge(for story: UserStory) -> some View {
