@@ -7,6 +7,7 @@ struct LoopToolbarView: View {
     var onStop: () -> Void = {}
     var onMaxIterationsChanged: ((Int) -> Void)?
     var onAutoRetryChanged: ((Bool) -> Void)?
+    var onAudioNotificationsChanged: ((Bool) -> Void)?
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
 
@@ -34,6 +35,18 @@ struct LoopToolbarView: View {
             elapsedTimeView
 
             Spacer()
+
+            // Audio notifications toggle
+            Toggle("Audio", isOn: Binding(
+                get: { project.audioNotificationsEnabled },
+                set: { newValue in
+                    project.audioNotificationsEnabled = newValue
+                    onAudioNotificationsChanged?(newValue)
+                }
+            ))
+                .toggleStyle(.checkbox)
+                .font(.system(size: 11))
+                .help("Play sound on completion")
 
             // Auto-retry toggle
             Toggle("Auto-retry", isOn: Binding(

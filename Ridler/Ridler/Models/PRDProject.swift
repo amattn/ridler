@@ -13,6 +13,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
 
     var pauseAfterStory: Bool
     var autoRetryEnabled: Bool
+    var audioNotificationsEnabled: Bool
     var maxIterations: Int
     var loopStartDate: Date?
 
@@ -38,6 +39,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         iterationCount: Int = 0,
         pauseAfterStory: Bool = false,
         autoRetryEnabled: Bool = false,
+        audioNotificationsEnabled: Bool = true,
         maxIterations: Int = 0,
         loopStartDate: Date? = nil,
         directoryURL: URL? = nil
@@ -51,6 +53,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         self.iterationCount = iterationCount
         self.pauseAfterStory = pauseAfterStory
         self.autoRetryEnabled = autoRetryEnabled
+        self.audioNotificationsEnabled = audioNotificationsEnabled
         self.maxIterations = maxIterations
         self.loopStartDate = loopStartDate
         self.directoryURL = directoryURL
@@ -67,6 +70,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         iterationCount = 0
         pauseAfterStory = false
         autoRetryEnabled = false
+        audioNotificationsEnabled = true
         maxIterations = 0
         loopStartDate = nil
         directoryURL = nil

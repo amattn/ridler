@@ -53,7 +53,7 @@
 - GitManaging protocol in `Protocols/GitManaging.swift` defines interface for git operations (currentBranch, isProtectedBranch, createAndCheckoutBranch, commitAllChanges) — enables test mocking
 - RalphLoopEngine accepts `gitManager: GitManaging` parameter for dependency injection; commits after each successful iteration with message format `feat: [US-XXX] - Story Title`
 - Git commit failures in the loop are non-fatal — logged as warnings but don't stop the loop
-- PRDProject runtime-only properties now include: autoRetryEnabled — must be preserved in `reloadAllProjects()` and `onProjectUpdated`
+- PRDProject runtime-only properties now include: autoRetryEnabled, audioNotificationsEnabled — must be preserved in `reloadAllProjects()` and `onProjectUpdated`
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
@@ -486,3 +486,20 @@
   - The `autoRetryEnabled` property follows the same pattern as `pauseAfterStory` — runtime-only, preserved in reload, toggled in toolbar
   - Tests with long backoff timers (18s+) can run slowly — the exhaustion test takes ~30s; consider shorter backoff in tests if this becomes an issue
   - All 173 tests pass (166 existing + 7 new auto-retry tests)
+
+## 2026-02-09 - US-029
+- **What was implemented:** Audio notification on PRD completion using AVFoundation AVAudioPlayer, with toggle to enable/disable in the toolbar (default: on)
+- **Files changed:**
+  - `Ridler/Ridler/Models/PRDProject.swift` — Added `audioNotificationsEnabled: Bool` runtime-only property (default: true, excluded from Codable)
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Replaced `import AppKit` with `import AVFoundation`; replaced `NSSound.beep()` with `AVAudioPlayer` playing `/System/Library/Sounds/Glass.aiff`; added `audioNotificationsEnabled` property, `updateAudioNotifications()` method, and `audioPlayer` instance variable; sound only plays when `audioNotificationsEnabled` is true
+  - `Ridler/Ridler/Views/LoopToolbarView.swift` — Added "Audio" checkbox toggle with `onAudioNotificationsChanged` callback, positioned before Auto-retry toggle
+  - `Ridler/Ridler/ContentView.swift` — Wired `onAudioNotificationsChanged` callback to engine's `updateAudioNotifications()`; preserved `audioNotificationsEnabled` in both `reloadAllProjects()` and `onProjectUpdated`
+  - `.chief/prds/ridler/prd.json` — Marked US-029 as passes: true
+- **Learnings for future iterations:**
+  - `AVAudioPlayer` requires keeping a strong reference to the player instance (stored as `audioPlayer` property) — if the player is a local variable it gets deallocated before playback finishes
+  - System sounds are at `/System/Library/Sounds/` — Glass.aiff is a pleasant completion chime; other options include Hero.aiff, Purr.aiff, Funk.aiff
+  - `import AVFoundation` replaces `import AppKit` for audio — AVFoundation provides AVAudioPlayer which is the recommended approach for audio playback on macOS
+  - The `audioNotificationsEnabled` property follows the same pattern as `autoRetryEnabled` and `pauseAfterStory` — runtime-only, default value, preserved in reload/update, toggled in toolbar, forwarded to engine
+  - PRDProject runtime-only properties now include: loopState, iterationCount, pauseAfterStory, autoRetryEnabled, audioNotificationsEnabled, maxIterations, loopStartDate, directoryURL — all must be preserved in `reloadAllProjects()` and `onProjectUpdated`
+  - All 173 tests pass (no new tests needed — audio playback is a side effect best verified manually)
+---

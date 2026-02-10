@@ -52,6 +52,10 @@ struct ContentView: View {
                             onAutoRetryChanged: { enabled in
                                 let project = openProjects[selectedIndex]
                                 loopEngines[project.id]?.updateAutoRetry(enabled)
+                            },
+                            onAudioNotificationsChanged: { enabled in
+                                let project = openProjects[selectedIndex]
+                                loopEngines[project.id]?.updateAudioNotifications(enabled)
                             }
                         )
                     }
@@ -265,6 +269,7 @@ struct ContentView: View {
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
                 updated.autoRetryEnabled = openProjects[index].autoRetryEnabled
+                updated.audioNotificationsEnabled = openProjects[index].audioNotificationsEnabled
                 updated.maxIterations = openProjects[index].maxIterations
                 updated.loopStartDate = openProjects[index].loopStartDate
                 openProjects[index] = updated
@@ -298,6 +303,7 @@ struct ContentView: View {
                 let currentIteration = openProjects[idx].iterationCount
                 let currentPause = openProjects[idx].pauseAfterStory
                 let currentAutoRetry = openProjects[idx].autoRetryEnabled
+                let currentAudio = openProjects[idx].audioNotificationsEnabled
                 let currentMax = openProjects[idx].maxIterations
                 let currentStart = openProjects[idx].loopStartDate
                 openProjects[idx] = updatedProject
@@ -305,6 +311,7 @@ struct ContentView: View {
                 openProjects[idx].iterationCount = currentIteration
                 openProjects[idx].pauseAfterStory = currentPause
                 openProjects[idx].autoRetryEnabled = currentAutoRetry
+                openProjects[idx].audioNotificationsEnabled = currentAudio
                 openProjects[idx].maxIterations = currentMax
                 openProjects[idx].loopStartDate = currentStart
             }

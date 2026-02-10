@@ -1,6 +1,6 @@
 import Foundation
 import Combine
-import AppKit
+import AVFoundation
 import os
 
 /// The Ralph loop engine orchestrates the autonomous execution loop:
@@ -26,6 +26,7 @@ final class RalphLoopEngine: ObservableObject {
     private var directoryURL: URL?
     private var pauseAfterStory = false
     private var autoRetryEnabled = false
+    private var audioNotificationsEnabled = true
     private var maxIterations = 0
     private var iterationCount = 0
     private var loopState: LoopState = .ready
@@ -33,6 +34,7 @@ final class RalphLoopEngine: ObservableObject {
     private var retryCount = 0
     private static let maxRetries = 3
     private var currentStoryID: String?
+    private var audioPlayer: AVAudioPlayer?
 
     init(
         prdStore: PRDStore = FileSystemPRDStore(),
@@ -54,6 +56,7 @@ final class RalphLoopEngine: ObservableObject {
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
         self.autoRetryEnabled = project.autoRetryEnabled
+        self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
@@ -75,6 +78,7 @@ final class RalphLoopEngine: ObservableObject {
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
         self.autoRetryEnabled = project.autoRetryEnabled
+        self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
@@ -119,6 +123,11 @@ final class RalphLoopEngine: ObservableObject {
     /// Updates the auto-retry setting.
     func updateAutoRetry(_ enabled: Bool) {
         self.autoRetryEnabled = enabled
+    }
+
+    /// Updates the audio notifications setting.
+    func updateAudioNotifications(_ enabled: Bool) {
+        self.audioNotificationsEnabled = enabled
     }
 
     // MARK: - Private
@@ -479,7 +488,16 @@ final class RalphLoopEngine: ObservableObject {
     }
 
     private func playCompletionSound() {
-        // Use NSSound for simple audio notification
-        NSSound.beep()
+        guard audioNotificationsEnabled else { return }
+
+        // Use a system sound via AVAudioPlayer
+        let soundPath = "/System/Library/Sounds/Glass.aiff"
+        let soundURL = URL(fileURLWithPath: soundPath)
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
+            audioPlayer?.play()
+        } catch {
+            Self.logger.warning("Failed to play completion sound: \(error.localizedDescription)")
+        }
     }
 }

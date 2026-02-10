@@ -452,7 +452,8 @@
         "Option to disable audio notifications in Settings (default: on)"
       ],
       "priority": 29,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-030",
