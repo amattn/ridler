@@ -30,7 +30,7 @@ struct ContentView: View {
                     NavigationSplitView(columnVisibility: $columnVisibility) {
                         SidebarView(project: selectedProject, selection: $sidebarSelection)
                     } content: {
-                        DetailView()
+                        DetailView(project: selectedProject, selection: sidebarSelection)
                     } detail: {
                         LogPanelView()
                     }
