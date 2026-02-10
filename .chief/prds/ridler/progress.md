@@ -503,3 +503,17 @@
   - PRDProject runtime-only properties now include: loopState, iterationCount, pauseAfterStory, autoRetryEnabled, audioNotificationsEnabled, maxIterations, loopStartDate, directoryURL — all must be preserved in `reloadAllProjects()` and `onProjectUpdated`
   - All 173 tests pass (no new tests needed — audio playback is a side effect best verified manually)
 ---
+
+## 2026-02-09 - US-030
+- **What was implemented:** macOS notification on PRD completion using UserNotifications framework. When a PRD reaches Complete state and the app is not frontmost, a native macOS notification is posted with the PRD name.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Added `import UserNotifications` and `import AppKit`; added `projectName` property to track PRD name; added `postCompletionNotification()` method that checks `NSApplication.shared.isActive` and posts via `UNUserNotificationCenter`; called alongside `playCompletionSound()` at both completion points (all stories pass on iteration start, and all stories pass after process exit)
+  - `.chief/prds/ridler/prd.json` — Marked US-030 as passes: true
+- **Learnings for future iterations:**
+  - `UNUserNotificationCenter.current().requestAuthorization()` is async and returns via callback — authorization is requested inline before each notification post (idempotent after first grant)
+  - `NSApplication.shared.isActive` checks if the app is frontmost — only post notification when app is in background
+  - `UNNotificationRequest` with `trigger: nil` delivers immediately
+  - Notification identifier uses `ridler-complete-\(projectID)` to avoid duplicate notifications for the same PRD
+  - No new tests needed — `UNUserNotificationCenter` and `NSApplication` are runtime-only APIs that require a running app context to test meaningfully
+  - All 173 tests pass
+---

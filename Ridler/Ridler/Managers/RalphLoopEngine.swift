@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 import AVFoundation
+import UserNotifications
+import AppKit
 import os
 
 /// The Ralph loop engine orchestrates the autonomous execution loop:
@@ -23,6 +25,7 @@ final class RalphLoopEngine: ObservableObject {
     var onProjectUpdated: ((PRDProject) -> Void)?
 
     private var projectID: String = ""
+    private var projectName: String = ""
     private var directoryURL: URL?
     private var pauseAfterStory = false
     private var autoRetryEnabled = false
@@ -53,6 +56,7 @@ final class RalphLoopEngine: ObservableObject {
         guard loopState != .running else { return }
 
         self.projectID = project.id
+        self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
         self.autoRetryEnabled = project.autoRetryEnabled
@@ -75,6 +79,7 @@ final class RalphLoopEngine: ObservableObject {
         guard loopState == .paused || loopState == .stopped || loopState == .error else { return }
 
         self.projectID = project.id
+        self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
         self.autoRetryEnabled = project.autoRetryEnabled
@@ -163,6 +168,7 @@ final class RalphLoopEngine: ObservableObject {
             loopState = .complete
             onStateChange?(.complete)
             playCompletionSound()
+            postCompletionNotification()
             return
         }
 
@@ -297,6 +303,7 @@ final class RalphLoopEngine: ObservableObject {
                 loopState = .complete
                 onStateChange?(.complete)
                 playCompletionSound()
+                postCompletionNotification()
                 return
             }
         } catch {
@@ -498,6 +505,38 @@ final class RalphLoopEngine: ObservableObject {
             audioPlayer?.play()
         } catch {
             Self.logger.warning("Failed to play completion sound: \(error.localizedDescription)")
+        }
+    }
+
+    private func postCompletionNotification() {
+        // Only post notification when the app is not frontmost
+        guard !NSApplication.shared.isActive else { return }
+
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            guard granted else {
+                if let error {
+                    Self.logger.warning("Notification authorization denied: \(error.localizedDescription)")
+                }
+                return
+            }
+
+            let content = UNMutableNotificationContent()
+            content.title = "PRD Complete"
+            content.body = "\(self.projectName) has finished all stories."
+            content.sound = .default
+
+            let request = UNNotificationRequest(
+                identifier: "ridler-complete-\(self.projectID)",
+                content: content,
+                trigger: nil // Deliver immediately
+            )
+
+            center.add(request) { error in
+                if let error {
+                    Self.logger.warning("Failed to post notification: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }
