@@ -715,3 +715,15 @@
   - Delete is disabled when loop is running (`project.loopState == .running`) in both the context menu and PRD menu to prevent deleting files mid-execution
   - All 193 tests pass (no new tests needed — the feature was already implemented and tested via context menu)
 ---
+
+## 2026-02-09 - US-042
+- **What was implemented:** Drag-and-drop support to open PRD folders or .md files. Users can drag a ridl/ folder or .md file from Finder onto the Ridler app window to open it as a tab. If the dropped file cannot be loaded (e.g., invalid JSON, missing files), an error alert is displayed.
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Extracted body's main content into `mainContent` computed property to reduce Swift type-checker complexity; added `.onDrop(of: [.fileURL])` modifier to body; added `handleDrop(providers:)` method that loads file URLs from NSItemProvider, passes them to FileSystemPRDStore for loading, and calls `addProject()` or shows an error alert
+- **Learnings for future iterations:**
+  - ContentView body was at the Swift type-checker complexity limit — adding one more modifier caused "unable to type-check this expression in reasonable time" error. Solution: extract the main content into a separate `@ViewBuilder` computed property (`mainContent`)
+  - `NSItemProvider.loadItem(forTypeIdentifier: "public.file-url")` returns Data that must be converted to URL via `URL(dataRepresentation:relativeTo:)` — this is the standard Finder drag-and-drop pattern
+  - The `.onDrop(of: [.fileURL])` modifier on the outermost view handles drops on both the empty state and the main three-pane layout
+  - The loadItem callback runs on a background thread — must dispatch to main thread for UI updates and state mutations
+  - All 193 tests pass (no new tests needed — drag-and-drop is a UI interaction that requires a running app for testing)
+---

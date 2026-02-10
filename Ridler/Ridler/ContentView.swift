@@ -35,63 +35,66 @@ struct ContentView: View {
         return openProjects.firstIndex { $0.id == id }
     }
 
-    var body: some View {
-        Group {
-            if openProjects.isEmpty {
-                EmptyStateView(
-                    onOpenPRD: { isFilePickerPresented = true },
-                    onNewPRD: { isNewPRDPresented = true }
-                )
-            } else {
-                VStack(spacing: 0) {
-                    tabBar
+    @ViewBuilder
+    private var mainContent: some View {
+        if openProjects.isEmpty {
+            EmptyStateView(
+                onOpenPRD: { isFilePickerPresented = true },
+                onNewPRD: { isNewPRDPresented = true }
+            )
+        } else {
+            VStack(spacing: 0) {
+                tabBar
 
-                    if let selectedIndex = selectedProjectIndex {
-                        LoopToolbarView(
-                            project: $openProjects[selectedIndex],
-                            onStart: { startLoop(for: selectedIndex) },
-                            onPause: { pauseLoop(for: selectedIndex) },
-                            onStop: { stopLoop(for: selectedIndex) },
-                            onMaxIterationsChanged: { newValue in
-                                let project = openProjects[selectedIndex]
-                                loopEngines[project.id]?.updateMaxIterations(newValue)
-                            },
-                            onAutoRetryChanged: { enabled in
-                                let project = openProjects[selectedIndex]
-                                loopEngines[project.id]?.updateAutoRetry(enabled)
-                            },
-                            onAudioNotificationsChanged: { enabled in
-                                let project = openProjects[selectedIndex]
-                                loopEngines[project.id]?.updateAudioNotifications(enabled)
-                            }
-                        )
-                    }
-
-                    NavigationSplitView(columnVisibility: $columnVisibility) {
-                        SidebarView(
-                            project: selectedProject,
-                            selection: $sidebarSelection,
-                            onResume: selectedProjectIndex.map { idx in
-                                { startLoop(for: idx) }
-                            }
-                        )
-                            .id(fileWatcher.changeToken)
-                    } content: {
-                        DetailView(project: selectedProject, selection: sidebarSelection)
-                            .id(fileWatcher.changeToken)
-                    } detail: {
-                        rightPaneView
-                    }
-
-                    StatusBarView(
-                        activityMessage: statusBarMessage(for: selectedProject),
-                        loopState: selectedProject?.loopState ?? .ready,
-                        debugMode: settings.debugMode,
-                        debugInfo: debugStatusInfo(for: selectedProject)
+                if let selectedIndex = selectedProjectIndex {
+                    LoopToolbarView(
+                        project: $openProjects[selectedIndex],
+                        onStart: { startLoop(for: selectedIndex) },
+                        onPause: { pauseLoop(for: selectedIndex) },
+                        onStop: { stopLoop(for: selectedIndex) },
+                        onMaxIterationsChanged: { newValue in
+                            let project = openProjects[selectedIndex]
+                            loopEngines[project.id]?.updateMaxIterations(newValue)
+                        },
+                        onAutoRetryChanged: { enabled in
+                            let project = openProjects[selectedIndex]
+                            loopEngines[project.id]?.updateAutoRetry(enabled)
+                        },
+                        onAudioNotificationsChanged: { enabled in
+                            let project = openProjects[selectedIndex]
+                            loopEngines[project.id]?.updateAudioNotifications(enabled)
+                        }
                     )
                 }
+
+                NavigationSplitView(columnVisibility: $columnVisibility) {
+                    SidebarView(
+                        project: selectedProject,
+                        selection: $sidebarSelection,
+                        onResume: selectedProjectIndex.map { idx in
+                            { startLoop(for: idx) }
+                        }
+                    )
+                        .id(fileWatcher.changeToken)
+                } content: {
+                    DetailView(project: selectedProject, selection: sidebarSelection)
+                        .id(fileWatcher.changeToken)
+                } detail: {
+                    rightPaneView
+                }
+
+                StatusBarView(
+                    activityMessage: statusBarMessage(for: selectedProject),
+                    loopState: selectedProject?.loopState ?? .ready,
+                    debugMode: settings.debugMode,
+                    debugInfo: debugStatusInfo(for: selectedProject)
+                )
             }
         }
+    }
+
+    var body: some View {
+        mainContent
         .frame(minWidth: 900, minHeight: 500)
         .fileImporter(
             isPresented: $isFilePickerPresented,
@@ -239,6 +242,10 @@ struct ContentView: View {
         }
         .focusedSceneValue(\.selectedProject, selectedProject)
         .focusedSceneValue(\.hasProject, !openProjects.isEmpty)
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            handleDrop(providers: providers)
+            return true
+        }
     }
 
     private var tabBar: some View {
@@ -683,6 +690,34 @@ struct ContentView: View {
             retryCount: engine?.currentRetryCount ?? 0,
             elapsedPerIteration: elapsedStr
         )
+    }
+
+    private func handleDrop(providers: [NSItemProvider]) {
+        for provider in providers {
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, error in
+                guard let data = data as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else {
+                    if let error {
+                        DispatchQueue.main.async {
+                            errorAlertMessage = error.localizedDescription
+                            showErrorAlert = true
+                        }
+                    }
+                    return
+                }
+                DispatchQueue.main.async {
+                    let store = FileSystemPRDStore()
+                    do {
+                        let project = try store.loadProject(from: url)
+                        addProject(project)
+                    } catch {
+                        errorAlertMessage = error.localizedDescription
+                        showErrorAlert = true
+                    }
+                }
+            }
+            break // Only handle the first dropped item
+        }
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {

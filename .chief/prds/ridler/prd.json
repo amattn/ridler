@@ -633,7 +633,8 @@
         "Works with Finder drag-and-drop"
       ],
       "priority": 42,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-043",
