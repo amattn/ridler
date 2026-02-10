@@ -369,7 +369,8 @@
         "Integration tests with real git repos for branch detection"
       ],
       "priority": 23,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-024",

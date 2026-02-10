@@ -33,6 +33,9 @@
 		A10024 /* StreamingJSONParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026 /* StreamingJSONParser.swift */; };
 		A10025 /* LogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027 /* LogStore.swift */; };
 		A10026 /* RalphLoopEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20028 /* RalphLoopEngine.swift */; };
+		A10027 /* GitManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20029 /* GitManaging.swift */; };
+		A10028 /* GitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20030 /* GitManager.swift */; };
+		A10029 /* BranchWarningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20031 /* BranchWarningSheet.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -40,6 +43,7 @@
 		C10005 /* StreamingJSONParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20006 /* StreamingJSONParserTests.swift */; };
 		C10006 /* LogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20007 /* LogStoreTests.swift */; };
 		C10007 /* RalphLoopEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20008 /* RalphLoopEngineTests.swift */; };
+		C10008 /* GitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20009 /* GitManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +85,9 @@
 		A20026 /* StreamingJSONParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONParser.swift; sourceTree = "<group>"; };
 		A20027 /* LogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStore.swift; sourceTree = "<group>"; };
 		A20028 /* RalphLoopEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngine.swift; sourceTree = "<group>"; };
+		A20029 /* GitManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManaging.swift; sourceTree = "<group>"; };
+		A20030 /* GitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManager.swift; sourceTree = "<group>"; };
+		A20031 /* BranchWarningSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BranchWarningSheet.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -88,6 +95,7 @@
 		C20006 /* StreamingJSONParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONParserTests.swift; sourceTree = "<group>"; };
 		C20007 /* LogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStoreTests.swift; sourceTree = "<group>"; };
 		C20008 /* RalphLoopEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngineTests.swift; sourceTree = "<group>"; };
+		C20009 /* GitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManagerTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -158,6 +166,7 @@
 				A20017 /* EmptyStateView.swift */,
 				A20018 /* NewPRDSheet.swift */,
 				A20022 /* LoopToolbarView.swift */,
+				A20031 /* BranchWarningSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -179,6 +188,7 @@
 				A20026 /* StreamingJSONParser.swift */,
 				A20027 /* LogStore.swift */,
 				A20028 /* RalphLoopEngine.swift */,
+				A20030 /* GitManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -197,6 +207,7 @@
 			children = (
 				A20012 /* PRDStore.swift */,
 				A20023 /* ProcessManaging.swift */,
+				A20029 /* GitManaging.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
@@ -219,6 +230,7 @@
 				C20006 /* StreamingJSONParserTests.swift */,
 				C20007 /* LogStoreTests.swift */,
 				C20008 /* RalphLoopEngineTests.swift */,
+				C20009 /* GitManagerTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -339,6 +351,9 @@
 				A10024 /* StreamingJSONParser.swift in Sources */,
 				A10025 /* LogStore.swift in Sources */,
 				A10026 /* RalphLoopEngine.swift in Sources */,
+				A10027 /* GitManaging.swift in Sources */,
+				A10028 /* GitManager.swift in Sources */,
+				A10029 /* BranchWarningSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +368,7 @@
 				C10005 /* StreamingJSONParserTests.swift in Sources */,
 				C10006 /* LogStoreTests.swift in Sources */,
 				C10007 /* RalphLoopEngineTests.swift in Sources */,
+				C10008 /* GitManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

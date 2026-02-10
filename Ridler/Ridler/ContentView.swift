@@ -13,6 +13,10 @@ struct ContentView: View {
     @StateObject private var fileWatcher = ProjectFileWatcher()
     @StateObject private var logStore = LogStore()
     @State private var loopEngines: [String: RalphLoopEngine] = [:]
+    @State private var showBranchWarning = false
+    @State private var branchWarningIndex: Int?
+    @State private var branchWarningBranch: String = ""
+    private let gitManager: GitManaging = GitManager()
 
     private var selectedProject: PRDProject? {
         guard let id = selectedProjectID else { return nil }
@@ -83,6 +87,25 @@ struct ContentView: View {
         } message: {
             if let errorAlertMessage {
                 Text(errorAlertMessage)
+            }
+        }
+        .sheet(isPresented: $showBranchWarning) {
+            if let idx = branchWarningIndex {
+                BranchWarningSheet(
+                    currentBranch: branchWarningBranch,
+                    prdName: openProjects[idx].name ?? openProjects[idx].id,
+                    onCreateBranch: { newBranch in
+                        showBranchWarning = false
+                        handleCreateBranch(newBranch, for: idx)
+                    },
+                    onContinue: {
+                        showBranchWarning = false
+                        proceedWithStart(for: idx)
+                    },
+                    onCancel: {
+                        showBranchWarning = false
+                    }
+                )
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openPRD)) { _ in
@@ -271,6 +294,37 @@ struct ContentView: View {
 
     private func startLoop(for index: Int) {
         let project = openProjects[index]
+
+        // Skip branch check when resuming from paused/stopped/error
+        if project.loopState == .paused || project.loopState == .stopped || project.loopState == .error {
+            proceedWithStart(for: index)
+            return
+        }
+
+        // Check for protected branch before first start
+        guard let dirURL = project.directoryURL else {
+            proceedWithStart(for: index)
+            return
+        }
+
+        let workingDir = dirURL.deletingLastPathComponent()
+        do {
+            let branch = try gitManager.currentBranch(at: workingDir)
+            if gitManager.isProtectedBranch(branch) {
+                branchWarningBranch = branch
+                branchWarningIndex = index
+                showBranchWarning = true
+                return
+            }
+        } catch {
+            // Not a git repo or git not available — proceed without warning
+        }
+
+        proceedWithStart(for: index)
+    }
+
+    private func proceedWithStart(for index: Int) {
+        let project = openProjects[index]
         let engine = getOrCreateEngine(for: project)
 
         if project.maxIterations == 0 {
@@ -287,6 +341,18 @@ struct ContentView: View {
             engine.resume(project: projectToStart)
         } else {
             engine.start(project: projectToStart)
+        }
+    }
+
+    private func handleCreateBranch(_ branchName: String, for index: Int) {
+        guard let dirURL = openProjects[index].directoryURL else { return }
+        let workingDir = dirURL.deletingLastPathComponent()
+        do {
+            try gitManager.createAndCheckoutBranch(branchName, at: workingDir)
+            proceedWithStart(for: index)
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            showErrorAlert = true
         }
     }
 

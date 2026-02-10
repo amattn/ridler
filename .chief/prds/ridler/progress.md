@@ -50,6 +50,11 @@
 - RalphLoopEngine in `Managers/RalphLoopEngine.swift` — use callbacks (onStateChange, onIterationChange, onLogEntry, onProjectUpdated) to communicate back to ContentView; one engine per project stored in `loopEngines: [String: RalphLoopEngine]`
 - LoopToolbarView accepts onStart/onPause/onStop closures — delegates control to ContentView which manages engine lifecycle
 - pbxproj IDs: A10026/A20028 (RalphLoopEngine), C10007/C20008 (RalphLoopEngineTests)
+- GitManaging protocol in `Protocols/GitManaging.swift` defines interface for git operations (currentBranch, isProtectedBranch, createAndCheckoutBranch) — enables test mocking
+- GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
+- Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
+- Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
+- pbxproj IDs: A10027/A20029 (GitManaging), A10028/A20030 (GitManager), A10029/A20031 (BranchWarningSheet), C10008/C20009 (GitManagerTests)
 
 ---
 
@@ -369,4 +374,36 @@
   - MockProcessManager is useful for testing — expose `sendLine()` and `sendExit()` helper methods for simulating subprocess behavior
   - pbxproj IDs: A10026/A20028 (RalphLoopEngine), C10007/C20008 (RalphLoopEngineTests)
   - All 137 tests pass (123 existing + 14 new)
+---
+
+## 2026-02-09 - US-022
+- **What was implemented:** Progress.md updates after each iteration — RalphLoopEngine now appends a structured progress entry to progress.md in the PRD directory after each successful iteration completes
+- **Files changed:**
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Added `appendProgress(storyID:exitCode:)` method that appends timestamped progress entries with story ID, title, iteration number, and completion status; called from `handleProcessExit` after successful iteration; uses FileHandle for appending to existing files and atomic write for new files
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — Added 4 new tests: progress file creation after iteration (verifies file exists and content includes story ID/title/iteration/status), appending to existing progress files (preserves prior content), non-zero exit code does not create progress entry, progress file stored in PRD directory (not parent)
+  - `.chief/prds/ridler/prd.json` — Marked US-022 as passes: true
+- **Learnings for future iterations:**
+  - Progress is only appended on successful iterations (exit code 0 or completion detected) — error exits return before appendProgress is called
+  - `FileHandle(forWritingTo:)` + `seekToEndOfFile()` + `write()` is the pattern for appending to existing files without reading the entire file into memory
+  - The engine already includes progress.md content in the prompt via `buildPrompt()` — so Claude Code sessions get context about prior iterations automatically
+  - All 141 tests pass (137 existing + 4 new)
+---
+
+## 2026-02-09 - US-023
+- **What was implemented:** Protected branch detection and warning before starting a loop. When the project is on main/master, a warning dialog appears with three options: create a new ridler/{prd-name} branch (recommended, with editable name), continue on current branch, or cancel.
+- **Files changed:**
+  - `Ridler/Ridler/Protocols/GitManaging.swift` — New protocol defining git operation interface: `currentBranch(at:)`, `isProtectedBranch(_:)`, `createAndCheckoutBranch(_:at:)` for test mocking
+  - `Ridler/Ridler/Managers/GitManager.swift` — Implementation that shells out to `/usr/bin/git` for branch detection (rev-parse) and checkout (-b); errors include command and stderr
+  - `Ridler/Ridler/Views/BranchWarningSheet.swift` — Warning dialog with editable branch name field and three action buttons
+  - `Ridler/Ridler/ContentView.swift` — Refactored `startLoop` to check protected branch before first start; added `proceedWithStart` and `handleCreateBranch` helpers; added BranchWarningSheet sheet modifier; branch check skipped on resume (paused/stopped/error)
+  - `Ridler/RidlerTests/GitManagerTests.swift` — 11 integration tests with real git repos: current branch detection, non-git directory errors, protected branch checks (main, master, feature), create and checkout branch, duplicate branch error, error message contents, full detection integration flow
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added GitManaging (A10027/A20029), GitManager (A10028/A20030), BranchWarningSheet (A10029/A20031), GitManagerTests (C10008/C20009)
+  - `.chief/prds/ridler/prd.json` — Marked US-023 as passes: true
+- **Learnings for future iterations:**
+  - GitManager uses `/usr/bin/git` directly (not `/usr/bin/env git`) since git is reliably at that path on macOS
+  - Protected branch check uses working directory = `directoryURL.deletingLastPathComponent()` (project root), same as where Claude Code runs
+  - Branch check is only done on initial start (`.ready` state), not on resume from paused/stopped/error — avoids redundant checks
+  - If git is not available or directory is not a git repo, the error is silently caught and the loop proceeds — graceful degradation
+  - BranchWarningSheet uses `@State branchName` initialized to `ridler/{prdName}` — the user can edit this before creating
+  - All 152 tests pass (141 existing + 11 new)
 ---
