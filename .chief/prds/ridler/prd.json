@@ -590,7 +590,8 @@
         "Logs filterable in Console.app by subsystem and category"
       ],
       "priority": 39,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-040",

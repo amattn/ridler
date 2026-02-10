@@ -1,7 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import os
 
 struct ContentView: View {
+    private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "ContentView")
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var openProjects: [PRDProject] = []
     @State private var selectedProjectID: String?
@@ -375,6 +377,7 @@ struct ContentView: View {
         projectToAdd.autoRetryEnabled = settings.autoRetryOnCrash
         openProjects.append(projectToAdd)
         selectedProjectID = projectToAdd.id
+        Self.logger.info("Opened project: \(projectToAdd.name ?? projectToAdd.id)")
         if let dirURL = project.directoryURL {
             fileWatcher.watch(directoryURL: dirURL)
             RecentProjectsManager.shared.addRecent(dirURL)
@@ -382,6 +385,7 @@ struct ContentView: View {
     }
 
     private func closeProject(_ project: PRDProject) {
+        Self.logger.info("Closing project: \(project.name ?? project.id)")
         // Stop the engine if it's running
         if let engine = loopEngines[project.id] {
             engine.stop()
@@ -397,6 +401,7 @@ struct ContentView: View {
     }
 
     private func deleteProject(_ project: PRDProject) {
+        Self.logger.info("Deleting project: \(project.name ?? project.id)")
         closeProject(project)
         if let dirURL = project.directoryURL {
             try? FileManager.default.removeItem(at: dirURL)
@@ -431,11 +436,13 @@ struct ContentView: View {
         }
         let engine = RalphLoopEngine()
         engine.onStateChange = { [self] newState in
+            Self.logger.info("State transition for \(project.name ?? project.id): \(String(describing: newState))")
             if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
                 openProjects[idx].loopState = newState
             }
         }
         engine.onIterationChange = { [self] count in
+            Self.logger.info("Iteration \(count) for \(project.name ?? project.id)")
             if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
                 openProjects[idx].iterationCount = count
             }
@@ -468,6 +475,7 @@ struct ContentView: View {
 
     private func startLoop(for index: Int) {
         let project = openProjects[index]
+        Self.logger.info("Start loop requested for: \(project.name ?? project.id), state: \(String(describing: project.loopState))")
 
         // Skip branch check when resuming from paused/stopped/error
         if project.loopState == .paused || project.loopState == .stopped || project.loopState == .error {
@@ -525,6 +533,7 @@ struct ContentView: View {
             try gitManager.createAndCheckoutBranch(branchName, at: workingDir)
             proceedWithStart(for: index)
         } catch {
+            Self.logger.error("Failed to create branch \(branchName): \(error.localizedDescription)")
             errorAlertMessage = error.localizedDescription
             showErrorAlert = true
         }
@@ -532,6 +541,7 @@ struct ContentView: View {
 
     private func pauseLoop(for index: Int) {
         let project = openProjects[index]
+        Self.logger.info("Pause loop requested for: \(project.name ?? project.id)")
         if let engine = loopEngines[project.id] {
             engine.pause()
         }
@@ -539,6 +549,7 @@ struct ContentView: View {
 
     private func stopLoop(for index: Int) {
         let project = openProjects[index]
+        Self.logger.info("Stop loop requested for: \(project.name ?? project.id)")
         if let engine = loopEngines[project.id] {
             engine.stop()
         }

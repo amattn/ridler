@@ -1,7 +1,9 @@
 import Foundation
 import Combine
+import os
 
 final class SettingsManager: ObservableObject {
+    private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "Settings")
     static let shared = SettingsManager()
 
     private enum Keys {
@@ -12,19 +14,31 @@ final class SettingsManager: ObservableObject {
     }
 
     @Published var audioNotifications: Bool {
-        didSet { UserDefaults.standard.set(audioNotifications, forKey: Keys.audioNotifications) }
+        didSet {
+            UserDefaults.standard.set(audioNotifications, forKey: Keys.audioNotifications)
+            Self.logger.info("Audio notifications: \(self.audioNotifications)")
+        }
     }
 
     @Published var autoRetryOnCrash: Bool {
-        didSet { UserDefaults.standard.set(autoRetryOnCrash, forKey: Keys.autoRetryOnCrash) }
+        didSet {
+            UserDefaults.standard.set(autoRetryOnCrash, forKey: Keys.autoRetryOnCrash)
+            Self.logger.info("Auto-retry on crash: \(self.autoRetryOnCrash)")
+        }
     }
 
     @Published var verboseLog: Bool {
-        didSet { UserDefaults.standard.set(verboseLog, forKey: Keys.verboseLog) }
+        didSet {
+            UserDefaults.standard.set(verboseLog, forKey: Keys.verboseLog)
+            Self.logger.info("Verbose log: \(self.verboseLog)")
+        }
     }
 
     @Published var debugMode: Bool {
-        didSet { UserDefaults.standard.set(debugMode, forKey: Keys.debugMode) }
+        didSet {
+            UserDefaults.standard.set(debugMode, forKey: Keys.debugMode)
+            Self.logger.info("Debug mode: \(self.debugMode)")
+        }
     }
 
     private init() {

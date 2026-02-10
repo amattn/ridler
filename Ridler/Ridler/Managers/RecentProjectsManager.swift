@@ -1,6 +1,8 @@
 import Foundation
+import os
 
 class RecentProjectsManager: ObservableObject {
+    private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "RecentProjects")
     static let shared = RecentProjectsManager()
 
     private let key = "recentProjectURLs"
@@ -22,6 +24,7 @@ class RecentProjectsManager: ObservableObject {
         }
         recentURLs = urls
         saveRecents()
+        Self.logger.debug("Added recent project: \(standardized.path)")
     }
 
     func clearRecents() {

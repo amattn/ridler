@@ -1,7 +1,9 @@
 import Foundation
 import Combine
+import os
 
 final class ClaudeCodeProcessManager: ProcessManaging {
+    private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "ProcessManager")
     private var process: Process?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
@@ -28,12 +30,15 @@ final class ClaudeCodeProcessManager: ProcessManaging {
 
     func spawn(prompt: String, workingDirectory: URL, logFileURL: URL) throws -> AnyPublisher<String, Never> {
         guard !isRunning else {
+            Self.logger.error("Spawn failed: a process is already running")
             throw RidlerError.processError(
                 command: "claude",
                 exitCode: -1,
                 stderr: "A process is already running"
             )
         }
+
+        Self.logger.info("Spawning Claude Code in \(workingDirectory.path)")
 
         let process = Process()
         let stdoutPipe = Pipe()
@@ -120,6 +125,12 @@ final class ClaudeCodeProcessManager: ProcessManaging {
                 command: self.currentCommand
             )
 
+            if proc.terminationStatus != 0 {
+                Self.logger.error("Claude Code exited with code \(proc.terminationStatus): \(stderrString.prefix(500))")
+            } else {
+                Self.logger.info("Claude Code exited successfully (code 0)")
+            }
+
             DispatchQueue.main.async {
                 self.exitSubject.send(result)
                 self.process = nil
@@ -129,11 +140,13 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         }
 
         try process.run()
+        Self.logger.info("Claude Code process started (PID: \(process.processIdentifier))")
         return lineSubject.eraseToAnyPublisher()
     }
 
     func kill() {
         guard let process, process.isRunning else { return }
+        Self.logger.info("Killing Claude Code process (PID: \(process.processIdentifier))")
         process.terminate()
         // Give the process a moment to terminate gracefully, then force kill
         DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) { [weak self] in

@@ -62,6 +62,7 @@
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - SettingsManager (`Managers/SettingsManager.swift`) — singleton `ObservableObject` for app-wide UserDefaults settings; accessed via `SettingsManager.shared`; settings: audioNotifications, autoRetryOnCrash, verboseLog, debugMode
 - pbxproj IDs: A10034/A20036 (SettingsManager), A10035/A20037 (SettingsView)
+- os_log: All managers use `Logger(subsystem: "com.amattn.Ridler", category: "<ClassName>")` — use `.error` for failures, `.info` for state transitions, `.debug` for routine ops; in `didSet` blocks, use `self.` prefix for property references in logger string interpolation
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
@@ -661,3 +662,23 @@
   - Debug mode state is already persisted via UserDefaults from US-037 — no additional persistence needed
   - pbxproj IDs: A10036/A20038 (DebugInfoView.swift)
   - All 193 tests pass (no new tests needed — debug views are read-only UI displaying existing state)
+
+## 2026-02-09 - US-039
+- **What was implemented:** os_log integration across all managers and ContentView. All errors, state transitions, and significant events are now logged via `os.Logger` with appropriate log levels (.error, .info, .debug) and structured metadata (PRD name, story ID, iteration number). Logs are filterable in Console.app by subsystem (`com.amattn.Ridler`) and category.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/ClaudeCodeProcessManager.swift` — Added `import os` and Logger with category "ProcessManager"; added logging for spawn, process start (with PID), kill, exit (success/error), and spawn-already-running error
+  - `Ridler/Ridler/Managers/FileSystemPRDStore.swift` — Added `import os` and Logger with category "PRDStore"; added logging for file-not-found errors, JSON decoding errors, successful project loads (debug), and project writes (debug)
+  - `Ridler/Ridler/Managers/GitManager.swift` — Added `import os` and Logger with category "GitManager"; added logging for branch detection, branch creation, commit operations, and git command failures
+  - `Ridler/Ridler/Managers/DirectoryMonitor.swift` — Added `import os` and Logger with category "DirectoryMonitor"; added logging for monitor start (with path), start failure (error), and stop
+  - `Ridler/Ridler/Managers/ProjectFileWatcher.swift` — Added `import os` and Logger with category "FileWatcher"; added logging for watch, unwatch, and stopAll operations
+  - `Ridler/Ridler/Managers/RecentProjectsManager.swift` — Added `import os` and Logger with category "RecentProjects"; added logging for addRecent
+  - `Ridler/Ridler/Managers/SettingsManager.swift` — Added `import os` and Logger with category "Settings"; added logging for all settings changes (audio notifications, auto-retry, verbose log, debug mode)
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Enhanced existing logger calls in `logSystem()` and `transitionToError()` to include structured metadata: `[projectName] iteration=N story=ID message`
+  - `Ridler/Ridler/ContentView.swift` — Added `import os` and Logger with category "ContentView"; added logging for project open/close/delete, loop start/pause/stop, state transitions (via engine callback), iteration changes, and branch creation errors
+- **Learnings for future iterations:**
+  - os.Logger string interpolation creates an autoclosure — property references in `didSet` blocks need explicit `self.` prefix (e.g., `Self.logger.info("value: \(self.myProperty)")`)
+  - RalphLoopEngine and StreamingJSONParser already had os.Logger from prior stories — only needed to enhance their metadata
+  - All managers use the same subsystem `com.amattn.Ridler` with different categories for Console.app filtering: ProcessManager, PRDStore, GitManager, DirectoryMonitor, FileWatcher, RecentProjects, Settings, RalphLoopEngine, StreamingJSONParser, ContentView
+  - Log levels used consistently: `.error` for failures, `.info` for state transitions and significant events, `.debug` for verbose/routine operations (file reads, writes)
+  - No new tests needed — os_log is a side effect and doesn't change observable behavior; existing 193 tests still pass
+---

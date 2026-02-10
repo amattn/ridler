@@ -493,7 +493,7 @@ final class RalphLoopEngine: ObservableObject {
     }
 
     private func transitionToError(_ message: String) {
-        Self.logger.error("Loop error: \(message)")
+        Self.logger.error("[\(self.projectName)] iteration=\(self.iterationCount) story=\(self.currentStoryID ?? "none") Error: \(message)")
         logSystem("Error: \(message)")
         lastErrorMessage = message
         loopState = .error
@@ -501,7 +501,7 @@ final class RalphLoopEngine: ObservableObject {
     }
 
     private func logSystem(_ message: String) {
-        Self.logger.info("\(message)")
+        Self.logger.info("[\(self.projectName)] iteration=\(self.iterationCount) \(message)")
         let entry = LogEntry(type: .system, content: message)
         onLogEntry?(entry, projectID)
     }
