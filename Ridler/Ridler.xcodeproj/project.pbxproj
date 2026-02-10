@@ -31,11 +31,13 @@
 		A10022 /* ClaudeCodeProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024 /* ClaudeCodeProcessManager.swift */; };
 		A10023 /* LogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025 /* LogEntry.swift */; };
 		A10024 /* StreamingJSONParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026 /* StreamingJSONParser.swift */; };
+		A10025 /* LogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027 /* LogStore.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
 		C10004 /* ProcessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20005 /* ProcessManagerTests.swift */; };
 		C10005 /* StreamingJSONParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20006 /* StreamingJSONParserTests.swift */; };
+		C10006 /* LogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20007 /* LogStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,11 +77,13 @@
 		A20024 /* ClaudeCodeProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeProcessManager.swift; sourceTree = "<group>"; };
 		A20025 /* LogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEntry.swift; sourceTree = "<group>"; };
 		A20026 /* StreamingJSONParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONParser.swift; sourceTree = "<group>"; };
+		A20027 /* LogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStore.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
 		C20005 /* ProcessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessManagerTests.swift; sourceTree = "<group>"; };
 		C20006 /* StreamingJSONParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingJSONParserTests.swift; sourceTree = "<group>"; };
+		C20007 /* LogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStoreTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -169,6 +173,7 @@
 				A20021 /* ProjectFileWatcher.swift */,
 				A20024 /* ClaudeCodeProcessManager.swift */,
 				A20026 /* StreamingJSONParser.swift */,
+				A20027 /* LogStore.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -207,6 +212,7 @@
 				C20004 /* FileWatcherTests.swift */,
 				C20005 /* ProcessManagerTests.swift */,
 				C20006 /* StreamingJSONParserTests.swift */,
+				C20007 /* LogStoreTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -325,6 +331,7 @@
 				A10022 /* ClaudeCodeProcessManager.swift in Sources */,
 				A10023 /* LogEntry.swift in Sources */,
 				A10024 /* StreamingJSONParser.swift in Sources */,
+				A10025 /* LogStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +344,7 @@
 				C10003 /* FileWatcherTests.swift in Sources */,
 				C10004 /* ProcessManagerTests.swift in Sources */,
 				C10005 /* StreamingJSONParserTests.swift in Sources */,
+				C10006 /* LogStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

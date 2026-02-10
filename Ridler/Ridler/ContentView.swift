@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var errorAlertMessage: String?
     @State private var showErrorAlert = false
     @StateObject private var fileWatcher = ProjectFileWatcher()
+    @StateObject private var logStore = LogStore()
 
     private var selectedProject: PRDProject? {
         guard let id = selectedProjectID else { return nil }
@@ -44,7 +45,10 @@ struct ContentView: View {
                         DetailView(project: selectedProject, selection: sidebarSelection)
                             .id(fileWatcher.changeToken)
                     } detail: {
-                        LogPanelView()
+                        LogPanelView(
+                            entries: logStore.entries(for: selectedProject?.id ?? ""),
+                            isRunning: selectedProject?.loopState == .running
+                        )
                     }
                 }
             }

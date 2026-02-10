@@ -322,7 +322,8 @@
         "Show story transition events, iteration starts, completion messages in the log"
       ],
       "priority": 20,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-021",

@@ -40,6 +40,13 @@
 - Log file created per-PRD at specified URL; raw stdout/stderr appended with session separator
 - Process kill: `terminate()` first, then `interrupt()` after 2-second timeout for force kill
 - pbxproj IDs: A10021/A20023 (ProcessManaging), A10022/A20024 (ClaudeCodeProcessManager), C10004/C20005 (ProcessManagerTests)
+- StreamingJSONParser in `Managers/StreamingJSONParser.swift` parses Claude Code stream-json output line-by-line into LogEntry values; use `subscribe(to:)` to connect to ClaudeCodeProcessManager's stdout publisher
+- LogEntry model in `Models/LogEntry.swift` with LogEntryType enum: .assistantText, .toolUse, .toolResult, .error, .system
+- pbxproj IDs: A10023/A20025 (LogEntry), A10024/A20026 (StreamingJSONParser), C10005/C20006 (StreamingJSONParserTests)
+- pbxproj IDs: A10025/A20027 (LogStore), C10006/C20007 (LogStoreTests)
+- LogStore (ObservableObject) in `Managers/LogStore.swift` — stores `[LogEntry]` per project ID; used by ContentView as `@StateObject` and passed to LogPanelView
+- LogPanelView accepts `entries: [LogEntry]` and `isRunning: Bool` — renders typed log entries with icons, auto-scroll via ScrollViewReader
+- macOS 14.0 deployment target means `onScrollGeometryChange` is NOT available — use `onAppear`/`onDisappear` on a bottom sentinel view for scroll detection instead
 
 ---
 
@@ -305,4 +312,39 @@
   - Log file uses `FileHandle.seekToEndOfFile()` to append to existing logs across sessions
   - Process.terminate() sends SIGTERM; Process.interrupt() sends SIGINT — use terminate first, then interrupt as fallback
   - All 78 tests pass (67 existing + 11 new)
+---
+
+## 2026-02-09 - US-019
+- **What was implemented:** Streaming JSON parser for Claude Code's stream-json output format, with structured log entries and completion signal detection
+- **Files changed:**
+  - `Ridler/Ridler/Models/LogEntry.swift` — New LogEntry model (Identifiable, Equatable) with id, timestamp, type (LogEntryType enum: assistantText, toolUse, toolResult, error, system), and content string
+  - `Ridler/Ridler/Managers/StreamingJSONParser.swift` — StreamingJSONParser class that parses Claude Code's newline-delimited JSON output; identifies message types (assistant, tool_use, tool_result, result, error); publishes LogEntry via Combine; detects `<ridler-complete/>` signal; uses os.Logger for warnings on malformed JSON; supports subscribing to a line publisher from ClaudeCodeProcessManager
+  - `Ridler/RidlerTests/StreamingJSONParserTests.swift` — 35 unit tests covering: assistant text parsing (content string, content array, message field, multiple blocks), tool use parsing (Bash, Read, Glob, name field, unknown tool), tool result parsing, error parsing (message string, error object, error string), result parsing, system/unknown type parsing, malformed JSON handling (not JSON, partial JSON, empty lines, whitespace, arrays, missing type field), ridler-complete signal detection (in assistant content, raw text, result), entry publisher, subscribe to line publisher, realistic Claude output sequence, log entry properties (unique IDs, timestamps), edge cases
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added LogEntry.swift (A10023/A20025), StreamingJSONParser.swift (A10024/A20026), StreamingJSONParserTests.swift (C10005/C20006)
+- **Learnings for future iterations:**
+  - Claude Code stream-json format: one JSON object per line, with `type` field indicating message type (assistant, tool_use, tool_result, result, error)
+  - Tool use entries can have tool name in either `tool` or `name` field; input details in `input` object with keys like `command`, `file_path`, `pattern`
+  - Content can be a string or an array of content blocks with `type` and `text` fields — always handle both formats
+  - `<ridler-complete/>` signal can appear in any content field — check raw text, parsed assistant content, and result content
+  - StreamingJSONParser uses `@discardableResult` on `parseLine()` to support both synchronous (direct return) and async (publisher subscription) usage patterns
+  - os.Logger with subsystem "com.amattn.Ridler" and category "StreamingJSONParser" for structured logging of warnings
+  - pbxproj IDs: A10023/A20025 (LogEntry), A10024/A20026 (StreamingJSONParser), C10005/C20006 (StreamingJSONParserTests)
+  - All 113 tests pass (78 existing + 35 new)
+---
+
+## 2026-02-09 - US-020
+- **What was implemented:** Log view with streaming output display — LogPanelView updated to render parsed log entries with type-specific icons, auto-scroll behavior, and manual scroll detection; LogStore ObservableObject for managing per-project log entries
+- **Files changed:**
+  - `Ridler/Ridler/Managers/LogStore.swift` — New ObservableObject that stores `[LogEntry]` per project ID with append, appendSystem, clear, and entries(for:) methods
+  - `Ridler/Ridler/Views/LogPanelView.swift` — Complete rewrite: accepts `entries: [LogEntry]` and `isRunning: Bool`; renders log entries in LazyVStack with ScrollViewReader for auto-scroll; LogEntryRow subview with type-specific icons (bubble for assistant, terminal for Bash, doc for Read, pencil for Edit, etc.); color-coded backgrounds for errors (red) and system messages (blue); auto-scroll indicator in header; bottom sentinel view for scroll detection
+  - `Ridler/Ridler/ContentView.swift` — Added `@StateObject logStore` and wired LogPanelView with entries from logStore and isRunning from project state
+  - `Ridler/RidlerTests/LogStoreTests.swift` — 10 unit tests: empty store, append, multiple entries, system messages, project isolation, clear, clear isolation, system message types, order preservation, nonexistent project
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added LogStore.swift (A10025/A20027) and LogStoreTests.swift (C10006/C20007)
+- **Learnings for future iterations:**
+  - `onScrollGeometryChange` is macOS 15.0+ only — deployment target is 14.0, so use `onAppear`/`onDisappear` on a bottom sentinel (`Color.clear.frame(height: 1)`) for scroll position detection
+  - Tool icons are determined by parsing the `content` field prefix (e.g., "Tool: Bash" → terminal.fill, "Tool: Read" → doc.text.fill)
+  - LogPanelView no longer takes zero args — all callers must pass `entries` and `isRunning`
+  - LogStore is a separate ObservableObject (not part of PRDProject) because it holds UI state not persisted to JSON
+  - pbxproj IDs: A10025/A20027 (LogStore), C10006/C20007 (LogStoreTests)
+  - All 123 tests pass (113 existing + 10 new)
 ---
