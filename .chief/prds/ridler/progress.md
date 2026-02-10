@@ -53,6 +53,8 @@
 - GitManaging protocol in `Protocols/GitManaging.swift` defines interface for git operations (currentBranch, isProtectedBranch, createAndCheckoutBranch, commitAllChanges) — enables test mocking
 - RalphLoopEngine accepts `gitManager: GitManaging` parameter for dependency injection; commits after each successful iteration with message format `feat: [US-XXX] - Story Title`
 - Git commit failures in the loop are non-fatal — logged as warnings but don't stop the loop
+- PRDProject runtime-only properties now include: autoRetryEnabled — must be preserved in `reloadAllProjects()` and `onProjectUpdated`
+- RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
@@ -467,3 +469,20 @@
   - Callback pattern (`onMaxIterationsChanged`) keeps LoopToolbarView decoupled from engine management — consistent with existing onStart/onPause/onStop pattern
   - All 166 tests still pass (pure UI story — no new tests needed)
 ---
+
+## 2026-02-09 - US-028
+- **What was implemented:** Auto-retry on Claude Code crashes with exponential backoff. When enabled, the loop engine automatically retries up to 3 times when Claude Code exits with a non-zero exit code. After retry exhaustion, transitions to Error state.
+- **Files changed:**
+  - `Ridler/Ridler/Models/PRDProject.swift` — Added `autoRetryEnabled: Bool` runtime-only property (default: false, excluded from Codable)
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Added retry logic: `retryCount`, `maxRetries` (3), `currentStoryID` tracking; `handleProcessExit` now checks `autoRetryEnabled` and retries with exponential backoff (2s, 8s, 18s); `updateAutoRetry()` method for runtime toggle; retry count resets on new story or successful iteration
+  - `Ridler/Ridler/Views/LoopToolbarView.swift` — Added "Auto-retry" toggle checkbox in toolbar with `onAutoRetryChanged` callback
+  - `Ridler/Ridler/ContentView.swift` — Preserves `autoRetryEnabled` in `reloadAllProjects()` and `onProjectUpdated`; wires `onAutoRetryChanged` to engine's `updateAutoRetry()`
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — Added 7 new tests: auto-retry retries on crash when enabled, disabled goes to error immediately, exhaustion transitions to error, retry log messages shown, default off, retry count reset on success, runtime toggle
+  - `.chief/prds/ridler/prd.json` — Marked US-028 as passes: true
+- **Learnings for future iterations:**
+  - Exponential backoff formula: `retryCount^2 * 2` seconds (2s, 8s, 18s for retries 1/2/3)
+  - `DispatchQueue.main.asyncAfter` with `[weak self]` prevents retain cycles in retry timers
+  - Retry count must be tracked per-story (`currentStoryID`) and reset when a new story starts or iteration succeeds
+  - The `autoRetryEnabled` property follows the same pattern as `pauseAfterStory` — runtime-only, preserved in reload, toggled in toolbar
+  - Tests with long backoff timers (18s+) can run slowly — the exhaustion test takes ~30s; consider shorter backoff in tests if this becomes an issue
+  - All 173 tests pass (166 existing + 7 new auto-retry tests)

@@ -439,7 +439,8 @@
         "Retry events shown in the log view"
       ],
       "priority": 28,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-029",

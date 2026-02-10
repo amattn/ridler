@@ -48,6 +48,10 @@ struct ContentView: View {
                             onMaxIterationsChanged: { newValue in
                                 let project = openProjects[selectedIndex]
                                 loopEngines[project.id]?.updateMaxIterations(newValue)
+                            },
+                            onAutoRetryChanged: { enabled in
+                                let project = openProjects[selectedIndex]
+                                loopEngines[project.id]?.updateAutoRetry(enabled)
                             }
                         )
                     }
@@ -260,6 +264,7 @@ struct ContentView: View {
                 updated.loopState = openProjects[index].loopState
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
+                updated.autoRetryEnabled = openProjects[index].autoRetryEnabled
                 updated.maxIterations = openProjects[index].maxIterations
                 updated.loopStartDate = openProjects[index].loopStartDate
                 openProjects[index] = updated
@@ -292,12 +297,14 @@ struct ContentView: View {
                 let currentState = openProjects[idx].loopState
                 let currentIteration = openProjects[idx].iterationCount
                 let currentPause = openProjects[idx].pauseAfterStory
+                let currentAutoRetry = openProjects[idx].autoRetryEnabled
                 let currentMax = openProjects[idx].maxIterations
                 let currentStart = openProjects[idx].loopStartDate
                 openProjects[idx] = updatedProject
                 openProjects[idx].loopState = currentState
                 openProjects[idx].iterationCount = currentIteration
                 openProjects[idx].pauseAfterStory = currentPause
+                openProjects[idx].autoRetryEnabled = currentAutoRetry
                 openProjects[idx].maxIterations = currentMax
                 openProjects[idx].loopStartDate = currentStart
             }
