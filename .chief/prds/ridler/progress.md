@@ -12,6 +12,11 @@
 - Models are in `Ridler/Ridler/Models/`: UserStory, LoopState, Milestone, PRDProject, RidlerError
 - PRDProject runtime-only properties (loopState, iterationCount, directoryURL) are excluded from Codable
 - UserStory.passes and .inProgress default to false when omitted from JSON
+- PRDStore protocol in `Protocols/PRDStore.swift` defines read/write interface for PRD files
+- FileSystemPRDStore in `Managers/FileSystemPRDStore.swift` implements disk I/O with ridl/ folder convention
+- When resolving URLs: directories are used as-is, files resolve to their parent directory
+- URL comparison gotcha: `deletingLastPathComponent()` adds trailing slash — use `.standardizedFileURL` for comparisons
+- DecodingError mapping: use `mapDecodingError()` pattern to convert Swift DecodingError into RidlerError.jsonDecoding with file, key, jsonPath
 
 ---
 
@@ -50,4 +55,30 @@
   - Use `@testable import Ridler` in test files to access internal types
   - PRDProject's runtime properties (loopState, iterationCount, directoryURL) are excluded from CodingKeys and initialized to defaults in init(from:)
   - All 22 tests pass in ~0.02 seconds
+---
+
+## 2026-02-09 - US-003
+- **What was implemented:** PRDStore protocol and FileSystemPRDStore for reading/writing PRD files from disk
+- **Files changed:**
+  - `Ridler/Ridler/Protocols/PRDStore.swift` — Protocol defining read/write interface: loadProject, loadMarkdown, loadMarkdownIfExists, writeProject
+  - `Ridler/Ridler/Managers/FileSystemPRDStore.swift` — File-system implementation with ridl/ folder convention, directory resolution (file or folder URL), DecodingError → RidlerError mapping
+  - `Ridler/RidlerTests/PRDStoreTests.swift` — 18 unit tests: valid JSON loading, missing optional fields, malformed JSON, missing required fields, missing files, nonexistent directories, file URL resolution, markdown loading/missing, optional markdown, round-trip write, pretty-printed output, field preservation, error message content
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added PRDStore.swift, FileSystemPRDStore.swift to app target, PRDStoreTests.swift to test target
+- **Learnings for future iterations:**
+  - `URL.deletingLastPathComponent()` adds a trailing slash, causing `XCTAssertEqual` to fail — use `.standardizedFileURL` for URL comparisons in tests
+  - pbxproj IDs continue pattern: A10010-A10011 for app build files, A20012-A20013 for file refs, C10002/C20003 for test files
+  - FileSystemPRDStore uses `.atomic` writing for safety and `[.prettyPrinted, .sortedKeys]` for human-readable JSON
+  - resolveDirectory() allows passing either a folder URL or a file URL (resolves to parent directory)
+  - All 40 tests pass (22 existing + 18 new)
+---
+
+## 2026-02-09 - US-004
+- **What was implemented:** Verified and tested PRD state update writing to ridl.json, including round-trip state modification and concurrent write safety
+- **Files changed:**
+  - `Ridler/RidlerTests/PRDStoreTests.swift` — Added 3 new tests: `testWriteProjectModifyPassesAndInProgress` (multi-step read→modify→write→read cycle), `testWriteProjectConcurrentSafety` (10 concurrent writes don't corrupt), `testWriteProjectMultipleStoryStateUpdates` (batch update multiple stories)
+- **Learnings for future iterations:**
+  - The writeProject implementation from US-003 already satisfied US-004's requirements — `.atomic` writing prevents file corruption during concurrent access
+  - For concurrent tests, use `DispatchQueue` with `.concurrent` attribute and `XCTestExpectation` with `expectedFulfillmentCount`
+  - After concurrent writes, always verify the file remains valid JSON by loading it back
+  - All 43 tests pass (22 model + 21 PRDStore)
 ---

@@ -67,7 +67,8 @@
         "Unit tests verify round-trip: read → modify passes/inProgress → write → read"
       ],
       "priority": 4,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-005",

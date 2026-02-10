@@ -317,6 +317,161 @@ final class FileSystemPRDStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.milestones?[0].name, "M1")
     }
 
+    // MARK: - US-004: Write PRD state updates
+
+    func testWriteProjectModifyPassesAndInProgress() throws {
+        // Read → modify passes/inProgress → write → read
+        let json = """
+        {
+            "project": "State Test",
+            "userStories": [
+                {
+                    "id": "US-001",
+                    "title": "Story 1",
+                    "description": "Desc 1",
+                    "priority": 1,
+                    "acceptanceCriteria": ["AC1"],
+                    "passes": false,
+                    "inProgress": false
+                },
+                {
+                    "id": "US-002",
+                    "title": "Story 2",
+                    "description": "Desc 2",
+                    "priority": 2,
+                    "acceptanceCriteria": ["AC2"],
+                    "passes": false,
+                    "inProgress": false
+                }
+            ]
+        }
+        """
+        try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
+
+        // Read
+        var project = try store.loadProject(from: tempDir)
+        XCTAssertFalse(project.userStories[0].passes)
+        XCTAssertFalse(project.userStories[0].inProgress)
+
+        // Modify: mark story 1 as in progress
+        project.userStories[0].inProgress = true
+
+        // Write
+        try store.writeProject(project, to: tempDir)
+
+        // Read again
+        var reloaded = try store.loadProject(from: tempDir)
+        XCTAssertFalse(reloaded.userStories[0].passes)
+        XCTAssertTrue(reloaded.userStories[0].inProgress)
+        XCTAssertFalse(reloaded.userStories[1].passes)
+        XCTAssertFalse(reloaded.userStories[1].inProgress)
+
+        // Modify: mark story 1 as passed, no longer in progress
+        reloaded.userStories[0].passes = true
+        reloaded.userStories[0].inProgress = false
+
+        // Write again
+        try store.writeProject(reloaded, to: tempDir)
+
+        // Read final state
+        let final = try store.loadProject(from: tempDir)
+        XCTAssertTrue(final.userStories[0].passes)
+        XCTAssertFalse(final.userStories[0].inProgress)
+        XCTAssertFalse(final.userStories[1].passes)
+        XCTAssertFalse(final.userStories[1].inProgress)
+    }
+
+    func testWriteProjectConcurrentSafety() throws {
+        // Verify that concurrent writes using .atomic don't corrupt the file
+        let project = PRDProject(
+            project: "Concurrent",
+            userStories: [
+                UserStory(id: "US-001", title: "S1", description: "D1", priority: 1, acceptanceCriteria: ["AC1"]),
+                UserStory(id: "US-002", title: "S2", description: "D2", priority: 2, acceptanceCriteria: ["AC2"])
+            ]
+        )
+        try store.writeProject(project, to: tempDir)
+
+        let expectation = XCTestExpectation(description: "Concurrent writes complete")
+        expectation.expectedFulfillmentCount = 10
+        let queue = DispatchQueue(label: "concurrent-test", attributes: .concurrent)
+
+        for i in 0..<10 {
+            queue.async {
+                do {
+                    var copy = project
+                    copy.userStories[0].passes = (i % 2 == 0)
+                    copy.userStories[1].inProgress = (i % 2 != 0)
+                    try self.store.writeProject(copy, to: self.tempDir)
+                    expectation.fulfill()
+                } catch {
+                    XCTFail("Concurrent write failed: \(error)")
+                }
+            }
+        }
+
+        wait(for: [expectation], timeout: 5.0)
+
+        // File should be valid JSON after all concurrent writes
+        let final = try store.loadProject(from: tempDir)
+        XCTAssertEqual(final.project, "Concurrent")
+        XCTAssertEqual(final.userStories.count, 2)
+    }
+
+    func testWriteProjectMultipleStoryStateUpdates() throws {
+        let json = """
+        {
+            "project": "Multi",
+            "description": "Multiple updates",
+            "userStories": [
+                {
+                    "id": "US-001",
+                    "title": "Story 1",
+                    "description": "Desc 1",
+                    "priority": 1,
+                    "acceptanceCriteria": ["AC1"]
+                },
+                {
+                    "id": "US-002",
+                    "title": "Story 2",
+                    "description": "Desc 2",
+                    "priority": 2,
+                    "acceptanceCriteria": ["AC2"]
+                },
+                {
+                    "id": "US-003",
+                    "title": "Story 3",
+                    "description": "Desc 3",
+                    "priority": 3,
+                    "acceptanceCriteria": ["AC3"]
+                }
+            ]
+        }
+        """
+        try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
+
+        var project = try store.loadProject(from: tempDir)
+
+        // Update multiple stories at once
+        project.userStories[0].passes = true
+        project.userStories[1].passes = true
+        project.userStories[1].inProgress = false
+        project.userStories[2].inProgress = true
+
+        try store.writeProject(project, to: tempDir)
+        let reloaded = try store.loadProject(from: tempDir)
+
+        XCTAssertTrue(reloaded.userStories[0].passes)
+        XCTAssertFalse(reloaded.userStories[0].inProgress)
+        XCTAssertTrue(reloaded.userStories[1].passes)
+        XCTAssertFalse(reloaded.userStories[1].inProgress)
+        XCTAssertFalse(reloaded.userStories[2].passes)
+        XCTAssertTrue(reloaded.userStories[2].inProgress)
+        // All other fields preserved
+        XCTAssertEqual(reloaded.project, "Multi")
+        XCTAssertEqual(reloaded.description, "Multiple updates")
+    }
+
     // MARK: - JSON error messages
 
     func testJSONErrorIncludesFileNameAndKey() throws {
