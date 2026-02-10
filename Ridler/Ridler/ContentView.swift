@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showErrorAlert = false
     @StateObject private var fileWatcher = ProjectFileWatcher()
     @StateObject private var logStore = LogStore()
+    @ObservedObject private var settings = SettingsManager.shared
     @State private var loopEngines: [String: RalphLoopEngine] = [:]
     @State private var showBranchWarning = false
     @State private var branchWarningIndex: Int?
@@ -356,8 +357,11 @@ struct ContentView: View {
             }
             return
         }
-        openProjects.append(project)
-        selectedProjectID = project.id
+        var projectToAdd = project
+        projectToAdd.audioNotificationsEnabled = settings.audioNotifications
+        projectToAdd.autoRetryEnabled = settings.autoRetryOnCrash
+        openProjects.append(projectToAdd)
+        selectedProjectID = projectToAdd.id
         if let dirURL = project.directoryURL {
             fileWatcher.watch(directoryURL: dirURL)
             RecentProjectsManager.shared.addRecent(dirURL)

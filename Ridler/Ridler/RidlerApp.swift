@@ -15,6 +15,8 @@ struct RidlerApp: App {
             ContentView()
         }
         .commands {
+            // Settings (Cmd+,) is automatically provided by the Settings scene below
+
             // MARK: - File Menu
             CommandGroup(replacing: .newItem) {
                 Button("New PRD...") {
@@ -99,6 +101,10 @@ struct RidlerApp: App {
 
                 Divider()
             }
+        }
+
+        Settings {
+            SettingsView()
         }
     }
 }

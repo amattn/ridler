@@ -562,7 +562,8 @@
         "Settings persisted via UserDefaults"
       ],
       "priority": 37,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-038",

@@ -40,6 +40,8 @@
 		A10031 /* SyntaxHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20033 /* SyntaxHighlighter.swift */; };
 		A10032 /* FocusedValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20034 /* FocusedValues.swift */; };
 		A10033 /* RecentProjectsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20035 /* RecentProjectsManager.swift */; };
+		A10034 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20036 /* SettingsManager.swift */; };
+		A10035 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20037 /* SettingsView.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -97,6 +99,8 @@
 		A20033 /* SyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighter.swift; sourceTree = "<group>"; };
 		A20034 /* FocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedValues.swift; sourceTree = "<group>"; };
 		A20035 /* RecentProjectsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentProjectsManager.swift; sourceTree = "<group>"; };
+		A20036 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		A20037 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -179,6 +183,7 @@
 				A20022 /* LoopToolbarView.swift */,
 				A20031 /* BranchWarningSheet.swift */,
 				A20032 /* StatusBarView.swift */,
+				A20037 /* SettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -203,6 +208,7 @@
 				A20030 /* GitManager.swift */,
 				A20033 /* SyntaxHighlighter.swift */,
 				A20035 /* RecentProjectsManager.swift */,
+				A20036 /* SettingsManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -373,6 +379,8 @@
 				A10031 /* SyntaxHighlighter.swift in Sources */,
 				A10032 /* FocusedValues.swift in Sources */,
 				A10033 /* RecentProjectsManager.swift in Sources */,
+				A10034 /* SettingsManager.swift in Sources */,
+				A10035 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

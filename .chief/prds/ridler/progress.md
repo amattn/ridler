@@ -60,6 +60,8 @@
 - RecentProjectsManager (`Managers/RecentProjectsManager.swift`) — singleton `ObservableObject` managing recent PRD URLs via UserDefaults with URL bookmarks; `addRecent()` called from ContentView's `addProject()`; accessed via `RecentProjectsManager.shared`
 - pbxproj IDs: A10033/A20035 (RecentProjectsManager)
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
+- SettingsManager (`Managers/SettingsManager.swift`) — singleton `ObservableObject` for app-wide UserDefaults settings; accessed via `SettingsManager.shared`; settings: audioNotifications, autoRetryOnCrash, verboseLog, debugMode
+- pbxproj IDs: A10034/A20036 (SettingsManager), A10035/A20037 (SettingsView)
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
@@ -618,4 +620,22 @@
   - Delete is disabled when loop is running to prevent deleting files mid-execution
   - The `deleteProject()` method reuses `closeProject()` for cleanup (engine stop, watcher unwatch, tab removal) then adds `FileManager.removeItem` for disk deletion
   - All 193 tests pass (pure UI story — no new tests needed)
+---
+
+## 2026-02-09 - US-037
+- **What was implemented:** Standard macOS Settings window accessible via Cmd+, with four toggles: Audio notifications (default: on), Auto-retry on crash (default: off), Verbose log (default: off), and Debug mode (default: off). All settings persisted via UserDefaults.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/SettingsManager.swift` — New singleton `ObservableObject` managing app-wide settings via UserDefaults with `register(defaults:)` for default values; four `@Published` properties with `didSet` persistence: `audioNotifications`, `autoRetryOnCrash`, `verboseLog`, `debugMode`
+  - `Ridler/Ridler/Views/SettingsView.swift` — New SwiftUI `Form` with `.formStyle(.grouped)` using four sections (Notifications, Execution, Logging, Developer) each containing a toggle bound to SettingsManager
+  - `Ridler/Ridler/RidlerApp.swift` — Added `Settings { SettingsView() }` scene which automatically provides the standard Cmd+, shortcut and macOS Settings menu item
+  - `Ridler/Ridler/ContentView.swift` — Added `@ObservedObject settings = SettingsManager.shared`; updated `addProject()` to apply app-wide defaults (audioNotifications, autoRetryOnCrash) to newly opened projects
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added SettingsManager.swift (A10034/A20036) to Managers group and SettingsView.swift (A10035/A20037) to Views group
+- **Learnings for future iterations:**
+  - SwiftUI `Settings` scene automatically provides Cmd+, shortcut and the standard macOS Settings/Preferences menu item — no manual keyboard shortcut needed
+  - `UserDefaults.standard.register(defaults:)` sets default values that are returned when no value has been explicitly set — use this for first-launch defaults
+  - `SettingsManager.shared` singleton pattern is consistent with `RecentProjectsManager.shared` — both are app-wide singletons
+  - `@Published` with `didSet` is a clean pattern for two-way persistence: Combine publishes changes for SwiftUI, didSet saves to UserDefaults
+  - The verbose log and debug mode settings are stored but not yet consumed by other views — US-038 (Debug window) will consume `debugMode`, and the log view can consume `verboseLog`
+  - pbxproj IDs: A10034/A20036 (SettingsManager), A10035/A20037 (SettingsView)
+  - All 193 tests pass (no new tests needed — Settings is a pure UI/persistence feature with straightforward UserDefaults storage)
 ---
