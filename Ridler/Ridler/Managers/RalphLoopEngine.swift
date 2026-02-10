@@ -10,6 +10,7 @@ final class RalphLoopEngine: ObservableObject {
 
     private let prdStore: PRDStore
     private let processManagerFactory: () -> ProcessManaging
+    private let gitManager: GitManaging
 
     private var cancellables = Set<AnyCancellable>()
     private var currentProcessManager: ProcessManaging?
@@ -31,10 +32,12 @@ final class RalphLoopEngine: ObservableObject {
 
     init(
         prdStore: PRDStore = FileSystemPRDStore(),
-        processManagerFactory: @escaping () -> ProcessManaging = { ClaudeCodeProcessManager() }
+        processManagerFactory: @escaping () -> ProcessManaging = { ClaudeCodeProcessManager() },
+        gitManager: GitManaging = GitManager()
     ) {
         self.prdStore = prdStore
         self.processManagerFactory = processManagerFactory
+        self.gitManager = gitManager
     }
 
     // MARK: - Public API
@@ -222,6 +225,9 @@ final class RalphLoopEngine: ObservableObject {
         // Append progress entry for this iteration
         appendProgress(storyID: storyID, exitCode: result.exitCode)
 
+        // Create git commit for the completed story
+        commitStoryChanges(storyID: storyID)
+
         // Reload project to check updated state
         guard let directoryURL else { return }
         do {
@@ -345,6 +351,28 @@ final class RalphLoopEngine: ObservableObject {
         }
 
         return prompt
+    }
+
+    private func commitStoryChanges(storyID: String) {
+        guard let directoryURL else { return }
+
+        // Look up story title
+        var storyTitle = storyID
+        if let project = try? prdStore.loadProject(from: directoryURL),
+           let story = project.userStories.first(where: { $0.id == storyID }) {
+            storyTitle = story.title
+        }
+
+        let commitMessage = "feat: [\(storyID)] - \(storyTitle)"
+        let workingDirectory = directoryURL.deletingLastPathComponent()
+
+        do {
+            try gitManager.commitAllChanges(message: commitMessage, at: workingDirectory)
+            logSystem("Committed: \(commitMessage)")
+        } catch {
+            Self.logger.warning("Git commit failed for \(storyID): \(error.localizedDescription)")
+            logSystem("Git commit failed: \(error.localizedDescription)")
+        }
     }
 
     private func appendProgress(storyID: String, exitCode: Int32) {

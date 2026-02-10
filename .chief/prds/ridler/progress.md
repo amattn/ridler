@@ -50,7 +50,9 @@
 - RalphLoopEngine in `Managers/RalphLoopEngine.swift` — use callbacks (onStateChange, onIterationChange, onLogEntry, onProjectUpdated) to communicate back to ContentView; one engine per project stored in `loopEngines: [String: RalphLoopEngine]`
 - LoopToolbarView accepts onStart/onPause/onStop closures — delegates control to ContentView which manages engine lifecycle
 - pbxproj IDs: A10026/A20028 (RalphLoopEngine), C10007/C20008 (RalphLoopEngineTests)
-- GitManaging protocol in `Protocols/GitManaging.swift` defines interface for git operations (currentBranch, isProtectedBranch, createAndCheckoutBranch) — enables test mocking
+- GitManaging protocol in `Protocols/GitManaging.swift` defines interface for git operations (currentBranch, isProtectedBranch, createAndCheckoutBranch, commitAllChanges) — enables test mocking
+- RalphLoopEngine accepts `gitManager: GitManaging` parameter for dependency injection; commits after each successful iteration with message format `feat: [US-XXX] - Story Title`
+- Git commit failures in the loop are non-fatal — logged as warnings but don't stop the loop
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
 - Working directory for git operations: `directoryURL.deletingLastPathComponent()` (project root, not PRD dir)
@@ -406,4 +408,21 @@
   - If git is not available or directory is not a git repo, the error is silently caught and the loop proceeds — graceful degradation
   - BranchWarningSheet uses `@State branchName` initialized to `ridler/{prdName}` — the user can edit this before creating
   - All 152 tests pass (141 existing + 11 new)
+---
+
+## 2026-02-09 - US-024
+- **What was implemented:** Git commit per completed story — after each successful Claude Code iteration, Ridler creates a git commit with the format `feat: [US-XXX] - Story Title`
+- **Files changed:**
+  - `Ridler/Ridler/Protocols/GitManaging.swift` — Added `commitAllChanges(message:at:)` method to protocol
+  - `Ridler/Ridler/Managers/GitManager.swift` — Implemented `commitAllChanges` using `git add -A` then `git commit -m`
+  - `Ridler/Ridler/Managers/RalphLoopEngine.swift` — Added `gitManager: GitManaging` dependency; added `commitStoryChanges()` method called after successful iteration; commit message uses story ID and title from disk
+  - `Ridler/RidlerTests/GitManagerTests.swift` — Added 3 integration tests: successful commit, empty commit error, error message contents
+  - `Ridler/RidlerTests/RalphLoopEngineTests.swift` — Added `MockGitManager` class and 5 unit tests: commit after success, working directory is project root, no commit on error, commit failure is non-fatal, commit log message emitted
+  - `.chief/prds/ridler/prd.json` — Marked US-024 as passes: true
+- **Learnings for future iterations:**
+  - `commitAllChanges` uses two git commands (`add -A` then `commit -m`) — if `add` succeeds but `commit` fails (e.g., nothing to commit), the error is from the commit step
+  - Git commit errors are non-fatal in the loop engine — the loop continues even if the commit fails, which is the right behavior for graceful degradation
+  - MockGitManager in tests tracks `commitCallCount`, `lastCommitMessage`, `lastCommitDirectory`, and supports injecting `commitError` for failure testing
+  - The commit happens after `appendProgress` but before reloading the project and checking for completion — this ensures progress.md is included in the commit
+  - All 160 tests pass (152 existing + 3 git integration + 5 engine tests)
 ---

@@ -90,6 +90,49 @@ final class GitManagerTests: XCTestCase {
         }
     }
 
+    func testCommitAllChanges() throws {
+        try initGitRepo(at: tempDir, defaultBranch: "main")
+
+        // Create a new file and commit it
+        let newFile = tempDir.appendingPathComponent("feature.swift")
+        try "let x = 1".write(to: newFile, atomically: true, encoding: .utf8)
+
+        try gitManager.commitAllChanges(message: "feat: [US-001] - Test Feature", at: tempDir)
+
+        // Verify the commit was created with correct message
+        let log = try runGit(["log", "--oneline", "-1"], at: tempDir)
+        XCTAssertTrue(log.contains("feat: [US-001] - Test Feature"), "Commit message should match")
+
+        // Verify no uncommitted changes remain
+        let status = try runGit(["status", "--porcelain"], at: tempDir)
+        XCTAssertTrue(status.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, "Working tree should be clean after commit")
+    }
+
+    func testCommitAllChangesWithNoChanges() throws {
+        try initGitRepo(at: tempDir, defaultBranch: "main")
+
+        // Committing with no changes should fail
+        XCTAssertThrowsError(try gitManager.commitAllChanges(message: "empty commit", at: tempDir)) { error in
+            guard case RidlerError.gitError(let command, _) = error else {
+                XCTFail("Expected RidlerError.gitError, got \(error)")
+                return
+            }
+            XCTAssertTrue(command.contains("commit"), "Error should reference git commit command")
+        }
+    }
+
+    func testCommitAllChangesErrorIncludesCommandAndStderr() throws {
+        // Non-git directory — git add should fail
+        XCTAssertThrowsError(try gitManager.commitAllChanges(message: "test", at: tempDir)) { error in
+            guard case RidlerError.gitError(let command, let stderr) = error else {
+                XCTFail("Expected RidlerError.gitError, got \(error)")
+                return
+            }
+            XCTAssertFalse(command.isEmpty, "Error should include the failed command")
+            XCTAssertFalse(stderr.isEmpty, "Error should include stderr output")
+        }
+    }
+
     func testProtectedBranchDetectionIntegration() throws {
         // Create repo on main branch
         try initGitRepo(at: tempDir, defaultBranch: "main")

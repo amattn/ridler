@@ -42,6 +42,35 @@ final class MockProcessManager: ProcessManaging {
     }
 }
 
+// MARK: - Mock GitManaging
+
+final class MockGitManager: GitManaging {
+    var currentBranchResult: String = "main"
+    var currentBranchError: Error?
+    var commitCallCount = 0
+    var lastCommitMessage: String?
+    var lastCommitDirectory: URL?
+    var commitError: Error?
+
+    func currentBranch(at directoryURL: URL) throws -> String {
+        if let error = currentBranchError { throw error }
+        return currentBranchResult
+    }
+
+    func isProtectedBranch(_ branchName: String) -> Bool {
+        branchName == "main" || branchName == "master"
+    }
+
+    func createAndCheckoutBranch(_ branchName: String, at directoryURL: URL) throws {}
+
+    func commitAllChanges(message: String, at directoryURL: URL) throws {
+        if let error = commitError { throw error }
+        commitCallCount += 1
+        lastCommitMessage = message
+        lastCommitDirectory = directoryURL
+    }
+}
+
 // MARK: - Tests
 
 final class RalphLoopEngineTests: XCTestCase {
@@ -710,5 +739,215 @@ final class RalphLoopEngineTests: XCTestCase {
         // Verify it's NOT in the parent directory
         let parentProgressURL = tempDir.deletingLastPathComponent().appendingPathComponent("progress.md")
         XCTAssertFalse(FileManager.default.fileExists(atPath: parentProgressURL.path), "progress.md should not be in parent directory")
+    }
+
+    // MARK: - Git Commit Tests
+
+    func testGitCommitAfterSuccessfulIteration() throws {
+        let stories = [
+            UserStory(id: "US-001", title: "First Story", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+        ]
+        let project = try createTestProject(stories: stories)
+
+        var mockPM: MockProcessManager?
+        let mockGit = MockGitManager()
+        let engine = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM = pm
+                return pm
+            },
+            gitManager: mockGit
+        )
+
+        let pausedExpectation = XCTestExpectation(description: "Paused")
+        engine.onStateChange = { state in
+            if state == .paused {
+                pausedExpectation.fulfill()
+            }
+        }
+
+        var project2 = project
+        project2.pauseAfterStory = true
+        engine.start(project: project2)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mockPM?.sendExit(code: 0)
+        }
+
+        wait(for: [pausedExpectation], timeout: 3.0)
+
+        XCTAssertEqual(mockGit.commitCallCount, 1, "Should create one commit per iteration")
+        XCTAssertEqual(mockGit.lastCommitMessage, "feat: [US-001] - First Story", "Commit message should follow format")
+    }
+
+    func testGitCommitUsesProjectRootAsWorkingDirectory() throws {
+        let stories = [
+            UserStory(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+        ]
+        let project = try createTestProject(stories: stories)
+
+        var mockPM: MockProcessManager?
+        let mockGit = MockGitManager()
+        let engine = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM = pm
+                return pm
+            },
+            gitManager: mockGit
+        )
+
+        let pausedExpectation = XCTestExpectation(description: "Paused")
+        engine.onStateChange = { state in
+            if state == .paused {
+                pausedExpectation.fulfill()
+            }
+        }
+
+        var project2 = project
+        project2.pauseAfterStory = true
+        engine.start(project: project2)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mockPM?.sendExit(code: 0)
+        }
+
+        wait(for: [pausedExpectation], timeout: 3.0)
+
+        // Commit directory should be parent of PRD directory (project root)
+        let expectedDir = tempDir.deletingLastPathComponent()
+        XCTAssertEqual(
+            mockGit.lastCommitDirectory?.standardizedFileURL,
+            expectedDir.standardizedFileURL,
+            "Commit should use project root directory"
+        )
+    }
+
+    func testGitCommitNotCalledOnError() throws {
+        let stories = [
+            UserStory(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+        ]
+        let project = try createTestProject(stories: stories)
+
+        var mockPM: MockProcessManager?
+        let mockGit = MockGitManager()
+        let engine = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM = pm
+                return pm
+            },
+            gitManager: mockGit
+        )
+
+        let errorExpectation = XCTestExpectation(description: "Error")
+        engine.onStateChange = { state in
+            if state == .error {
+                errorExpectation.fulfill()
+            }
+        }
+
+        engine.start(project: project)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mockPM?.sendExit(code: 1, stderr: "crash")
+        }
+
+        wait(for: [errorExpectation], timeout: 3.0)
+
+        XCTAssertEqual(mockGit.commitCallCount, 0, "Should not commit on error exit")
+    }
+
+    func testGitCommitFailureDoesNotStopLoop() throws {
+        let stories = [
+            UserStory(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+        ]
+        let project = try createTestProject(stories: stories)
+
+        var mockPM: MockProcessManager?
+        let mockGit = MockGitManager()
+        mockGit.commitError = RidlerError.gitError(command: "git commit", stderr: "nothing to commit")
+        let engine = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM = pm
+                return pm
+            },
+            gitManager: mockGit
+        )
+
+        let pausedExpectation = XCTestExpectation(description: "Paused")
+        engine.onStateChange = { state in
+            if state == .paused {
+                pausedExpectation.fulfill()
+            }
+        }
+
+        var project2 = project
+        project2.pauseAfterStory = true
+        engine.start(project: project2)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mockPM?.sendExit(code: 0)
+        }
+
+        wait(for: [pausedExpectation], timeout: 3.0)
+
+        // Loop should continue (paused as expected) even though commit failed
+        // This verifies the commit error is non-fatal
+    }
+
+    func testGitCommitLogMessage() throws {
+        let stories = [
+            UserStory(id: "US-042", title: "Cool Feature", description: "d", priority: 1, acceptanceCriteria: ["a"]),
+            UserStory(id: "US-043", title: "Other", description: "d", priority: 2, acceptanceCriteria: ["b"]),
+        ]
+        let project = try createTestProject(stories: stories)
+
+        var mockPM: MockProcessManager?
+        let mockGit = MockGitManager()
+        let engine = RalphLoopEngine(
+            prdStore: FileSystemPRDStore(),
+            processManagerFactory: {
+                let pm = MockProcessManager()
+                mockPM = pm
+                return pm
+            },
+            gitManager: mockGit
+        )
+
+        var logMessages: [String] = []
+        engine.onLogEntry = { entry, _ in
+            if entry.type == .system {
+                logMessages.append(entry.content)
+            }
+        }
+
+        let pausedExpectation = XCTestExpectation(description: "Paused")
+        engine.onStateChange = { state in
+            if state == .paused {
+                pausedExpectation.fulfill()
+            }
+        }
+
+        var project2 = project
+        project2.pauseAfterStory = true
+        engine.start(project: project2)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mockPM?.sendExit(code: 0)
+        }
+
+        wait(for: [pausedExpectation], timeout: 3.0)
+
+        XCTAssertTrue(logMessages.contains(where: { $0.contains("Committed:") && $0.contains("US-042") }), "Should log commit message")
     }
 }

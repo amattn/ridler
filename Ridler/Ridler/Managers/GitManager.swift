@@ -24,6 +24,11 @@ final class GitManager: GitManaging {
         _ = try runGit(["checkout", "-b", branchName], at: directoryURL)
     }
 
+    func commitAllChanges(message: String, at directoryURL: URL) throws {
+        _ = try runGit(["add", "-A"], at: directoryURL)
+        _ = try runGit(["commit", "-m", message], at: directoryURL)
+    }
+
     // MARK: - Private
 
     private func runGit(_ arguments: [String], at directoryURL: URL) throws -> String {

@@ -383,7 +383,8 @@
         "Git errors are reported clearly with the failed command and stderr"
       ],
       "priority": 24,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-025",

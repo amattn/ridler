@@ -10,4 +10,7 @@ protocol GitManaging {
 
     /// Creates and checks out a new branch with the given name.
     func createAndCheckoutBranch(_ branchName: String, at directoryURL: URL) throws
+
+    /// Stages all changes and creates a commit with the given message.
+    func commitAllChanges(message: String, at directoryURL: URL) throws
 }
