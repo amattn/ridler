@@ -546,7 +546,8 @@
         "Menu items enabled/disabled based on the tab's current loop state"
       ],
       "priority": 36,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-037",

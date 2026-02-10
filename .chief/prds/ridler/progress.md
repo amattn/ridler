@@ -606,3 +606,16 @@
   - pbxproj IDs: A10033/A20035 (RecentProjectsManager.swift)
   - All 193 tests pass (no new tests needed — this is a UI/persistence feature with straightforward UserDefaults storage)
 ---
+
+## 2026-02-09 - US-036
+- **What was implemented:** Right-click context menus on PRD tabs with Start, Pause, Stop, Edit, Close, and Delete options. Menu items are enabled/disabled based on the tab's current loop state. Delete shows a confirmation alert before permanently removing PRD files from disk.
+- **Files changed:**
+  - `Ridler/Ridler/ContentView.swift` — Added `.contextMenu` modifier to `tabItem(for:)` with six menu items: Start (disabled when can't transition to running), Pause (disabled when can't transition to paused), Stop (disabled when can't transition to stopped), Edit (selects prd.md in sidebar), Close (calls closeProject), Delete (shows confirmation alert then deletes files from disk); added `showDeleteConfirmation` and `projectToDelete` state; added `.alert("Delete PRD")` confirmation dialog; added `deleteProject()` method that closes the project and removes its directory from disk
+- **Learnings for future iterations:**
+  - SwiftUI `.contextMenu` on a view builder works naturally with `Button` items — no need for NSMenu or AppKit
+  - `Button(role: .destructive)` renders the Delete option in red automatically in context menus
+  - Loop state enable/disable uses existing `canTransition(to:)` method from LoopState — consistent with menu bar items
+  - Delete is disabled when loop is running to prevent deleting files mid-execution
+  - The `deleteProject()` method reuses `closeProject()` for cleanup (engine stop, watcher unwatch, tab removal) then adds `FileManager.removeItem` for disk deletion
+  - All 193 tests pass (pure UI story — no new tests needed)
+---

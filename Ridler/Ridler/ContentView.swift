@@ -131,6 +131,20 @@ struct ContentView: View {
                 )
             }
         }
+        .alert("Delete PRD", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let project = projectToDelete {
+                    deleteProject(project)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                projectToDelete = nil
+            }
+        } message: {
+            if let project = projectToDelete {
+                Text("Are you sure you want to delete \"\(project.name ?? project.id)\"? This will permanently delete the PRD files from disk.")
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openPRD)) { _ in
             isFilePickerPresented = true
         }
@@ -249,6 +263,9 @@ struct ContentView: View {
         .font(.system(size: 9))
     }
 
+    @State private var showDeleteConfirmation = false
+    @State private var projectToDelete: PRDProject?
+
     private func tabItem(for project: PRDProject) -> some View {
         let isSelected = selectedProjectID == project.id
         return HStack(spacing: 6) {
@@ -273,6 +290,59 @@ struct ContentView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             selectedProjectID = project.id
+        }
+        .contextMenu {
+            Button {
+                if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
+                    startLoop(for: idx)
+                }
+            } label: {
+                Label("Start", systemImage: "play.fill")
+            }
+            .disabled(!project.loopState.canTransition(to: .running))
+
+            Button {
+                if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
+                    pauseLoop(for: idx)
+                }
+            } label: {
+                Label("Pause", systemImage: "pause.fill")
+            }
+            .disabled(!project.loopState.canTransition(to: .paused))
+
+            Button {
+                if let idx = openProjects.firstIndex(where: { $0.id == project.id }) {
+                    stopLoop(for: idx)
+                }
+            } label: {
+                Label("Stop", systemImage: "stop.fill")
+            }
+            .disabled(!project.loopState.canTransition(to: .stopped))
+
+            Divider()
+
+            Button {
+                selectedProjectID = project.id
+                sidebarSelection = .file(.prdMd)
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Divider()
+
+            Button {
+                closeProject(project)
+            } label: {
+                Label("Close", systemImage: "xmark")
+            }
+
+            Button(role: .destructive) {
+                projectToDelete = project
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .disabled(project.loopState == .running)
         }
     }
 
@@ -307,6 +377,14 @@ struct ContentView: View {
         if selectedProjectID == project.id {
             selectedProjectID = openProjects.first?.id
         }
+    }
+
+    private func deleteProject(_ project: PRDProject) {
+        closeProject(project)
+        if let dirURL = project.directoryURL {
+            try? FileManager.default.removeItem(at: dirURL)
+        }
+        projectToDelete = nil
     }
 
     private func reloadAllProjects() {
