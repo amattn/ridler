@@ -15,7 +15,8 @@
         "Project organized into groups: Models, Views, ViewModels, Managers, Protocols"
       ],
       "priority": 1,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-002",
