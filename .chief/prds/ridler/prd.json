@@ -658,7 +658,8 @@
         "DMG installer for distribution"
       ],
       "priority": 44,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     }
   ]
 }
