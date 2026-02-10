@@ -54,6 +54,8 @@
 - RalphLoopEngine accepts `gitManager: GitManaging` parameter for dependency injection; commits after each successful iteration with message format `feat: [US-XXX] - Story Title`
 - Git commit failures in the loop are non-fatal — logged as warnings but don't stop the loop
 - PRDProject runtime-only properties now include: autoRetryEnabled, audioNotificationsEnabled — must be preserved in `reloadAllProjects()` and `onProjectUpdated`
+- SyntaxHighlighter in `Managers/SyntaxHighlighter.swift` — use `parseSegments()` to split content into text/code blocks, `highlight()` to apply NSAttributedString coloring; HighlightedCodeView (NSViewRepresentable) in LogPanelView for rendering
+- pbxproj IDs: A10031/A20033 (SyntaxHighlighter), C10009/C20010 (SyntaxHighlighterTests)
 - RalphLoopEngine auto-retry: 3 max retries, exponential backoff (2s, 8s, 18s), per-story retry count tracking, `updateAutoRetry()` for runtime toggle
 - GitManager in `Managers/GitManager.swift` shells out to `/usr/bin/git` for git operations
 - Protected branch detection: ContentView.startLoop() checks branch before first start (skipped on resume); shows BranchWarningSheet with three options: create branch (recommended), continue, cancel
@@ -516,4 +518,36 @@
   - Notification identifier uses `ridler-complete-\(projectID)` to avoid duplicate notifications for the same PRD
   - No new tests needed — `UNUserNotificationCenter` and `NSApplication` are runtime-only APIs that require a running app context to test meaningfully
   - All 173 tests pass
+---
+
+## 2026-02-09 - US-031
+- **What was implemented:** Syntax highlighting for code blocks in the log view. When Claude's output contains fenced code blocks (``` markers), they are now rendered with keyword-based syntax highlighting using NSAttributedString and NSTextView.
+- **Files changed:**
+  - `Ridler/Ridler/Managers/SyntaxHighlighter.swift` — New struct with two main functions: `parseSegments()` splits content into text and code block segments by detecting ``` fences with optional language tags; `highlight()` applies regex-based syntax highlighting for keywords, strings, comments, numbers, and type names using NSAttributedString with language-specific keyword sets
+  - `Ridler/Ridler/Views/LogPanelView.swift` — Updated `LogEntryRow` to detect code blocks via `SyntaxHighlighter.parseSegments()`; added `contentView` that renders mixed text/code content; added `HighlightedCodeView` (NSViewRepresentable wrapping NSTextView) for displaying highlighted code with proper sizing via `sizeThatFits`
+  - `Ridler/RidlerTests/SyntaxHighlighterTests.swift` — 20 unit tests covering: segment parsing (plain text, single/multiple code blocks, no language, unclosed blocks, empty blocks, language normalization, multiline code), highlighting (Swift, Python, TypeScript, Rust, Go, Bash keywords, unknown/nil language, empty code, content preservation), and supported language coverage
+  - `Ridler/Ridler.xcodeproj/project.pbxproj` — Added SyntaxHighlighter.swift (A10031/A20033) and SyntaxHighlighterTests.swift (C10009/C20010)
+- **Learnings for future iterations:**
+  - `NSViewRepresentable` with `sizeThatFits(_:nsView:context:)` is the correct way to get dynamic sizing for AppKit views embedded in SwiftUI (macOS 14+)
+  - NSTextView requires `textContainer?.widthTracksTextView = true` and `isHorizontallyResizable = false` for proper text wrapping
+  - Syntax highlighting colors should use explicit RGB values rather than system semantic colors to ensure consistent appearance in code blocks
+  - Code block detection splits on ``` fences — unclosed blocks are treated as plain text to avoid rendering errors
+  - Language tags in fences are normalized to lowercase for consistent keyword matching
+  - Supported languages: Swift, TypeScript/TS/TSX, JavaScript/JS/JSX, Python/Py, Go/Golang, Rust/RS, Bash/Sh/Shell/Zsh, JSON, HTML/XML, CSS/SCSS, plus a generic fallback set
+  - pbxproj IDs: A10031/A20033 (SyntaxHighlighter), C10009/C20010 (SyntaxHighlighterTests)
+  - All 193 tests pass (173 existing + 20 new)
+---
+
+## 2026-02-09 - US-032
+- **What was implemented:** Interrupted story detection and warning banner in the sidebar. When a PRD is loaded/reopened and a story has `inProgress: true` from a previously interrupted session (loop is not currently running), a yellow warning banner appears in the stories panel showing which stories were interrupted. The banner includes a dismiss button and an optional "Resume Loop" button to acknowledge and resume.
+- **Files changed:**
+  - `Ridler/Ridler/Views/SidebarView.swift` — Added `onResume` callback parameter, `interruptedWarningDismissed` state, and `interruptedStoryBanner()` view builder that shows a yellow warning banner when stories have `inProgress: true` while `loopState != .running`; banner includes story ID list, dismiss button, and "Resume Loop" button
+  - `Ridler/Ridler/ContentView.swift` — Updated SidebarView initialization to pass `onResume` callback that calls `startLoop(for:)` for the selected project index
+  - `.chief/prds/ridler/prd.json` — Marked US-032 as passes: true
+- **Learnings for future iterations:**
+  - Interrupted story detection logic: `story.inProgress && !story.passes` while `project.loopState != .running` — this covers fresh loads (loopState defaults to `.ready`) and paused/stopped/error states
+  - SidebarView now accepts an optional `onResume: (() -> Void)?` closure — nil means no resume button is shown (e.g., in previews)
+  - `@State interruptedWarningDismissed` resets naturally when the view is re-created (e.g., switching PRDs) since it's local view state
+  - The `selectedProjectIndex.map { idx in { startLoop(for: idx) } }` pattern creates an optional closure from an optional index — clean way to pass conditional callbacks
+  - All 193 tests pass (no new tests needed — this is a pure UI feature with straightforward detection logic)
 ---

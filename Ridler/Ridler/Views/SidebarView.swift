@@ -3,9 +3,11 @@ import SwiftUI
 struct SidebarView: View {
     let project: PRDProject?
     @Binding var selection: SidebarSelection?
+    var onResume: (() -> Void)?
 
     @State private var isFileSectionExpanded = true
     @State private var collapsedMilestones: Set<String> = []
+    @State private var interruptedWarningDismissed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,6 +16,8 @@ struct SidebarView: View {
 
                 Divider()
                     .padding(.vertical, 8)
+
+                interruptedStoryBanner(project: project)
 
                 storiesSection(project: project)
             } else {
@@ -92,6 +96,55 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Interrupted Story Banner
+
+    @ViewBuilder
+    private func interruptedStoryBanner(project: PRDProject) -> some View {
+        let interruptedStories = project.userStories.filter { $0.inProgress && !$0.passes }
+        let isInterrupted = !interruptedStories.isEmpty && project.loopState != .running
+
+        if isInterrupted && !interruptedWarningDismissed {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.yellow)
+                        .font(.system(size: 13))
+                    Text("Interrupted Session")
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    Button {
+                        interruptedWarningDismissed = true
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                let storyList = interruptedStories.map { "\($0.id)" }.joined(separator: ", ")
+                Text("\(storyList) was in progress when the app was interrupted. Review before continuing.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let onResume {
+                    Button("Resume Loop") {
+                        interruptedWarningDismissed = true
+                        onResume()
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .controlSize(.small)
+                }
+            }
+            .padding(10)
+            .background(Color.yellow.opacity(0.12))
+            .cornerRadius(6)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
     }
 
     // MARK: - Stories Section
@@ -260,5 +313,5 @@ struct SidebarView: View {
 }
 
 #Preview {
-    SidebarView(project: nil, selection: .constant(nil))
+    SidebarView(project: nil, selection: .constant(nil), onResume: nil)
 }

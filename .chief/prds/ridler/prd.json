@@ -490,7 +490,8 @@
         "User can acknowledge the warning and resume the loop"
       ],
       "priority": 32,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-033",

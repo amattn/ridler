@@ -61,7 +61,13 @@ struct ContentView: View {
                     }
 
                     NavigationSplitView(columnVisibility: $columnVisibility) {
-                        SidebarView(project: selectedProject, selection: $sidebarSelection)
+                        SidebarView(
+                            project: selectedProject,
+                            selection: $sidebarSelection,
+                            onResume: selectedProjectIndex.map { idx in
+                                { startLoop(for: idx) }
+                            }
+                        )
                             .id(fileWatcher.changeToken)
                     } content: {
                         DetailView(project: selectedProject, selection: sidebarSelection)
