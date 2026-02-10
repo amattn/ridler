@@ -38,6 +38,12 @@ final class ClaudeCodeProcessManager: ProcessManaging {
             )
         }
 
+        let settings = SettingsManager.shared
+        guard settings.isClaudeConfigDirValid else {
+            Self.logger.error("Claude config directory not found: \(settings.resolvedClaudeConfigPath)")
+            throw RidlerError.claudeConfigNotFound(path: settings.resolvedClaudeConfigPath)
+        }
+
         Self.logger.info("Spawning Claude Code in \(workingDirectory.path)")
 
         let process = Process()
@@ -52,6 +58,7 @@ final class ClaudeCodeProcessManager: ProcessManaging {
             "-p", prompt
         ]
         process.currentDirectoryURL = workingDirectory
+        process.environment = Self.processEnvironment()
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
@@ -154,6 +161,25 @@ final class ClaudeCodeProcessManager: ProcessManaging {
                 self?.process?.interrupt()
             }
         }
+    }
+
+    /// Returns a process environment with an expanded PATH that includes
+    /// common user binary directories where `claude` may be installed.
+    private static func processEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let home = NSHomeDirectory()
+        let additionalPaths = [
+            "\(home)/.local/bin",
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+        ]
+        let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = (additionalPaths + [currentPath]).joined(separator: ":")
+
+        let configDir = SettingsManager.shared.resolvedClaudeConfigPath
+        env["CLAUDE_CONFIG_DIR"] = configDir
+
+        return env
     }
 
     private func createLogFileHandle(at url: URL) -> FileHandle? {

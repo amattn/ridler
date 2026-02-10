@@ -45,6 +45,8 @@
 		A10036 /* DebugInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20038 /* DebugInfoView.swift */; };
 		A10037 /* ClaudeTerminalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20039 /* ClaudeTerminalManager.swift */; };
 		A10038 /* ClaudeTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20040 /* ClaudeTerminalView.swift */; };
+		A10039 /* SwiftTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20041 /* SwiftTerminalView.swift */; };
+		A10040 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = SP0002 /* SwiftTerm */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -107,6 +109,7 @@
 		A20038 /* DebugInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugInfoView.swift; sourceTree = "<group>"; };
 		A20039 /* ClaudeTerminalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTerminalManager.swift; sourceTree = "<group>"; };
 		A20040 /* ClaudeTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTerminalView.swift; sourceTree = "<group>"; };
+		A20041 /* SwiftTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTerminalView.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -124,6 +127,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10040 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +196,7 @@
 				A20037 /* SettingsView.swift */,
 				A20038 /* DebugInfoView.swift */,
 				A20040 /* ClaudeTerminalView.swift */,
+				A20041 /* SwiftTerminalView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -281,6 +286,9 @@
 			dependencies = (
 			);
 			name = Ridler;
+			packageProductDependencies = (
+				SP0002 /* SwiftTerm */,
+			);
 			productName = Ridler;
 			productReference = A20005 /* Ridler.app */;
 			productType = "com.apple.product-type.application";
@@ -330,6 +338,9 @@
 				Base,
 			);
 			mainGroup = A40000;
+			packageReferences = (
+				SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			productRefGroup = A40006 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -393,6 +404,7 @@
 				A10036 /* DebugInfoView.swift in Sources */,
 				A10037 /* ClaudeTerminalManager.swift in Sources */,
 				A10038 /* ClaudeTerminalView.swift in Sources */,
+				A10039 /* SwiftTerminalView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -659,6 +671,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		SP0002 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A90001 /* Project object */;
 }

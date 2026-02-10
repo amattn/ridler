@@ -20,12 +20,26 @@ struct SettingsView: View {
                     .help("Display raw JSON output from Claude Code in the log view")
             }
 
+            Section("Claude Code") {
+                HStack {
+                    Text("Config directory")
+                    TextField("~/.claude/", text: $settings.claudeConfigDir)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .help("Path to the Claude Code config directory (CLAUDE_CONFIG_DIR). Restart sessions after changing.")
+                if !settings.isClaudeConfigDirValid {
+                    Label("Directory not found: \(settings.resolvedClaudeConfigPath)", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                }
+            }
+
             Section("Developer") {
                 Toggle("Debug mode", isOn: $settings.debugMode)
                     .help("Enable debug features including the Debug Info window")
             }
         }
         .formStyle(.grouped)
-        .frame(width: 450, height: 280)
+        .frame(width: 450, height: 340)
     }
 }

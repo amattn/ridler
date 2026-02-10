@@ -7,6 +7,7 @@ enum RidlerError: LocalizedError, Equatable {
     case processError(command: String, exitCode: Int32, stderr: String)
     case gitError(command: String, stderr: String)
     case loopError(message: String)
+    case claudeConfigNotFound(path: String)
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum RidlerError: LocalizedError, Equatable {
             return "Git error: \(command)\n\(stderr)"
         case .loopError(let message):
             return "Loop error: \(message)"
+        case .claudeConfigNotFound(let path):
+            return "Claude config directory not found at \(path). Please set CLAUDE_CONFIG_DIR in Settings (⌘,)."
         }
     }
 }

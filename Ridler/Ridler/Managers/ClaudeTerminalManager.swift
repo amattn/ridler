@@ -1,21 +1,31 @@
 import Foundation
 import Combine
 import os
+import SwiftTerm
+import AppKit
 
 /// Manages an interactive Claude Code session for PRD editing.
-/// Uses a pseudo-terminal (PTY) to provide proper terminal I/O.
+/// Coordinates session configuration and holds the persistent terminal view.
 final class ClaudeTerminalManager: ObservableObject {
     private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "ClaudeTerminal")
 
-    @Published var outputText: String = ""
+    struct SessionConfig: Identifiable {
+        let id = UUID()
+        let executable: String
+        let arguments: [String]
+        let environment: [String: String]
+        let workingDirectory: String
+        let initialInput: String?
+    }
+
     @Published var isRunning: Bool = false
+    @Published var hasSessionHistory: Bool = false
+    @Published var configError: String?
+    @Published var activeSession: SessionConfig?
 
-    private var process: Process?
-    private var primaryFD: Int32 = -1
-    private var replicaFD: Int32 = -1
-    private var readSource: DispatchSourceRead?
-
-    private let outputQueue = DispatchQueue(label: "com.amattn.Ridler.ClaudeTerminal.output", qos: .userInitiated)
+    /// Persistent terminal view — survives SwiftUI lifecycle.
+    /// Set and managed by SwiftTerminalView.
+    var terminalView: LocalProcessTerminalView?
 
     /// Starts an interactive Claude Code session.
     /// - Parameters:
@@ -31,24 +41,24 @@ final class ClaudeTerminalManager: ObservableObject {
 
         Self.logger.info("Starting Claude terminal for \(fileName) at \(workingDirectory.path)")
 
-        outputText = ""
-
-        // Create pseudo-terminal pair
-        var primary: Int32 = 0
-        var replica: Int32 = 0
-        guard openpty(&primary, &replica, nil, nil, nil) == 0 else {
-            Self.logger.error("Failed to create pseudo-terminal")
-            outputText = "Error: Failed to create pseudo-terminal\n"
+        let settings = SettingsManager.shared
+        guard settings.isClaudeConfigDirValid else {
+            Self.logger.error("Claude config directory not found: \(settings.resolvedClaudeConfigPath)")
+            configError = "Claude config directory not found at \(settings.resolvedClaudeConfigPath)\n\nPlease set CLAUDE_CONFIG_DIR in Settings (\u{2318},) under \"Claude Code\"."
             return
         }
-        self.primaryFD = primary
-        self.replicaFD = replica
 
-        // Build arguments
+        configError = nil
+
+        // Build arguments and determine initial prompt for interactive sessions
         var arguments = ["claude"]
+        var initialInput: String? = nil
+
         if fileExists {
-            arguments += ["-p", "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first."]
+            // Interactive mode: launch bare claude, send context as first user message
+            initialInput = "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first.\n"
         } else {
+            // Generation mode: use -p for one-shot execution
             let prompt: String
             switch fileName {
             case "ridl.md":
@@ -61,100 +71,71 @@ final class ClaudeTerminalManager: ObservableObject {
             arguments += ["-p", prompt]
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = arguments
-        process.currentDirectoryURL = workingDirectory
-        process.standardInput = FileHandle(fileDescriptor: replica, closeOnDealloc: false)
-        process.standardOutput = FileHandle(fileDescriptor: replica, closeOnDealloc: false)
-        process.standardError = FileHandle(fileDescriptor: replica, closeOnDealloc: false)
+        let session = SessionConfig(
+            executable: "/usr/bin/env",
+            arguments: arguments,
+            environment: Self.processEnvironment(),
+            workingDirectory: workingDirectory.path,
+            initialInput: initialInput
+        )
 
-        // Set up reading from the primary side of the PTY
-        let source = DispatchSource.makeReadSource(fileDescriptor: primary, queue: outputQueue)
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
-            var buffer = [UInt8](repeating: 0, count: 4096)
-            let bytesRead = read(primary, &buffer, buffer.count)
-            if bytesRead > 0 {
-                if let text = String(bytes: buffer[0..<bytesRead], encoding: .utf8) {
-                    DispatchQueue.main.async {
-                        self.outputText += text
-                        // Cap output at 500KB to prevent memory issues
-                        if self.outputText.count > 500_000 {
-                            let startIndex = self.outputText.index(self.outputText.endIndex, offsetBy: -400_000)
-                            self.outputText = String(self.outputText[startIndex...])
-                        }
-                    }
-                }
-            }
-        }
-        source.setCancelHandler {
-            close(primary)
-        }
-        source.resume()
-        self.readSource = source
-
-        // Handle termination
-        process.terminationHandler = { [weak self] proc in
-            Self.logger.info("Claude terminal session ended (exit code: \(proc.terminationStatus))")
-            DispatchQueue.main.async {
-                self?.isRunning = false
-                self?.cleanup()
-            }
-        }
-
-        do {
-            try process.run()
-            self.process = process
-            self.isRunning = true
-            Self.logger.info("Claude terminal session started (PID: \(process.processIdentifier))")
-        } catch {
-            Self.logger.error("Failed to start Claude terminal: \(error.localizedDescription)")
-            outputText = "Error: Failed to start Claude Code: \(error.localizedDescription)\n"
-            cleanup()
-        }
+        isRunning = true
+        hasSessionHistory = true
+        activeSession = session
     }
 
-    /// Sends input text to the running Claude session.
-    func sendInput(_ text: String) {
-        guard isRunning, primaryFD >= 0 else { return }
-        if let data = text.data(using: .utf8) {
-            data.withUnsafeBytes { buffer in
-                if let baseAddress = buffer.baseAddress {
-                    _ = write(primaryFD, baseAddress, buffer.count)
-                }
-            }
+    /// Called by the SwiftTerminalView coordinator when the process terminates.
+    func processDidTerminate(exitCode: Int32?) {
+        Self.logger.info("Claude terminal session ended (exit code: \(exitCode.map { String($0) } ?? "nil"))")
+        DispatchQueue.main.async { [weak self] in
+            self?.isRunning = false
         }
     }
 
     /// Terminates the current Claude session.
     func terminate() {
-        guard let process, process.isRunning else {
-            isRunning = false
-            cleanup()
+        guard isRunning else {
+            activeSession = nil
             return
         }
-        Self.logger.info("Terminating Claude terminal session (PID: \(process.processIdentifier))")
-        process.terminate()
-        // Force kill after 2 seconds if needed
-        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            if self?.process?.isRunning == true {
-                self?.process?.interrupt()
-            }
+        Self.logger.info("Terminating Claude terminal session")
+
+        if let tv = terminalView {
+            // Send Ctrl+C to interrupt the running process
+            tv.send([0x03])
         }
+
+        // Force mark as stopped after timeout if process hasn't exited
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard let self, self.isRunning else { return }
+            Self.logger.warning("Force-stopping Claude terminal session after timeout")
+            self.isRunning = false
+        }
+
+        activeSession = nil
     }
 
-    private func cleanup() {
-        readSource?.cancel()
-        readSource = nil
+    /// Returns a process environment with an expanded PATH that includes
+    /// common user binary directories where `claude` may be installed.
+    static func processEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let home = NSHomeDirectory()
+        let additionalPaths = [
+            "\(home)/.local/bin",
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+        ]
+        let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = (additionalPaths + [currentPath]).joined(separator: ":")
 
-        if replicaFD >= 0 {
-            close(replicaFD)
-            replicaFD = -1
-        }
-        // primaryFD is closed by the dispatch source cancel handler
-        primaryFD = -1
-        process = nil
+        let configDir = SettingsManager.shared.resolvedClaudeConfigPath
+        env["CLAUDE_CONFIG_DIR"] = configDir
+
+        // Tell the child process it's running in a color-capable terminal
+        env["TERM"] = "xterm-256color"
+        env["COLORTERM"] = "truecolor"
+
+        return env
     }
 
     deinit {
