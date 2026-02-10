@@ -39,6 +39,11 @@ struct SwiftTerminalView: NSViewRepresentable {
         return container
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSView, context: Context) -> CGSize? {
+        // Accept the full proposed size so the terminal fills all available space
+        CGSize(width: proposal.width ?? 400, height: proposal.height ?? 300)
+    }
+
     func updateNSView(_ container: NSView, context: Context) {
         // Ensure the terminal view is attached to this container (handles sidebar re-navigation)
         if let tv = manager.terminalView, tv.superview !== container {

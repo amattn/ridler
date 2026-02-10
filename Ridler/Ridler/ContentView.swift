@@ -2,6 +2,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 import os
 
+struct BranchWarningItem: Identifiable {
+    let id = UUID()
+    let index: Int
+    let branch: String
+}
+
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "ContentView")
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -17,9 +23,7 @@ struct ContentView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @State private var loopEngines: [String: RalphLoopEngine] = [:]
     @State private var terminalManagers: [String: ClaudeTerminalManager] = [:]
-    @State private var showBranchWarning = false
-    @State private var branchWarningIndex: Int?
-    @State private var branchWarningBranch: String = ""
+    @State private var branchWarning: BranchWarningItem?
     @State private var showDebugWindow = false
     @State private var showTerminateSessionAlert = false
     @State private var pendingLoopStartIndex: Int?
@@ -121,24 +125,22 @@ struct ContentView: View {
                 Text(errorAlertMessage)
             }
         }
-        .sheet(isPresented: $showBranchWarning) {
-            if let idx = branchWarningIndex {
-                BranchWarningSheet(
-                    currentBranch: branchWarningBranch,
-                    prdName: openProjects[idx].name ?? openProjects[idx].id,
-                    onCreateBranch: { newBranch in
-                        showBranchWarning = false
-                        handleCreateBranch(newBranch, for: idx)
-                    },
-                    onContinue: {
-                        showBranchWarning = false
-                        proceedWithStart(for: idx)
-                    },
-                    onCancel: {
-                        showBranchWarning = false
-                    }
-                )
-            }
+        .sheet(item: $branchWarning) { warning in
+            BranchWarningSheet(
+                currentBranch: warning.branch,
+                prdName: openProjects[warning.index].name ?? openProjects[warning.index].id,
+                onCreateBranch: { newBranch in
+                    branchWarning = nil
+                    handleCreateBranch(newBranch, for: warning.index)
+                },
+                onContinue: {
+                    branchWarning = nil
+                    proceedWithStart(for: warning.index)
+                },
+                onCancel: {
+                    branchWarning = nil
+                }
+            )
         }
         .alert("Delete PRD", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -582,9 +584,7 @@ struct ContentView: View {
         do {
             let branch = try gitManager.currentBranch(at: workingDir)
             if gitManager.isProtectedBranch(branch) {
-                branchWarningBranch = branch
-                branchWarningIndex = index
-                showBranchWarning = true
+                branchWarning = BranchWarningItem(index: index, branch: branch)
                 return
             }
         } catch {
