@@ -551,3 +551,19 @@
   - The `selectedProjectIndex.map { idx in { startLoop(for: idx) } }` pattern creates an optional closure from an optional index — clean way to pass conditional callbacks
   - All 193 tests pass (no new tests needed — this is a pure UI feature with straightforward detection logic)
 ---
+
+## 2026-02-09 - US-033
+- **What was implemented:** Keyboard shortcuts for all common actions — Start/Resume (Cmd+R, Cmd+Return), Pause (Cmd+.), Stop (Cmd+Shift+.), Switch tabs (Cmd+1 through Cmd+9), Focus Log Panel (Cmd+L), and Edit current PRD (Cmd+E). Cmd+O and Cmd+N were already implemented in prior stories.
+- **Files changed:**
+  - `Ridler/Ridler/RidlerApp.swift` — Added new `CommandGroup(after: .newItem)` with menu items for all keyboard shortcuts: Start/Resume Loop (Cmd+R and Cmd+Return), Pause Loop (Cmd+.), Stop Loop (Cmd+Shift+.), Focus Log Panel (Cmd+L), Edit Current PRD (Cmd+E), and Switch to PRD 1-9 (Cmd+1 through Cmd+9); added 6 new Notification.Name extensions (startLoop, pauseLoop, stopLoop, switchToTab, focusLogPanel, editPRD)
+  - `Ridler/Ridler/ContentView.swift` — Added 6 `.onReceive` handlers for the new notifications: startLoop calls `startLoop(for:)`, pauseLoop calls `pauseLoop(for:)`, stopLoop calls `stopLoop(for:)`, switchToTab switches `selectedProjectID` by tab position (1-indexed), focusLogPanel sets `columnVisibility = .all`, editPRD selects `.file(.prdMd)` in sidebar
+  - `.chief/prds/ridler/prd.json` — Marked US-033 as passes: true
+- **Learnings for future iterations:**
+  - `CommandGroup(after: .newItem)` appends items after the existing File menu section — use this for additional menu items that don't replace the New/Open group
+  - SwiftUI `KeyEquivalent(Character(String(index)))` converts an Int (1-9) to a keyboard shortcut character — used for Cmd+1 through Cmd+9 tab switching
+  - `Notification.object` can carry data — used `notification.object as? Int` for the tab number in switchToTab
+  - Cmd+Return uses `.keyboardShortcut(.return)` — SwiftUI has predefined `KeyEquivalent` constants for special keys
+  - Focus Log Panel is implemented by ensuring `columnVisibility = .all` (showing all three panes) — in a future iteration, a more precise focus mechanism (e.g., FocusState) could be used
+  - Edit Current PRD selects `.file(.prdMd)` in sidebar — this will trigger the Claude terminal pane when US-040 is implemented; for now it just shows the prd.md file content
+  - All 193 tests pass (pure UI story — no new tests needed)
+---

@@ -508,7 +508,8 @@
         "Cmd+E — Edit current PRD (launch Claude Code)"
       ],
       "priority": 33,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-034",

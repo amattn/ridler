@@ -137,6 +137,36 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newPRD)) { _ in
             isNewPRDPresented = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .startLoop)) { _ in
+            if let idx = selectedProjectIndex {
+                startLoop(for: idx)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pauseLoop)) { _ in
+            if let idx = selectedProjectIndex {
+                pauseLoop(for: idx)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stopLoop)) { _ in
+            if let idx = selectedProjectIndex {
+                stopLoop(for: idx)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToTab)) { notification in
+            if let tabNumber = notification.object as? Int,
+               tabNumber >= 1, tabNumber <= openProjects.count {
+                selectedProjectID = openProjects[tabNumber - 1].id
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .focusLogPanel)) { _ in
+            columnVisibility = .all
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .editPRD)) { _ in
+            if selectedProject != nil {
+                // Select the prd.md file in sidebar to trigger the Claude terminal pane
+                sidebarSelection = .file(.prdMd)
+            }
+        }
         .onReceive(fileWatcher.$changeToken.dropFirst()) { _ in
             reloadAllProjects()
         }
