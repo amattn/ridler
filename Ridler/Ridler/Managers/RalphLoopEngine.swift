@@ -219,6 +219,9 @@ final class RalphLoopEngine: ObservableObject {
 
         logSystem("Iteration \(iterationCount) completed for \(storyID)")
 
+        // Append progress entry for this iteration
+        appendProgress(storyID: storyID, exitCode: result.exitCode)
+
         // Reload project to check updated state
         guard let directoryURL else { return }
         do {
@@ -342,6 +345,49 @@ final class RalphLoopEngine: ObservableObject {
         }
 
         return prompt
+    }
+
+    private func appendProgress(storyID: String, exitCode: Int32) {
+        guard let directoryURL else { return }
+
+        let progressURL = directoryURL.appendingPathComponent("progress.md")
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        let timestamp = dateFormatter.string(from: Date())
+        let status = exitCode == 0 ? "Completed successfully" : "Exited with code \(exitCode)"
+
+        // Look up story title from disk
+        var storyTitle = storyID
+        if let project = try? prdStore.loadProject(from: directoryURL),
+           let story = project.userStories.first(where: { $0.id == storyID }) {
+            storyTitle = "\(storyID) — \(story.title)"
+        }
+
+        let entry = """
+
+        ## \(timestamp) - \(storyTitle)
+        - **Iteration:** \(iterationCount)
+        - **Status:** \(status)
+        - Claude Code session completed for this story
+        ---
+
+        """
+
+        do {
+            if FileManager.default.fileExists(atPath: progressURL.path) {
+                let handle = try FileHandle(forWritingTo: progressURL)
+                handle.seekToEndOfFile()
+                if let data = entry.data(using: .utf8) {
+                    handle.write(data)
+                }
+                handle.closeFile()
+            } else {
+                try entry.data(using: .utf8)?.write(to: progressURL, options: .atomic)
+            }
+            Self.logger.info("Appended progress entry for \(storyID)")
+        } catch {
+            Self.logger.warning("Failed to append progress for \(storyID): \(error.localizedDescription)")
+        }
     }
 
     private func transitionToError(_ message: String) {
