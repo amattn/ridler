@@ -37,13 +37,26 @@ struct LogPanelView: View {
     }
 
     private var autoScrollIndicator: some View {
-        HStack(spacing: 4) {
-            Image(systemName: autoScroll ? "arrow.down.to.line" : "hand.raised")
-                .font(.system(size: 10))
-            Text(autoScroll ? "Auto" : "Manual")
-                .font(.system(size: 10))
+        Button {
+            autoScroll.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: autoScroll ? "arrow.down.to.line" : "hand.raised")
+                    .font(.system(size: 10))
+                Text(autoScroll ? "Auto-scroll" : "Manual scroll")
+                    .font(.system(size: 10))
+            }
+            .foregroundStyle(autoScroll ? .cyan : .secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(autoScroll ? Color.cyan.opacity(0.1) : Color.secondary.opacity(0.1))
+            )
+            .animation(.easeInOut(duration: 0.2), value: autoScroll)
         }
-        .foregroundStyle(autoScroll ? .cyan : .secondary)
+        .buttonStyle(.plain)
+        .help(autoScroll ? "Click to disable auto-scroll" : "Click to enable auto-scroll")
     }
 
     private var emptyState: some View {

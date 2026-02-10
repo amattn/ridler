@@ -727,3 +727,15 @@
   - The loadItem callback runs on a background thread — must dispatch to main thread for UI updates and state mutations
   - All 193 tests pass (no new tests needed — drag-and-drop is a UI interaction that requires a running app for testing)
 ---
+
+## 2026-02-09 - US-043
+- **What was implemented:** Enhanced auto-scroll indicator in the log view to be a clickable toggle button with visual polish. The indicator was already present (from US-020) but has been upgraded: it now acts as a clickable button that toggles between auto-scroll and manual-scroll modes, has a subtle background pill shape with state-colored fill (cyan for auto, gray for manual), animates smoothly between states, and includes tooltip help text explaining the current state.
+- **Files changed:**
+  - `Ridler/Ridler/Views/LogPanelView.swift` — Enhanced `autoScrollIndicator` from a passive label to an interactive `Button` with: clickable toggle behavior, `RoundedRectangle` background pill, `.animation(.easeInOut)` for smooth transitions, expanded labels ("Auto-scroll" / "Manual scroll"), and `.help()` tooltip for discoverability
+- **Learnings for future iterations:**
+  - The auto-scroll indicator and sentinel-based scroll detection were already implemented in US-020 — US-043 only needed to polish the visual indicator and make it interactive
+  - SwiftUI `.buttonStyle(.plain)` removes the default button chrome, allowing a custom appearance for the toggle button
+  - `.help()` modifier adds a macOS native tooltip on hover — good for discoverability without cluttering the UI
+  - `.animation(.easeInOut(duration: 0.2), value: autoScroll)` on the label content animates color and background transitions smoothly
+  - All 193 tests pass (no new tests needed — this is a pure UI enhancement)
+---

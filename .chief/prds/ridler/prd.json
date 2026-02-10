@@ -645,7 +645,8 @@
         "Indicator updates in real-time as user scrolls"
       ],
       "priority": 43,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-044",
