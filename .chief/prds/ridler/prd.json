@@ -220,7 +220,8 @@
         "Missing file indicators update when files are created or deleted externally"
       ],
       "priority": 14,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-015",

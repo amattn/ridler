@@ -24,8 +24,11 @@
 		A10015 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017 /* EmptyStateView.swift */; };
 		A10016 /* NewPRDSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018 /* NewPRDSheet.swift */; };
 		A10017 /* SidebarSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019 /* SidebarSelection.swift */; };
+		A10018 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20020 /* DirectoryMonitor.swift */; };
+		A10019 /* ProjectFileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20021 /* ProjectFileWatcher.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
+		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,8 +61,11 @@
 		A20017 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A20018 /* NewPRDSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPRDSheet.swift; sourceTree = "<group>"; };
 		A20019 /* SidebarSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelection.swift; sourceTree = "<group>"; };
+		A20020 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
+		A20021 /* ProjectFileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileWatcher.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
+		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -143,6 +149,8 @@
 			isa = PBXGroup;
 			children = (
 				A20013 /* FileSystemPRDStore.swift */,
+				A20020 /* DirectoryMonitor.swift */,
+				A20021 /* ProjectFileWatcher.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -177,6 +185,7 @@
 			children = (
 				C20001 /* ModelTests.swift */,
 				C20003 /* PRDStoreTests.swift */,
+				C20004 /* FileWatcherTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -288,6 +297,8 @@
 				A10015 /* EmptyStateView.swift in Sources */,
 				A10016 /* NewPRDSheet.swift in Sources */,
 				A10017 /* SidebarSelection.swift in Sources */,
+				A10018 /* DirectoryMonitor.swift in Sources */,
+				A10019 /* ProjectFileWatcher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -297,6 +308,7 @@
 			files = (
 				C10001 /* ModelTests.swift in Sources */,
 				C10002 /* PRDStoreTests.swift in Sources */,
+				C10003 /* FileWatcherTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

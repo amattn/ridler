@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var sidebarSelection: SidebarSelection?
     @State private var errorAlertMessage: String?
     @State private var showErrorAlert = false
+    @StateObject private var fileWatcher = ProjectFileWatcher()
 
     private var selectedProject: PRDProject? {
         guard let id = selectedProjectID else { return nil }
@@ -29,8 +30,10 @@ struct ContentView: View {
 
                     NavigationSplitView(columnVisibility: $columnVisibility) {
                         SidebarView(project: selectedProject, selection: $sidebarSelection)
+                            .id(fileWatcher.changeToken)
                     } content: {
                         DetailView(project: selectedProject, selection: sidebarSelection)
+                            .id(fileWatcher.changeToken)
                     } detail: {
                         LogPanelView()
                     }
@@ -62,6 +65,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .newPRD)) { _ in
             isNewPRDPresented = true
+        }
+        .onReceive(fileWatcher.$changeToken.dropFirst()) { _ in
+            reloadAllProjects()
         }
     }
 
@@ -167,12 +173,34 @@ struct ContentView: View {
         }
         openProjects.append(project)
         selectedProjectID = project.id
+        if let dirURL = project.directoryURL {
+            fileWatcher.watch(directoryURL: dirURL)
+        }
     }
 
     private func closeProject(_ project: PRDProject) {
+        if let dirURL = project.directoryURL {
+            fileWatcher.unwatch(directoryURL: dirURL)
+        }
         openProjects.removeAll { $0.id == project.id }
         if selectedProjectID == project.id {
             selectedProjectID = openProjects.first?.id
+        }
+    }
+
+    private func reloadAllProjects() {
+        let store = FileSystemPRDStore()
+        for index in openProjects.indices {
+            guard let dirURL = openProjects[index].directoryURL else { continue }
+            do {
+                let reloaded = try store.loadProject(from: dirURL)
+                var updated = reloaded
+                updated.loopState = openProjects[index].loopState
+                updated.iterationCount = openProjects[index].iterationCount
+                openProjects[index] = updated
+            } catch {
+                // File may be mid-write; ignore transient errors
+            }
         }
     }
 
