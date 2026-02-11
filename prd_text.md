@@ -52,7 +52,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | PM-8 | Watch each opened PRD's files for filesystem changes and auto-reload when files change externally | P0 |
 | PM-9 | Support the three-file PRD format: `prd.md` (human-readable PRD), `ridl.md` (agent instructions with user stories and acceptance criteria), and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file. JSON decoding must be resilient to missing optional-in-practice fields (`passes` defaults to `false`, `inProgress` defaults to `false`) | P0 |
 | PM-10 | Auto-convert `prd.md` to `ridl.json` when the markdown source is newer than the JSON | P1 |
-| PM-11 | All PRD files (`prd.md`, `ridl.md`, `ridl.json`, `progress.md`, `claude.log`) are stored together in a `ridl/` folder | P0 |
+| PM-11 | All PRD files (`prd.md`, `ridl.md`, `ridl.json`, `progress.md`, `ridler.log`) are stored together in a `ridl/` folder | P0 |
 | PM-12 | Remember recently opened PRDs and display them in File > Open Recent | P1 |
 | PM-13 | Drag-and-drop a `ridl/` folder or a `.md` file onto the app icon to open it as a tab. Show an error alert if the drop target cannot be loaded | P1 |
 | PM-14 | JSON decoding errors must include the file name, the missing or invalid key, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) rather than generic system error messages | P0 |
@@ -196,7 +196,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-D3 | Display the full description with word wrapping | P0 |
 | UI-D4 | Display acceptance criteria as a bulleted list | P0 |
 | UI-D5 | When no PRD is loaded, show instructions to create or open a project | P0 |
-| UI-D6 | When an error occurs, show error details and a tip to check `claude.log` | P0 |
+| UI-D6 | When an error occurs, show error details and a tip to check `ridler.log` | P0 |
 | UI-D7 | When a PRD file row is selected (instead of a story), the middle pane displays the file's content: rendered markdown for `.md` files, formatted/pretty-printed JSON for `.json` files. If the selected file does not yet exist on disk, the middle pane is empty | P0 |
 | UI-D8 | File content displayed in the middle pane is read-only (no inline editing) | P0 |
 | UI-D9 | File changes detected by the file watcher automatically refresh the displayed content in the middle pane | P0 |
@@ -215,8 +215,8 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-L8 | Show story transition events, iteration starts, completion messages, and retry events in the log | P0 |
 | UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using SwiftTerm (`LocalProcessTerminalView`) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
-| UI-L11 | When the user switches back to a story row, the right pane reverts to the log view | P0 |
-| UI-L12 | If a Claude editing session is active and the user switches to a story or starts the loop, the Claude session is terminated. If the session is mid-conversation, a confirmation dialog is shown before termination | P1 |
+| UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the SwiftTerm NSView stays mounted) | P0 |
+| UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
 
 #### 3.6.8 Status Bar (Bottom)
 
@@ -275,7 +275,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | ID | Requirement |
 |----|-------------|
 | NF-S1 | No telemetry, analytics, or crash reporting that transmits data externally |
-| NF-S2 | PRD-specific data (ridl.json, progress.md, claude.log) stays alongside the PRD file. App-wide preferences stored in the app's container via UserDefaults |
+| NF-S2 | PRD-specific data (ridl.json, progress.md, ridler.log) stays alongside the PRD file. App-wide preferences stored in the app's container via UserDefaults |
 | NF-S3 | Claude Code authentication is delegated to the Claude Code CLI — the app does not store API keys |
 
 
@@ -428,7 +428,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 |----|-------------|----------|
 | DX-20 | All errors, state transitions, and significant events are logged to the unified macOS logging system (`os_log`) with appropriate log levels (`.error`, `.info`, `.debug`) | P1 |
 | DX-21 | Log messages include structured metadata (PRD name, story ID, iteration number) so they can be filtered in Console.app | P1 |
-| DX-22 | The per-PRD `claude.log` file captures the full raw stdout/stderr of each Claude Code invocation for post-mortem debugging | P0 |
+| DX-22 | The per-PRD `ridler.log` file captures the full raw stdout/stderr of each Claude Code invocation for post-mortem debugging | P0 |
 
 ### 7.4 Code Readability and Agent Compatibility
 
@@ -538,7 +538,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 | 1 | Should the app support remote execution (SSH) like the original Chief CLI? | **No, never.** Local-only is the permanent design. No plans for remote support. |
 | 2 | Should the app include a built-in PRD text editor? | **No.** PRD editing is done via Claude Code interactive sessions (same as the original Chief CLI). The app is an execution dashboard, not an editor. |
 | 3 | Should settings be in a dedicated Settings window? | **Yes.** A dedicated macOS Settings/Preferences window (`⌘,`) for app-wide configuration. |
-| 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, claude.log) stays alongside the PRD file. |
+| 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, ridler.log) stays alongside the PRD file. |
 | 5 | Should the responsive layout from the TUI (stacked vs. side-by-side) be replicated? | **No.** SwiftUI's NavigationSplitView handles window resizing natively. The sidebar collapses automatically on narrow windows. |
 
 ## 11. Open Questions

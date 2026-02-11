@@ -10,6 +10,13 @@ final class LogStore: ObservableObject {
         entries[projectID] ?? []
     }
 
+    /// Returns entries for the given project filtered by story ID.
+    /// When storyID is nil, returns all entries (unfiltered).
+    func entries(for projectID: String, storyID: String?) -> [LogEntry] {
+        guard let storyID else { return entries(for: projectID) }
+        return (entries[projectID] ?? []).filter { $0.storyID == storyID }
+    }
+
     /// Appends a log entry for the given project.
     func append(_ entry: LogEntry, for projectID: String) {
         if entries[projectID] == nil {

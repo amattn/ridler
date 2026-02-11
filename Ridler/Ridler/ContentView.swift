@@ -284,23 +284,47 @@ struct ContentView: View {
 
     @ViewBuilder
     private var rightPaneView: some View {
-        if let project = selectedProject, case .file(let fileName) = sidebarSelection {
-            let manager = getOrCreateTerminalManager(for: project)
-            ClaudeTerminalView(
-                fileName: fileName,
-                project: project,
-                isLoopRunning: project.loopState == .running,
-                terminalManager: manager,
-                onStartSession: { file in
-                    startTerminalSession(file: file, project: project)
-                }
-            )
-        } else {
-            LogPanelView(
-                entries: logStore.entries(for: selectedProject?.id ?? ""),
-                isRunning: selectedProject?.loopState == .running
-            )
+        let showTerminal = selectedProject != nil
+            && { if case .file = sidebarSelection { return true } else { return false } }()
+
+        ZStack {
+            // Log panel — always rendered, visible when not showing terminal
+            logPanelContent
+                .opacity(showTerminal ? 0 : 1)
+                .allowsHitTesting(!showTerminal)
+
+            // Terminal — kept alive once a session has been started
+            if let project = selectedProject,
+               getOrCreateTerminalManager(for: project).hasSessionHistory || showTerminal {
+                let manager = getOrCreateTerminalManager(for: project)
+                let fileName: PRDFileName = {
+                    if case .file(let f) = sidebarSelection { return f }
+                    return .prdMd
+                }()
+                ClaudeTerminalView(
+                    fileName: fileName,
+                    project: project,
+                    isLoopRunning: project.loopState == .running,
+                    terminalManager: manager,
+                    onStartSession: { file in
+                        startTerminalSession(file: file, project: project)
+                    }
+                )
+                .opacity(showTerminal ? 1 : 0)
+                .allowsHitTesting(showTerminal)
+            }
         }
+    }
+
+    private var logPanelContent: some View {
+        let selectedStoryID: String? = {
+            if case .story(let storyID) = sidebarSelection { return storyID }
+            return nil
+        }()
+        return LogPanelView(
+            entries: logStore.entries(for: selectedProject?.id ?? "", storyID: selectedStoryID),
+            isRunning: selectedProject?.loopState == .running
+        )
     }
 
     private func getOrCreateTerminalManager(for project: PRDProject) -> ClaudeTerminalManager {

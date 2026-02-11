@@ -56,7 +56,7 @@ final class ProcessManagerTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
-        let logFile = tempDir.appendingPathComponent("claude.log")
+        let logFile = tempDir.appendingPathComponent("ridler.log")
 
         let exitExpectation = XCTestExpectation(description: "Process exits")
 

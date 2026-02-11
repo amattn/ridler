@@ -207,7 +207,7 @@ final class RalphLoopEngine: ObservableObject {
         let parser = StreamingJSONParser()
         self.currentParser = parser
 
-        let logFileURL = directoryURL.appendingPathComponent("claude.log")
+        let logFileURL = directoryURL.appendingPathComponent("ridler.log")
 
         do {
             let linePublisher = try processManager.spawn(
@@ -220,12 +220,20 @@ final class RalphLoopEngine: ObservableObject {
             let parseSub = parser.subscribe(to: linePublisher)
             cancellables.insert(parseSub)
 
-            // Forward log entries
+            // Forward log entries tagged with the current story
+            let storyIDForIteration = self.currentStoryID
             let entrySub = parser.entryPublisher
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] entry in
                     guard let self else { return }
-                    self.onLogEntry?(entry, self.projectID)
+                    let taggedEntry = LogEntry(
+                        id: entry.id,
+                        timestamp: entry.timestamp,
+                        type: entry.type,
+                        content: entry.content,
+                        storyID: storyIDForIteration
+                    )
+                    self.onLogEntry?(taggedEntry, self.projectID)
                 }
             cancellables.insert(entrySub)
 
@@ -502,7 +510,7 @@ final class RalphLoopEngine: ObservableObject {
 
     private func logSystem(_ message: String) {
         Self.logger.info("[\(self.projectName)] iteration=\(self.iterationCount) \(message)")
-        let entry = LogEntry(type: .system, content: message)
+        let entry = LogEntry(type: .system, content: message, storyID: currentStoryID)
         onLogEntry?(entry, projectID)
     }
 

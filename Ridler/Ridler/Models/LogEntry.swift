@@ -6,12 +6,14 @@ struct LogEntry: Identifiable, Equatable {
     let timestamp: Date
     let type: LogEntryType
     let content: String
+    let storyID: String?
 
-    init(id: UUID = UUID(), timestamp: Date = Date(), type: LogEntryType, content: String) {
+    init(id: UUID = UUID(), timestamp: Date = Date(), type: LogEntryType, content: String, storyID: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.type = type
         self.content = content
+        self.storyID = storyID
     }
 }
 

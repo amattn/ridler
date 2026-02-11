@@ -213,7 +213,7 @@ struct DetailView: View {
             Label("Error", systemImage: "exclamationmark.triangle.fill")
                 .font(.headline)
                 .foregroundStyle(.red)
-            Text("An error occurred during execution. Check the log panel for details, or review claude.log in the PRD directory for the full output.")
+            Text("An error occurred during execution. Check the log panel for details, or review ridler.log in the PRD directory for the full output.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
