@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(file:*)",
+      "Bash(swift scripts/generate_icon.swift:*)",
+      "Bash(xcodebuild:*)"
+    ]
+  }
+}

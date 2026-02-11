@@ -6,15 +6,25 @@ import CoreGraphics
 // Generate a Ridler app icon: a modern macOS-style icon with a gradient background
 // and a stylized "R" with circuit/code motif
 
-func generateIcon(size: Int) -> NSImage {
+func generateIcon(size: Int) -> NSBitmapImageRep {
     let s = CGFloat(size)
-    let image = NSImage(size: NSSize(width: s, height: s))
-    image.lockFocus()
+    let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: size,
+        pixelsHigh: size,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    )!
+    rep.size = NSSize(width: s, height: s)
 
-    guard let context = NSGraphicsContext.current?.cgContext else {
-        image.unlockFocus()
-        return image
-    }
+    let nsContext = NSGraphicsContext(bitmapImageRep: rep)!
+    NSGraphicsContext.current = nsContext
+    let context = nsContext.cgContext
 
     // Background: rounded rectangle with gradient
     let cornerRadius = s * 0.22
@@ -154,14 +164,12 @@ func generateIcon(size: Int) -> NSImage {
 
     context.restoreGState()
 
-    image.unlockFocus()
-    return image
+    NSGraphicsContext.current = nil
+    return rep
 }
 
-func savePNG(_ image: NSImage, to path: String) {
-    guard let tiffData = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiffData),
-          let pngData = bitmap.representation(using: .png, properties: [:]) else {
+func savePNG(_ rep: NSBitmapImageRep, to path: String) {
+    guard let pngData = rep.representation(using: .png, properties: [:]) else {
         print("Error: Failed to create PNG data")
         return
     }
@@ -191,9 +199,9 @@ let sizes: [(name: String, pixels: Int)] = [
 ]
 
 for entry in sizes {
-    let image = generateIcon(size: entry.pixels)
+    let rep = generateIcon(size: entry.pixels)
     let path = "\(iconsetDir)/\(entry.name)"
-    savePNG(image, to: path)
+    savePNG(rep, to: path)
 }
 
 print("Icon generation complete!")
