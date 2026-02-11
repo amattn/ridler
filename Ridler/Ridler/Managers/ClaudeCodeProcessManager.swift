@@ -54,6 +54,7 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         process.arguments = [
             "claude",
             "--dangerously-skip-permissions",
+            "--verbose",
             "--output-format", "stream-json",
             "-p", prompt
         ]
@@ -66,7 +67,7 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         self.stdoutPipe = stdoutPipe
         self.stderrPipe = stderrPipe
         self.stderrData = Data()
-        self.currentCommand = "claude --dangerously-skip-permissions --output-format stream-json -p <prompt>"
+        self.currentCommand = "claude --dangerously-skip-permissions --verbose --output-format stream-json -p <prompt>"
 
         // Set up log file handle for raw output capture
         let logFileHandle = createLogFileHandle(at: logFileURL)
