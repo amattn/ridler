@@ -10,11 +10,6 @@ struct SettingsView: View {
                     .help("Play a sound when a PRD reaches Complete state")
             }
 
-            Section("Execution") {
-                Toggle("Auto-retry on Claude Code crash", isOn: $settings.autoRetryOnCrash)
-                    .help("Automatically retry when Claude Code exits with an error (up to 3 retries with exponential backoff)")
-            }
-
             Section("Logging") {
                 Toggle("Verbose log (show raw Claude JSON)", isOn: $settings.verboseLog)
                     .help("Display raw JSON output from Claude Code in the log view")
@@ -40,6 +35,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 300)
     }
 }

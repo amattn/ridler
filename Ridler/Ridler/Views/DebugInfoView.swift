@@ -65,7 +65,6 @@ struct DebugInfoView: View {
                 debugRow("Max Iterations", value: "\(project.maxIterations > 0 ? "\(project.maxIterations)" : "\(project.defaultMaxIterations) (default)")")
 
                 if let engine = loopEngines[project.id] {
-                    debugRow("Engine Retry Count", value: "\(engine.currentRetryCount)")
                     debugRow("Active Process PID", value: engine.activeProcessPID.map { "\($0)" } ?? "None")
                     debugRow("Last Error", value: engine.lastErrorMessage ?? "None")
                 } else {

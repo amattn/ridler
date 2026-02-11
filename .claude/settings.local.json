@@ -3,7 +3,9 @@
     "allow": [
       "Bash(file:*)",
       "Bash(swift scripts/generate_icon.swift:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

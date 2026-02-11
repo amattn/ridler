@@ -28,14 +28,11 @@ final class RalphLoopEngine: ObservableObject {
     private var projectName: String = ""
     private var directoryURL: URL?
     private var pauseAfterStory = false
-    private var autoRetryEnabled = false
     private var audioNotificationsEnabled = true
     private var maxIterations = 0
     private var iterationCount = 0
     private var loopState: LoopState = .ready
     private var completionDetected = false
-    private var retryCount = 0
-    private static let maxRetries = 3
     private var currentStoryID: String?
     private var audioPlayer: AVAudioPlayer?
 
@@ -50,9 +47,6 @@ final class RalphLoopEngine: ObservableObject {
     }
 
     // MARK: - Debug Properties
-
-    /// Exposes the current retry count for the debug window.
-    var currentRetryCount: Int { retryCount }
 
     /// Exposes the PID of the active Claude Code subprocess, or nil if none is running.
     var activeProcessPID: Int32? { currentProcessManager?.processIdentifier }
@@ -70,13 +64,11 @@ final class RalphLoopEngine: ObservableObject {
         self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
-        self.autoRetryEnabled = project.autoRetryEnabled
         self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
         self.completionDetected = false
-        self.retryCount = 0
         self.currentStoryID = nil
 
         onStateChange?(.running)
@@ -93,13 +85,11 @@ final class RalphLoopEngine: ObservableObject {
         self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
-        self.autoRetryEnabled = project.autoRetryEnabled
         self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
         self.completionDetected = false
-        self.retryCount = 0
         self.currentStoryID = nil
 
         onStateChange?(.running)
@@ -134,11 +124,6 @@ final class RalphLoopEngine: ObservableObject {
     /// Updates the max iterations setting.
     func updateMaxIterations(_ value: Int) {
         self.maxIterations = value
-    }
-
-    /// Updates the auto-retry setting.
-    func updateAutoRetry(_ enabled: Bool) {
-        self.autoRetryEnabled = enabled
     }
 
     /// Updates the audio notifications setting.
@@ -183,11 +168,7 @@ final class RalphLoopEngine: ObservableObject {
             return
         }
 
-        // Reset retry count when starting a new story
-        if currentStoryID != nextStory.id {
-            retryCount = 0
-            currentStoryID = nextStory.id
-        }
+        currentStoryID = nextStory.id
 
         // Mark story as inProgress
         markStoryInProgress(nextStory.id, in: project)
@@ -271,37 +252,11 @@ final class RalphLoopEngine: ObservableObject {
 
         if result.exitCode != 0 && !completionDetected {
             logSystem("Claude Code exited with code \(result.exitCode): \(result.stderr)")
-
-            // Auto-retry with backoff if enabled
-            if autoRetryEnabled && retryCount < Self.maxRetries {
-                retryCount += 1
-                let backoffSeconds = Double(retryCount * retryCount * 2) // 2s, 8s, 18s
-                logSystem("Auto-retry \(retryCount)/\(Self.maxRetries) — retrying in \(Int(backoffSeconds))s...")
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + backoffSeconds) { [weak self] in
-                    guard let self, self.loopState == .running || self.loopState == .paused else { return }
-                    if self.loopState == .paused {
-                        self.logSystem("Retry deferred — loop is paused")
-                        return
-                    }
-                    self.logSystem("Retrying iteration for \(storyID)...")
-                    self.runNextIteration()
-                }
-                return
-            }
-
-            // Retry exhaustion or auto-retry disabled
-            if autoRetryEnabled && retryCount >= Self.maxRetries {
-                logSystem("Auto-retry exhausted (\(Self.maxRetries) retries) — transitioning to Error")
-            }
             transitionToError("Claude Code failed (exit \(result.exitCode)): \(result.stderr)")
             return
         }
 
         logSystem("Iteration \(iterationCount) completed for \(storyID)")
-
-        // Reset retry count on success
-        retryCount = 0
 
         // Append progress entry for this iteration
         appendProgress(storyID: storyID, exitCode: result.exitCode)

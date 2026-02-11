@@ -60,10 +60,6 @@ struct ContentView: View {
                             let project = openProjects[selectedIndex]
                             loopEngines[project.id]?.updateMaxIterations(newValue)
                         },
-                        onAutoRetryChanged: { enabled in
-                            let project = openProjects[selectedIndex]
-                            loopEngines[project.id]?.updateAutoRetry(enabled)
-                        },
                         onAudioNotificationsChanged: { enabled in
                             let project = openProjects[selectedIndex]
                             loopEngines[project.id]?.updateAudioNotifications(enabled)
@@ -477,7 +473,6 @@ struct ContentView: View {
         }
         var projectToAdd = project
         projectToAdd.audioNotificationsEnabled = settings.audioNotifications
-        projectToAdd.autoRetryEnabled = settings.autoRetryOnCrash
         openProjects.append(projectToAdd)
         selectedProjectID = projectToAdd.id
         Self.logger.info("Opened project: \(projectToAdd.name ?? projectToAdd.id)")
@@ -527,7 +522,6 @@ struct ContentView: View {
                 updated.loopState = openProjects[index].loopState
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
-                updated.autoRetryEnabled = openProjects[index].autoRetryEnabled
                 updated.audioNotificationsEnabled = openProjects[index].audioNotificationsEnabled
                 updated.maxIterations = openProjects[index].maxIterations
                 updated.loopStartDate = openProjects[index].loopStartDate
@@ -563,7 +557,6 @@ struct ContentView: View {
                 let currentState = openProjects[idx].loopState
                 let currentIteration = openProjects[idx].iterationCount
                 let currentPause = openProjects[idx].pauseAfterStory
-                let currentAutoRetry = openProjects[idx].autoRetryEnabled
                 let currentAudio = openProjects[idx].audioNotificationsEnabled
                 let currentMax = openProjects[idx].maxIterations
                 let currentStart = openProjects[idx].loopStartDate
@@ -571,7 +564,6 @@ struct ContentView: View {
                 openProjects[idx].loopState = currentState
                 openProjects[idx].iterationCount = currentIteration
                 openProjects[idx].pauseAfterStory = currentPause
-                openProjects[idx].autoRetryEnabled = currentAutoRetry
                 openProjects[idx].audioNotificationsEnabled = currentAudio
                 openProjects[idx].maxIterations = currentMax
                 openProjects[idx].loopStartDate = currentStart
@@ -711,7 +703,6 @@ struct ContentView: View {
         return DebugStatusInfo(
             loopStateRawValue: "\(project.loopState)",
             currentStoryID: currentStory?.id,
-            retryCount: engine?.currentRetryCount ?? 0,
             elapsedPerIteration: elapsedStr
         )
     }

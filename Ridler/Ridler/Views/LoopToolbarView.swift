@@ -6,7 +6,6 @@ struct LoopToolbarView: View {
     var onPause: () -> Void = {}
     var onStop: () -> Void = {}
     var onMaxIterationsChanged: ((Int) -> Void)?
-    var onAutoRetryChanged: ((Bool) -> Void)?
     var onAudioNotificationsChanged: ((Bool) -> Void)?
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
@@ -47,17 +46,6 @@ struct LoopToolbarView: View {
                 .toggleStyle(.checkbox)
                 .font(.system(size: 11))
                 .help("Play sound on completion")
-
-            // Auto-retry toggle
-            Toggle("Auto-retry", isOn: Binding(
-                get: { project.autoRetryEnabled },
-                set: { newValue in
-                    project.autoRetryEnabled = newValue
-                    onAutoRetryChanged?(newValue)
-                }
-            ))
-                .toggleStyle(.checkbox)
-                .font(.system(size: 11))
 
             // Pause after story toggle
             Toggle("Pause after story", isOn: $project.pauseAfterStory)

@@ -18,7 +18,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 ### 1.1 Design Principles
 
 - **Native-first:** Full SwiftUI interface with proper macOS conventions (menu bar, keyboard shortcuts, window management, drag-and-drop).
-- **Feature parity:** Every capability of the original Chief CLI is present — parallel PRD execution, log streaming, protected branch detection, auto-retry, audio notifications.
+- **Feature parity:** Every capability of the original Chief CLI is present — parallel PRD execution, log streaming, protected branch detection, audio notifications.
 - **Zero configuration:** No global config files. PRD state lives alongside the PRD files wherever the user stores them. App-wide preferences stored in the app's container.
 - **Non-blocking:** Multiple PRDs can run simultaneously with independent loop state. The UI stays responsive during long-running iterations.
 - **Transparent:** Real-time streaming of Claude's output with syntax highlighting. Every action is visible and controllable.
@@ -70,7 +70,6 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | RL-7 | On all stories complete, transition to the Complete state and play an audio notification | P0 |
 | RL-8 | Support configurable max iterations per PRD (default: remaining stories + 5, minimum 5) | P0 |
 | RL-9 | Allow runtime adjustment of max iterations via UI controls (+5 / -5) | P1 |
-| RL-10 | Auto-retry on Claude Code crashes with backoff (configurable, can be disabled) | P1 |
 | RL-11 | Detect the `<ridler-complete/>` signal from Claude to exit the loop early when all stories are done | P0 |
 | RL-12 | Create one git commit per completed story using the format `feat: [US-001] - Story Title` | P0 |
 | RL-13 | Append implementation details, file changes, and learnings to `progress.md` after each iteration | P0 |
@@ -93,7 +92,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | LS-3 | Running → Paused: User presses Pause; loop finishes current iteration then pauses | P0 |
 | LS-4 | Running → Stopped: User presses Stop; loop halts immediately | P0 |
 | LS-5 | Running → Complete: All stories pass | P0 |
-| LS-6 | Running → Error: Claude Code fails or crashes (after retry exhaustion if retries enabled) | P0 |
+| LS-6 | Running → Error: Claude Code fails or crashes | P0 |
 | LS-7 | Paused/Stopped/Error → Running: User presses Start to resume | P0 |
 | LS-8 | Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red) | P0 |
 | LS-9 | Running → Paused: When "Pause after story" is enabled, the loop automatically transitions to Paused after a story completes (same as a manual pause) | P0 |
@@ -212,7 +211,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-L5 | Auto-scroll to follow new output while the loop is running | P0 |
 | UI-L6 | Allow manual scrolling; disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom | P0 |
 | UI-L7 | Show an indicator for auto-scroll vs. manual-scroll mode | P1 |
-| UI-L8 | Show story transition events, iteration starts, completion messages, and retry events in the log | P0 |
+| UI-L8 | Show story transition events, iteration starts, and completion messages in the log | P0 |
 | UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using SwiftTerm (`LocalProcessTerminalView`) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
 | UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the SwiftTerm NSView stays mounted) | P0 |
@@ -364,9 +363,7 @@ Process exits
   │
   ├── Success → update ridl.json (passes: true), git commit, append progress.md
   │
-  ├── Failure + retries remaining → backoff, retry
-  │
-  └── Failure + no retries → transition to Error state
+  └── Failure → transition to Error state
 ```
 
 ---
@@ -382,7 +379,6 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | Audio notifications | Toggle | On | Play sound on PRD completion |
-| Auto-retry on crash | Toggle | Off | Automatically retry when Claude Code crashes |
 | Verbose log | Toggle | Off | Show raw Claude JSON in log view |
 | Debug mode | Toggle | Off | Enable debug information overlays and the Debug window (see Section 7 — Developer Experience) |
 | Claude Config Dir | Directory path | Empty (system default) | Custom `CLAUDE_CONFIG_DIR` path passed to Claude Code subprocesses; validated on save, surfaces `claudeConfigNotFound` error if path does not exist |
@@ -418,7 +414,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 |----|-------------|----------|
 | DX-10 | A "Debug" menu item (Window > Debug Info) opens a dedicated Debug window showing live internal state | P1 |
 | DX-11 | The Debug window displays: current loop state per PRD, engine iteration count, file watcher status, active process PIDs, last error per tab, and memory usage | P1 |
-| DX-12 | In debug mode, the status bar expands to show internal state: loop state enum value, current story ID, engine retry count, and elapsed time per iteration | P2 |
+| DX-12 | In debug mode, the status bar expands to show internal state: loop state enum value, current story ID, and elapsed time per iteration | P2 |
 | DX-13 | In debug mode, log entries include raw JSON alongside the parsed representation (equivalent to "Verbose log" but scoped to the debug overlay) | P2 |
 | DX-14 | Debug mode state is persisted across launches via UserDefaults | P2 |
 
@@ -437,7 +433,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 | DX-30 | Swift source files are organized into clearly named groups (Models, Views, Managers, Protocols) matching Xcode's project navigator structure | P0 |
 | DX-31 | Public types and non-obvious methods include concise documentation comments describing purpose and contracts | P1 |
 | DX-32 | Error types conform to `LocalizedError` with human-readable `errorDescription` values that are suitable for both UI display and log output | P0 |
-| DX-33 | Test files mirror the source structure and use descriptive test method names that read as specifications (e.g., `testOpenInvalidPathThrows`, `testAutoRetryExhaustsAllRetries`) | P1 |
+| DX-33 | Test files mirror the source structure and use descriptive test method names that read as specifications (e.g., `testOpenInvalidPathThrows`, `testMaxIterationsStopsLoop`) | P1 |
 | DX-34 | Protocols are used for external dependencies (process spawning, git operations, file system access) to enable test mocking and make the dependency graph explicit for agents navigating the codebase | P0 |
 
 ---
@@ -513,7 +509,6 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 
 - Parallel PRD execution with independent loop state
 - Runtime iteration adjustment (+/-)
-- Auto-retry on Claude crashes
 - Audio notifications on completion
 - macOS notifications when app is backgrounded
 - Syntax highlighting in log view
@@ -540,6 +535,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 | 3 | Should settings be in a dedicated Settings window? | **Yes.** A dedicated macOS Settings/Preferences window (`⌘,`) for app-wide configuration. |
 | 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, ridler.log) stays alongside the PRD file. |
 | 5 | Should the responsive layout from the TUI (stacked vs. side-by-side) be replicated? | **No.** SwiftUI's NavigationSplitView handles window resizing natively. The sidebar collapses automatically on narrow windows. |
+| 6 | Should the app auto-retry when Claude Code crashes? | **No.** Auto-retry on crash was considered and removed. On process failure the engine transitions directly to Error state. Users can manually resume via Start/Resume. |
 
 ## 11. Open Questions
 

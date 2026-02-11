@@ -43,10 +43,6 @@ struct StatusBarView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("Retry: \(info.retryCount)")
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.secondary)
-
             if let elapsed = info.elapsedPerIteration {
                 Text("Iter: \(elapsed)")
                     .font(.system(size: 10, design: .monospaced))
@@ -72,6 +68,5 @@ struct StatusBarView: View {
 struct DebugStatusInfo {
     let loopStateRawValue: String
     let currentStoryID: String?
-    let retryCount: Int
     let elapsedPerIteration: String?
 }
