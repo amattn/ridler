@@ -62,7 +62,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | RL-1 | Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat | P0 |
-| RL-2 | Each iteration invokes Claude Code as a fresh subprocess with `--dangerously-skip-permissions --output-format stream-json` flags | P0 |
+| RL-2 | Each iteration invokes Claude Code as a fresh subprocess with `--dangerously-skip-permissions --verbose --output-format stream-json` flags (`--verbose` is required when combining `--output-format stream-json` with `-p`) | P0 |
 | RL-3 | Select the next story by filtering `passes: false`, sorting by `priority` ascending, and picking the first | P0 |
 | RL-4 | Build the prompt from: target story details (ID, title, description, acceptance criteria), embedded agent instructions, and `progress.md` context | P0 |
 | RL-5 | Parse Claude's streaming JSON output in real-time and display in the log view | P0 |
@@ -213,7 +213,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-L6 | Allow manual scrolling; disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom | P0 |
 | UI-L7 | Show an indicator for auto-scroll vs. manual-scroll mode | P1 |
 | UI-L8 | Show story transition events, iteration starts, completion messages, and retry events in the log | P0 |
-| UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session. If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md") | P0 |
+| UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using SwiftTerm (`LocalProcessTerminalView`) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
 | UI-L11 | When the user switches back to a story row, the right pane reverts to the log view | P0 |
 | UI-L12 | If a Claude editing session is active and the user switches to a story or starts the loop, the Claude session is terminated. If the session is mid-conversation, a confirmation dialog is shown before termination | P1 |
@@ -334,6 +334,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | JSON streaming | Foundation `JSONDecoder` | Line-by-line parsing of Claude's `stream-json` output |
 | File watching | FSEvents / DispatchSource | Monitor each opened PRD's directory for external changes |
 | Git operations | `Process` calling `git` CLI | Branch detection, commit creation |
+| Terminal emulation | SwiftTerm (SPM, 1.0.0+) | `LocalProcessTerminalView` wrapping for Claude Code interactive sessions; handles colors, cursor positioning, box drawing natively |
 | Syntax highlighting | Native or swift-syntax | Code block highlighting in log view |
 | Audio playback | AVFoundation `AVAudioPlayer` | Completion notification sound |
 | Notifications | UserNotifications framework | macOS notification center integration |
@@ -348,7 +349,7 @@ PRD Manager selects next story
 Build prompt (story + agent instructions + progress.md)
   │
   ▼
-Spawn Process: claude --dangerously-skip-permissions --output-format stream-json
+Spawn Process: claude --dangerously-skip-permissions --verbose --output-format stream-json
   │
   ▼
 Read stdout line-by-line (streaming JSON)
@@ -384,6 +385,7 @@ Ridler provides a standard macOS Settings window (`⌘,`) for app-wide preferenc
 | Auto-retry on crash | Toggle | Off | Automatically retry when Claude Code crashes |
 | Verbose log | Toggle | Off | Show raw Claude JSON in log view |
 | Debug mode | Toggle | Off | Enable debug information overlays and the Debug window (see Section 7 — Developer Experience) |
+| Claude Config Dir | Directory path | Empty (system default) | Custom `CLAUDE_CONFIG_DIR` path passed to Claude Code subprocesses; validated on save, surfaces `claudeConfigNotFound` error if path does not exist |
 
 #### Per-PRD Settings (Toolbar / Inline)
 
