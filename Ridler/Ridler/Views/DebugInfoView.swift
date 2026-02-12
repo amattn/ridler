@@ -77,11 +77,11 @@ struct DebugInfoView: View {
                     debugRow("Loop Start", value: startDate.formatted(.dateTime))
                 }
 
-                let passCount = project.userStories.filter { $0.passes }.count
-                debugRow("Stories", value: "\(passCount)/\(project.userStories.count) passed")
+                let passCount = project.iterationDefinitions.filter { $0.passes }.count
+                debugRow("Stories", value: "\(passCount)/\(project.iterationDefinitions.count) passed")
 
-                if let currentStory = project.userStories.first(where: { $0.inProgress }) {
-                    debugRow("Current Story", value: "\(currentStory.id) — \(currentStory.title)")
+                if let currentStory = project.iterationDefinitions.first(where: { $0.inProgress }) {
+                    debugRow("Current Story", value: "\(currentStory.id) — \(currentStory.userStoryTitle)")
                 }
             }
             .padding(.vertical, 2)

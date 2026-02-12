@@ -11,7 +11,7 @@
 		A10002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20002 /* ContentView.swift */; };
 		A10003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20003 /* Assets.xcassets */; };
 		A10004 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20004 /* Preview Assets.xcassets */; };
-		A10005 /* UserStory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20007 /* UserStory.swift */; };
+		A10005 /* IterationDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20007 /* IterationDefinition.swift */; };
 		A10006 /* LoopState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20008 /* LoopState.swift */; };
 		A10007 /* Milestone.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20009 /* Milestone.swift */; };
 		A10008 /* PRDProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20010 /* PRDProject.swift */; };
@@ -47,6 +47,7 @@
 		A10038 /* ClaudeTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20040 /* ClaudeTerminalView.swift */; };
 		A10039 /* SwiftTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20041 /* SwiftTerminalView.swift */; };
 		A10040 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = SP0002 /* SwiftTerm */; };
+		A10041 /* UniversalContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20042 /* UniversalContext.swift */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -75,7 +76,7 @@
 		A20004 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A20005 /* Ridler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ridler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20006 /* Ridler.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ridler.entitlements; sourceTree = "<group>"; };
-		A20007 /* UserStory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserStory.swift; sourceTree = "<group>"; };
+		A20007 /* IterationDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IterationDefinition.swift; sourceTree = "<group>"; };
 		A20008 /* LoopState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopState.swift; sourceTree = "<group>"; };
 		A20009 /* Milestone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestone.swift; sourceTree = "<group>"; };
 		A20010 /* PRDProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDProject.swift; sourceTree = "<group>"; };
@@ -110,6 +111,7 @@
 		A20039 /* ClaudeTerminalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTerminalManager.swift; sourceTree = "<group>"; };
 		A20040 /* ClaudeTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTerminalView.swift; sourceTree = "<group>"; };
 		A20041 /* SwiftTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTerminalView.swift; sourceTree = "<group>"; };
+		A20042 /* UniversalContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalContext.swift; sourceTree = "<group>"; };
 		C20001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		C20003 /* PRDStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDStoreTests.swift; sourceTree = "<group>"; };
 		C20004 /* FileWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherTests.swift; sourceTree = "<group>"; };
@@ -170,7 +172,7 @@
 		A40002 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				A20007 /* UserStory.swift */,
+				A20007 /* IterationDefinition.swift */,
 				A20008 /* LoopState.swift */,
 				A20009 /* Milestone.swift */,
 				A20010 /* PRDProject.swift */,
@@ -178,6 +180,7 @@
 				A20019 /* SidebarSelection.swift */,
 				A20025 /* LogEntry.swift */,
 				A20034 /* FocusedValues.swift */,
+				A20042 /* UniversalContext.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -370,7 +373,7 @@
 			files = (
 				A10002 /* ContentView.swift in Sources */,
 				A10001 /* RidlerApp.swift in Sources */,
-				A10005 /* UserStory.swift in Sources */,
+				A10005 /* IterationDefinition.swift in Sources */,
 				A10006 /* LoopState.swift in Sources */,
 				A10007 /* Milestone.swift in Sources */,
 				A10008 /* PRDProject.swift in Sources */,
@@ -405,6 +408,7 @@
 				A10037 /* ClaudeTerminalManager.swift in Sources */,
 				A10038 /* ClaudeTerminalView.swift in Sources */,
 				A10039 /* SwiftTerminalView.swift in Sources */,
+				A10041 /* UniversalContext.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -125,6 +125,7 @@ struct ContentView: View {
             BranchWarningSheet(
                 currentBranch: warning.branch,
                 prdName: openProjects[warning.index].name ?? openProjects[warning.index].id,
+                suggestedBranch: openProjects[warning.index].branchName,
                 onCreateBranch: { newBranch in
                     branchWarning = nil
                     handleCreateBranch(newBranch, for: warning.index)
@@ -673,20 +674,20 @@ struct ContentView: View {
         case .ready:
             return "Ready"
         case .running:
-            if let story = project.userStories.first(where: { $0.inProgress }) {
-                return "Working on: \(story.id) — \(story.title)"
+            if let story = project.iterationDefinitions.first(where: { $0.inProgress }) {
+                return "Working on: \(story.id) — \(story.userStoryTitle)"
             }
             return "Running..."
         case .paused:
-            if let story = project.userStories.first(where: { $0.inProgress }) {
-                return "Paused on: \(story.id) — \(story.title)"
+            if let story = project.iterationDefinitions.first(where: { $0.inProgress }) {
+                return "Paused on: \(story.id) — \(story.userStoryTitle)"
             }
             return "Paused"
         case .stopped:
             return "Stopped"
         case .complete:
-            let passCount = project.userStories.filter { $0.passes }.count
-            return "Complete — \(passCount)/\(project.userStories.count) stories passed"
+            let passCount = project.iterationDefinitions.filter { $0.passes }.count
+            return "Complete — \(passCount)/\(project.iterationDefinitions.count) stories passed"
         case .error:
             return "Error — check log for details"
         }
@@ -695,7 +696,7 @@ struct ContentView: View {
     private func debugStatusInfo(for project: PRDProject?) -> DebugStatusInfo? {
         guard settings.debugMode, let project else { return nil }
         let engine = loopEngines[project.id]
-        let currentStory = project.userStories.first(where: { $0.inProgress })
+        let currentStory = project.iterationDefinitions.first(where: { $0.inProgress })
 
         var elapsedStr: String?
         if let startDate = project.loopStartDate, project.loopState == .running {

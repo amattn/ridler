@@ -176,7 +176,7 @@ final class RalphLoopEngine: ObservableObject {
         iterationCount += 1
         onIterationChange?(iterationCount)
 
-        logSystem("Iteration \(iterationCount): Starting \(nextStory.id) — \(nextStory.title)")
+        logSystem("Iteration \(iterationCount): Starting \(nextStory.id) — \(nextStory.userStoryTitle)")
 
         // Build prompt
         let prompt = buildPrompt(for: nextStory, project: project)
@@ -273,7 +273,7 @@ final class RalphLoopEngine: ObservableObject {
             onProjectUpdated?(updatedProject)
 
             // Check if all stories pass
-            let allPass = updatedProject.userStories.allSatisfy { $0.passes }
+            let allPass = updatedProject.iterationDefinitions.allSatisfy { $0.passes }
             if allPass || completionDetected {
                 logSystem("All stories pass — loop complete!")
                 loopState = .complete
@@ -299,27 +299,23 @@ final class RalphLoopEngine: ObservableObject {
         runNextIteration()
     }
 
-    private func selectNextStory(from project: PRDProject) -> UserStory? {
-        project.userStories
+    private func selectNextStory(from project: PRDProject) -> IterationDefinition? {
+        project.iterationDefinitions
             .filter { !$0.passes }
             .sorted { $0.priority < $1.priority }
             .first
     }
 
     private func markStoryInProgress(_ storyID: String, in project: PRDProject) {
-        guard let directoryURL else { return }
+        // inProgress is runtime-only (not serialized in v2), so just notify via callback
         var updated = project
-        if let index = updated.userStories.firstIndex(where: { $0.id == storyID }) {
-            updated.userStories[index].inProgress = true
+        if let index = updated.iterationDefinitions.firstIndex(where: { $0.id == storyID }) {
+            updated.iterationDefinitions[index].inProgress = true
         }
-        do {
-            try prdStore.writeProject(updated, to: directoryURL)
-        } catch {
-            Self.logger.warning("Failed to mark story \(storyID) as inProgress: \(error.localizedDescription)")
-        }
+        onProjectUpdated?(updated)
     }
 
-    private func buildPrompt(for story: UserStory, project: PRDProject) -> String {
+    private func buildPrompt(for story: IterationDefinition, project: PRDProject) -> String {
         var prompt = """
         # Chief Agent Instructions
 
@@ -329,26 +325,56 @@ final class RalphLoopEngine: ObservableObject {
 
         1. Read the PRD at `ridl/ridl.json`
         2. Read `progress.md` if it exists (check Codebase Patterns section first)
-        3. Pick the **highest priority** user story where `passes: false` -- After determining which story to work on, output exact story id, e.g.: <ralph-status>\(story.id)</ralph-status>
-        4. Mark the story as `inProgress: true` in the PRD
-        5. Implement that single user story
-        6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-        7. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.title)`
-        8. Append your progress to `progress.md`
-        9. Update the PRD to set `passes: true` and `inProgress: false` for the completed story
+        3. Pick the **highest priority** iteration definition where `passes: false` -- After determining which story to work on, output exact story id, e.g.: <ralph-status>\(story.id)</ralph-status>
+        4. Implement that single iteration definition
+        5. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
+        6. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.userStoryTitle)`
+        7. Append your progress to `progress.md`
+        8. Update the PRD to set `passes: true` for the completed iteration definition
 
         ## Target Story
 
         - **ID:** \(story.id)
-        - **Title:** \(story.title)
+        - **Title:** \(story.userStoryTitle)
         - **Priority:** \(story.priority)
-        - **Description:** \(story.description)
+        - **Description:** \(story.userStoryDescription)
 
         ### Acceptance Criteria
         """
 
         for criterion in story.acceptanceCriteria {
             prompt += "\n- \(criterion)"
+        }
+
+        // Add prdReferences if present
+        if let refs = story.prdReferences, !refs.isEmpty {
+            prompt += "\n\n### PRD References"
+            for ref in refs {
+                prompt += "\n- \(ref)"
+            }
+        }
+
+        // Add universalContext if present
+        if let ctx = project.universalContext {
+            prompt += "\n\n## Universal Context"
+            if let nfr = ctx.nonFunctionalRequirements, !nfr.isEmpty {
+                prompt += "\n\n### Non-Functional Requirements"
+                for item in nfr {
+                    prompt += "\n- \(item)"
+                }
+            }
+            if let devExp = ctx.developerExperience, !devExp.isEmpty {
+                prompt += "\n\n### Developer Experience"
+                for item in devExp {
+                    prompt += "\n- \(item)"
+                }
+            }
+            if let techArch = ctx.technicalArchitecture, !techArch.isEmpty {
+                prompt += "\n\n### Technical Architecture"
+                for item in techArch {
+                    prompt += "\n- \(item)"
+                }
+            }
         }
 
         prompt += """
@@ -398,8 +424,8 @@ final class RalphLoopEngine: ObservableObject {
         // Look up story title
         var storyTitle = storyID
         if let project = try? prdStore.loadProject(from: directoryURL),
-           let story = project.userStories.first(where: { $0.id == storyID }) {
-            storyTitle = story.title
+           let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
+            storyTitle = story.userStoryTitle
         }
 
         let commitMessage = "feature: [\(storyID)] - \(storyTitle)"
@@ -426,8 +452,8 @@ final class RalphLoopEngine: ObservableObject {
         // Look up story title from disk
         var storyTitle = storyID
         if let project = try? prdStore.loadProject(from: directoryURL),
-           let story = project.userStories.first(where: { $0.id == storyID }) {
-            storyTitle = "\(storyID) — \(story.title)"
+           let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
+            storyTitle = "\(storyID) — \(story.userStoryTitle)"
         }
 
         let entry = """

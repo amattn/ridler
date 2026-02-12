@@ -13,7 +13,7 @@
 
 Ridler is a native macOS application that transforms Product Requirements Documents into working code by orchestrating Claude Code in an autonomous loop. It is a feature-complete native equivalent of [minicodemonkey/chief](https://github.com/minicodemonkey/chief), replacing the terminal-based Bubble Tea TUI with a native SwiftUI interface.
 
-The app reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file, preventing context overflow while maintaining project continuity.
+The app reads PRDs (markdown + JSON), breaks them into iteration definitions, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file, preventing context overflow while maintaining project continuity.
 
 ### 1.1 Design Principles
 
@@ -50,12 +50,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | PM-6 | Delete a PRD's files on disk (with confirmation dialog) | P1 |
 | PM-7 | Display PRD completion status: total stories, passed, in-progress, pending | P0 |
 | PM-8 | Watch each opened PRD's files for filesystem changes and auto-reload when files change externally | P0 |
-| PM-9 | Support the three-file PRD format: `prd.md` (human-readable PRD), `ridl.md` (agent instructions with user stories and acceptance criteria), and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file. JSON decoding must be resilient to missing optional-in-practice fields (`passes` defaults to `false`, `inProgress` defaults to `false`) | P0 |
+| PM-9 | Support the three-file PRD format: `prd.md` (human-readable PRD), `ridl.md` (agent instructions with iteration definitions and acceptance criteria), and `ridl.json` (machine-readable source of truth), stored in the same directory as the opened file. JSON decoding must be resilient to missing optional-in-practice fields (`passes` defaults to `false`, `inProgress` defaults to `false`) | P0 |
 | PM-10 | Auto-convert `prd.md` to `ridl.json` when the markdown source is newer than the JSON | P1 |
 | PM-11 | All PRD files (`prd.md`, `ridl.md`, `ridl.json`, `progress.md`, `ridler.log`) are stored together in a `ridl/` folder | P0 |
 | PM-12 | Remember recently opened PRDs and display them in File > Open Recent | P1 |
 | PM-13 | Drag-and-drop a `ridl/` folder or a `.md` file onto the app icon to open it as a tab. Show an error alert if the drop target cannot be loaded | P1 |
-| PM-14 | JSON decoding errors must include the file name, the missing or invalid key, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) rather than generic system error messages | P0 |
+| PM-14 | JSON decoding errors must include the file name, the missing or invalid key, and the JSON path (e.g., `ridl.json: missing required key "userStoryTitle" in iterationDefinitions.0`) rather than generic system error messages | P0 |
 
 ### 3.2 The Ralph Loop (Autonomous Execution Engine)
 
@@ -181,7 +181,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| UI-S1 | Display a scrollable list of all user stories for the selected PRD | P0 |
+| UI-S1 | Display a scrollable list of all iteration definitions for the selected PRD | P0 |
 | UI-S2 | Each row shows: status icon (✓ passed, ● in-progress, ○ pending, ✗ failed), story ID, and title | P0 |
 | UI-S3 | Highlight the currently selected story | P0 |
 | UI-S4 | Show a progress bar at the bottom: filled portion, percentage, and count (e.g., `2/4 stories`) | P0 |
@@ -407,7 +407,7 @@ Ridler is built and maintained by both human developers and AI coding agents. Th
 |----|-------------|----------|
 | DX-1 | All user-facing errors must be displayed in a native alert dialog with a clear, specific message (never silently swallowed) | P0 |
 | DX-2 | Error alerts must include a "Copy" button that copies the full error message to the clipboard for easy pasting into bug reports, chat, or agent prompts | P0 |
-| DX-3 | JSON decoding errors must identify the file name, the problematic key or field, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) | P0 |
+| DX-3 | JSON decoding errors must identify the file name, the problematic key or field, and the JSON path (e.g., `ridl.json: missing required key "userStoryTitle" in iterationDefinitions.0`) | P0 |
 | DX-4 | File-not-found errors must include the full path that was searched and, for companion file lookups, list which filenames were tried (e.g., "No ridl.json or prd.md found in /path/to/dir") | P0 |
 | DX-5 | Process errors (Claude Code crashes, non-zero exit codes) must include the exit code, stderr output (if any), and the command that was run | P1 |
 | DX-6 | Git errors must include the git command that failed and its stderr output | P1 |
@@ -453,7 +453,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 3. User enters a name and picks a directory. App creates an empty `prd.md` file there and opens it as a tab.
 4. User clicks "Edit PRD" in the UI. App launches Claude Code interactively with the PRD context.
 5. User describes the project. Claude populates the `prd.md` and generates `ridl.json`.
-6. Claude Code exits. App detects the file changes, loads the PRD and user stories, and displays them.
+6. Claude Code exits. App detects the file changes, loads the PRD and iteration definitions, and displays them.
 
 ### 8.2 Opening an Existing PRD
 

@@ -28,7 +28,7 @@ struct SidebarView: View {
 
             Spacer()
 
-            if let project, !project.userStories.isEmpty {
+            if let project, !project.iterationDefinitions.isEmpty {
                 progressBar(project: project)
             }
         }
@@ -102,7 +102,7 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func interruptedStoryBanner(project: PRDProject) -> some View {
-        let interruptedStories = project.userStories.filter { $0.inProgress && !$0.passes }
+        let interruptedStories = project.iterationDefinitions.filter { $0.inProgress && !$0.passes }
         let isInterrupted = !interruptedStories.isEmpty && project.loopState != .running
 
         if isInterrupted && !interruptedWarningDismissed {
@@ -151,7 +151,7 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func storiesSection(project: PRDProject) -> some View {
-        if project.userStories.isEmpty {
+        if project.iterationDefinitions.isEmpty {
             Text("No stories")
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
@@ -164,7 +164,7 @@ struct SidebarView: View {
 
                     // Show ungrouped stories (not in any milestone)
                     let groupedIDs = Set(milestones.flatMap { $0.storyIDs })
-                    let ungrouped = project.userStories.filter { !groupedIDs.contains($0.id) }
+                    let ungrouped = project.iterationDefinitions.filter { !groupedIDs.contains($0.id) }
                     if !ungrouped.isEmpty {
                         ForEach(ungrouped) { story in
                             storyRow(story: story)
@@ -175,7 +175,7 @@ struct SidebarView: View {
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(project.userStories) { story in
+                    ForEach(project.iterationDefinitions) { story in
                         storyRow(story: story)
                     }
                 }
@@ -186,7 +186,7 @@ struct SidebarView: View {
     @ViewBuilder
     private func milestoneGroup(milestone: Milestone, project: PRDProject) -> some View {
         let stories = milestone.storyIDs.compactMap { id in
-            project.userStories.first { $0.id == id }
+            project.iterationDefinitions.first { $0.id == id }
         }
         let passedCount = stories.filter(\.passes).count
         let isCollapsed = collapsedMilestones.contains(milestone.name)
@@ -205,8 +205,13 @@ struct SidebarView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 12)
-                Text(milestone.name)
+                Text(milestone.theme ?? milestone.name)
                     .font(.system(size: 12, weight: .semibold))
+                if let version = milestone.version {
+                    Text(version)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
                 Spacer()
                 Text("\(passedCount)/\(stories.count)")
                     .font(.system(size: 11))
@@ -226,7 +231,7 @@ struct SidebarView: View {
     }
 
     @ViewBuilder
-    private func storyRow(story: UserStory) -> some View {
+    private func storyRow(story: IterationDefinition) -> some View {
         let isSelected = selection == .story(story.id)
 
         Button {
@@ -240,7 +245,7 @@ struct SidebarView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Text(story.title)
+                Text(story.userStoryTitle)
                     .font(.system(size: 13))
                     .lineLimit(1)
 
@@ -254,7 +259,7 @@ struct SidebarView: View {
         .buttonStyle(.plain)
     }
 
-    private func storyStatusIcon(story: UserStory) -> some View {
+    private func storyStatusIcon(story: IterationDefinition) -> some View {
         Group {
             if story.passes {
                 Image(systemName: "checkmark.circle.fill")
@@ -273,8 +278,8 @@ struct SidebarView: View {
     // MARK: - Progress Bar
 
     private func progressBar(project: PRDProject) -> some View {
-        let total = project.userStories.count
-        let passed = project.userStories.filter(\.passes).count
+        let total = project.iterationDefinitions.count
+        let passed = project.iterationDefinitions.filter(\.passes).count
         let fraction = total > 0 ? Double(passed) / Double(total) : 0
         let percentage = Int(fraction * 100)
 

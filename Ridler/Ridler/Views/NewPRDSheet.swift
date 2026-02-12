@@ -85,7 +85,7 @@ struct NewPRDSheet: View {
 
             let project = PRDProject(
                 name: prdName,
-                userStories: [],
+                iterationDefinitions: [],
                 directoryURL: ridlDir
             )
             onCreate(project)

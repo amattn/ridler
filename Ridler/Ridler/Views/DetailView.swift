@@ -9,7 +9,7 @@ struct DetailView: View {
             if let selection, let project {
                 switch selection {
                 case .story(let storyID):
-                    if let story = project.userStories.first(where: { $0.id == storyID }) {
+                    if let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
                         storyDetailView(story: story, project: project)
                     } else {
                         placeholderView
@@ -30,11 +30,11 @@ struct DetailView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func storyDetailView(story: UserStory, project: PRDProject) -> some View {
+    private func storyDetailView(story: IterationDefinition, project: PRDProject) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Title
-                Text(story.title)
+                Text(story.userStoryTitle)
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -47,7 +47,7 @@ struct DetailView: View {
                 Divider()
 
                 // Description
-                Text(story.description)
+                Text(story.userStoryDescription)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -65,6 +65,35 @@ struct DetailView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
+                    }
+                }
+
+                // PRD References
+                if let refs = story.prdReferences, !refs.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("PRD References")
+                            .font(.headline)
+
+                        ForEach(refs, id: \.self) { ref in
+                            HStack(alignment: .top, spacing: 8) {
+                                Text("\u{2022}")
+                                    .foregroundStyle(.secondary)
+                                Text(ref)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+
+                // Notes
+                if let notes = story.notes, !notes.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notes")
+                            .font(.headline)
+
+                        Text(notes)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -178,7 +207,7 @@ struct DetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func statusBadge(for story: UserStory) -> some View {
+    private func statusBadge(for story: IterationDefinition) -> some View {
         HStack(spacing: 4) {
             Image(systemName: statusIcon(for: story))
                 .foregroundStyle(statusColor(for: story))
@@ -220,7 +249,7 @@ struct DetailView: View {
         }
     }
 
-    private func statusIcon(for story: UserStory) -> String {
+    private func statusIcon(for story: IterationDefinition) -> String {
         if story.passes {
             return "checkmark.circle.fill"
         } else if story.inProgress {
@@ -230,7 +259,7 @@ struct DetailView: View {
         }
     }
 
-    private func statusColor(for story: UserStory) -> Color {
+    private func statusColor(for story: IterationDefinition) -> Color {
         if story.passes {
             return .green
         } else if story.inProgress {
@@ -240,7 +269,7 @@ struct DetailView: View {
         }
     }
 
-    private func statusText(for story: UserStory) -> String {
+    private func statusText(for story: IterationDefinition) -> String {
         if story.passes {
             return "Passed"
         } else if story.inProgress {

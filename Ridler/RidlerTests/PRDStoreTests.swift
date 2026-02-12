@@ -25,20 +25,19 @@ final class FileSystemPRDStoreTests: XCTestCase {
         {
             "project": "Test",
             "description": "A test project",
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "title": "Story 1",
-                    "description": "Description 1",
+                    "userStoryTitle": "Story 1",
+                    "userStoryDescription": "Description 1",
                     "priority": 1,
                     "acceptanceCriteria": ["AC1", "AC2"],
-                    "passes": true,
-                    "inProgress": false
+                    "passes": true
                 },
                 {
                     "id": "US-002",
-                    "title": "Story 2",
-                    "description": "Description 2",
+                    "userStoryTitle": "Story 2",
+                    "userStoryDescription": "Description 2",
                     "priority": 2,
                     "acceptanceCriteria": ["AC3"]
                 }
@@ -51,24 +50,24 @@ final class FileSystemPRDStoreTests: XCTestCase {
 
         XCTAssertEqual(project.project, "Test")
         XCTAssertEqual(project.description, "A test project")
-        XCTAssertEqual(project.userStories.count, 2)
-        XCTAssertEqual(project.userStories[0].id, "US-001")
-        XCTAssertTrue(project.userStories[0].passes)
-        XCTAssertFalse(project.userStories[0].inProgress)
-        XCTAssertEqual(project.userStories[1].id, "US-002")
-        XCTAssertFalse(project.userStories[1].passes)
-        XCTAssertFalse(project.userStories[1].inProgress)
+        XCTAssertEqual(project.iterationDefinitions.count, 2)
+        XCTAssertEqual(project.iterationDefinitions[0].id, "US-001")
+        XCTAssertTrue(project.iterationDefinitions[0].passes)
+        XCTAssertFalse(project.iterationDefinitions[0].inProgress)
+        XCTAssertEqual(project.iterationDefinitions[1].id, "US-002")
+        XCTAssertFalse(project.iterationDefinitions[1].passes)
+        XCTAssertFalse(project.iterationDefinitions[1].inProgress)
         XCTAssertEqual(project.directoryURL, tempDir)
     }
 
     func testLoadProjectMissingOptionalFields() throws {
         let json = """
         {
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "title": "Minimal",
-                    "description": "Minimal story",
+                    "userStoryTitle": "Minimal",
+                    "userStoryDescription": "Minimal story",
                     "priority": 1,
                     "acceptanceCriteria": []
                 }
@@ -83,9 +82,9 @@ final class FileSystemPRDStoreTests: XCTestCase {
         XCTAssertNil(project.project)
         XCTAssertNil(project.description)
         XCTAssertNil(project.milestones)
-        XCTAssertEqual(project.userStories.count, 1)
-        XCTAssertFalse(project.userStories[0].passes)
-        XCTAssertFalse(project.userStories[0].inProgress)
+        XCTAssertEqual(project.iterationDefinitions.count, 1)
+        XCTAssertFalse(project.iterationDefinitions[0].passes)
+        XCTAssertFalse(project.iterationDefinitions[0].inProgress)
     }
 
     func testLoadProjectMalformedJSON() throws {
@@ -120,7 +119,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
             }
             if case .jsonDecoding(let file, let key, _, _) = ridlerError {
                 XCTAssertEqual(file, "ridl.json")
-                XCTAssertEqual(key, "userStories")
+                XCTAssertEqual(key, "iterationDefinitions")
             } else {
                 XCTFail("Expected jsonDecoding error, got \(ridlerError)")
             }
@@ -161,7 +160,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
     func testLoadProjectSetsDirectoryURL() throws {
         let json = """
         {
-            "userStories": []
+            "iterationDefinitions": []
         }
         """
         try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
@@ -173,7 +172,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
     func testLoadProjectFromFileURL() throws {
         let json = """
         {
-            "userStories": []
+            "iterationDefinitions": []
         }
         """
         try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
@@ -239,15 +238,14 @@ final class FileSystemPRDStoreTests: XCTestCase {
         let project = PRDProject(
             project: "Test",
             description: "Round trip test",
-            userStories: [
-                UserStory(
+            iterationDefinitions: [
+                IterationDefinition(
                     id: "US-001",
-                    title: "Story 1",
-                    description: "Desc",
+                    userStoryTitle: "Story 1",
+                    userStoryDescription: "Desc",
                     priority: 1,
                     acceptanceCriteria: ["AC1"],
-                    passes: false,
-                    inProgress: true
+                    passes: false
                 )
             ]
         )
@@ -257,15 +255,15 @@ final class FileSystemPRDStoreTests: XCTestCase {
         let loaded = try store.loadProject(from: tempDir)
         XCTAssertEqual(loaded.project, "Test")
         XCTAssertEqual(loaded.description, "Round trip test")
-        XCTAssertEqual(loaded.userStories.count, 1)
-        XCTAssertFalse(loaded.userStories[0].passes)
-        XCTAssertTrue(loaded.userStories[0].inProgress)
+        XCTAssertEqual(loaded.iterationDefinitions.count, 1)
+        XCTAssertFalse(loaded.iterationDefinitions[0].passes)
+        XCTAssertFalse(loaded.iterationDefinitions[0].inProgress)
     }
 
     func testWriteProjectProducesPrettyPrintedJSON() throws {
         let project = PRDProject(
             project: "Pretty",
-            userStories: []
+            iterationDefinitions: []
         )
 
         try store.writeProject(project, to: tempDir)
@@ -283,19 +281,19 @@ final class FileSystemPRDStoreTests: XCTestCase {
         {
             "project": "Test",
             "description": "Full project",
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "title": "Story",
-                    "description": "Desc",
+                    "userStoryTitle": "Story",
+                    "userStoryDescription": "Desc",
                     "priority": 1,
                     "acceptanceCriteria": ["AC1"]
                 }
             ],
             "milestones": [
                 {
-                    "name": "M1",
-                    "storyIDs": ["US-001"]
+                    "id": "M1",
+                    "definitionIds": ["US-001"]
                 }
             ]
         }
@@ -303,45 +301,39 @@ final class FileSystemPRDStoreTests: XCTestCase {
         try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
 
         var project = try store.loadProject(from: tempDir)
-        project.userStories[0].passes = true
-        project.userStories[0].inProgress = false
+        project.iterationDefinitions[0].passes = true
 
         try store.writeProject(project, to: tempDir)
         let reloaded = try store.loadProject(from: tempDir)
 
         XCTAssertEqual(reloaded.project, "Test")
         XCTAssertEqual(reloaded.description, "Full project")
-        XCTAssertTrue(reloaded.userStories[0].passes)
-        XCTAssertFalse(reloaded.userStories[0].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
         XCTAssertEqual(reloaded.milestones?.count, 1)
         XCTAssertEqual(reloaded.milestones?[0].name, "M1")
     }
 
     // MARK: - US-004: Write PRD state updates
 
-    func testWriteProjectModifyPassesAndInProgress() throws {
-        // Read → modify passes/inProgress → write → read
+    func testWriteProjectModifyPasses() throws {
         let json = """
         {
             "project": "State Test",
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "title": "Story 1",
-                    "description": "Desc 1",
+                    "userStoryTitle": "Story 1",
+                    "userStoryDescription": "Desc 1",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1"],
-                    "passes": false,
-                    "inProgress": false
+                    "acceptanceCriteria": ["AC1"]
                 },
                 {
                     "id": "US-002",
-                    "title": "Story 2",
-                    "description": "Desc 2",
+                    "userStoryTitle": "Story 2",
+                    "userStoryDescription": "Desc 2",
                     "priority": 2,
-                    "acceptanceCriteria": ["AC2"],
-                    "passes": false,
-                    "inProgress": false
+                    "acceptanceCriteria": ["AC2"]
                 }
             ]
         }
@@ -350,44 +342,39 @@ final class FileSystemPRDStoreTests: XCTestCase {
 
         // Read
         var project = try store.loadProject(from: tempDir)
-        XCTAssertFalse(project.userStories[0].passes)
-        XCTAssertFalse(project.userStories[0].inProgress)
+        XCTAssertFalse(project.iterationDefinitions[0].passes)
 
-        // Modify: mark story 1 as in progress
-        project.userStories[0].inProgress = true
+        // Modify: mark story 1 as passed
+        project.iterationDefinitions[0].passes = true
 
         // Write
         try store.writeProject(project, to: tempDir)
 
         // Read again
         var reloaded = try store.loadProject(from: tempDir)
-        XCTAssertFalse(reloaded.userStories[0].passes)
-        XCTAssertTrue(reloaded.userStories[0].inProgress)
-        XCTAssertFalse(reloaded.userStories[1].passes)
-        XCTAssertFalse(reloaded.userStories[1].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
+        XCTAssertFalse(reloaded.iterationDefinitions[1].passes)
 
-        // Modify: mark story 1 as passed, no longer in progress
-        reloaded.userStories[0].passes = true
-        reloaded.userStories[0].inProgress = false
+        // Modify: mark story 1 as passed (already), verify stability
+        reloaded.iterationDefinitions[0].passes = true
 
         // Write again
         try store.writeProject(reloaded, to: tempDir)
 
         // Read final state
         let final = try store.loadProject(from: tempDir)
-        XCTAssertTrue(final.userStories[0].passes)
-        XCTAssertFalse(final.userStories[0].inProgress)
-        XCTAssertFalse(final.userStories[1].passes)
-        XCTAssertFalse(final.userStories[1].inProgress)
+        XCTAssertTrue(final.iterationDefinitions[0].passes)
+        XCTAssertFalse(final.iterationDefinitions[1].passes)
     }
 
     func testWriteProjectConcurrentSafety() throws {
         // Verify that concurrent writes using .atomic don't corrupt the file
         let project = PRDProject(
             project: "Concurrent",
-            userStories: [
-                UserStory(id: "US-001", title: "S1", description: "D1", priority: 1, acceptanceCriteria: ["AC1"]),
-                UserStory(id: "US-002", title: "S2", description: "D2", priority: 2, acceptanceCriteria: ["AC2"])
+            iterationDefinitions: [
+                IterationDefinition(id: "US-001", userStoryTitle: "S1", userStoryDescription: "D1", priority: 1, acceptanceCriteria: ["AC1"]),
+                IterationDefinition(id: "US-002", userStoryTitle: "S2", userStoryDescription: "D2", priority: 2, acceptanceCriteria: ["AC2"])
             ]
         )
         try store.writeProject(project, to: tempDir)
@@ -400,8 +387,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
             queue.async {
                 do {
                     var copy = project
-                    copy.userStories[0].passes = (i % 2 == 0)
-                    copy.userStories[1].inProgress = (i % 2 != 0)
+                    copy.iterationDefinitions[0].passes = (i % 2 == 0)
                     try self.store.writeProject(copy, to: self.tempDir)
                     expectation.fulfill()
                 } catch {
@@ -415,7 +401,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
         // File should be valid JSON after all concurrent writes
         let final = try store.loadProject(from: tempDir)
         XCTAssertEqual(final.project, "Concurrent")
-        XCTAssertEqual(final.userStories.count, 2)
+        XCTAssertEqual(final.iterationDefinitions.count, 2)
     }
 
     func testWriteProjectMultipleStoryStateUpdates() throws {
@@ -423,25 +409,25 @@ final class FileSystemPRDStoreTests: XCTestCase {
         {
             "project": "Multi",
             "description": "Multiple updates",
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "title": "Story 1",
-                    "description": "Desc 1",
+                    "userStoryTitle": "Story 1",
+                    "userStoryDescription": "Desc 1",
                     "priority": 1,
                     "acceptanceCriteria": ["AC1"]
                 },
                 {
                     "id": "US-002",
-                    "title": "Story 2",
-                    "description": "Desc 2",
+                    "userStoryTitle": "Story 2",
+                    "userStoryDescription": "Desc 2",
                     "priority": 2,
                     "acceptanceCriteria": ["AC2"]
                 },
                 {
                     "id": "US-003",
-                    "title": "Story 3",
-                    "description": "Desc 3",
+                    "userStoryTitle": "Story 3",
+                    "userStoryDescription": "Desc 3",
                     "priority": 3,
                     "acceptanceCriteria": ["AC3"]
                 }
@@ -453,20 +439,18 @@ final class FileSystemPRDStoreTests: XCTestCase {
         var project = try store.loadProject(from: tempDir)
 
         // Update multiple stories at once
-        project.userStories[0].passes = true
-        project.userStories[1].passes = true
-        project.userStories[1].inProgress = false
-        project.userStories[2].inProgress = true
+        project.iterationDefinitions[0].passes = true
+        project.iterationDefinitions[1].passes = true
 
         try store.writeProject(project, to: tempDir)
         let reloaded = try store.loadProject(from: tempDir)
 
-        XCTAssertTrue(reloaded.userStories[0].passes)
-        XCTAssertFalse(reloaded.userStories[0].inProgress)
-        XCTAssertTrue(reloaded.userStories[1].passes)
-        XCTAssertFalse(reloaded.userStories[1].inProgress)
-        XCTAssertFalse(reloaded.userStories[2].passes)
-        XCTAssertTrue(reloaded.userStories[2].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[1].passes)
+        XCTAssertFalse(reloaded.iterationDefinitions[1].inProgress)
+        XCTAssertFalse(reloaded.iterationDefinitions[2].passes)
+        XCTAssertFalse(reloaded.iterationDefinitions[2].inProgress)
         // All other fields preserved
         XCTAssertEqual(reloaded.project, "Multi")
         XCTAssertEqual(reloaded.description, "Multiple updates")
@@ -475,13 +459,13 @@ final class FileSystemPRDStoreTests: XCTestCase {
     // MARK: - JSON error messages
 
     func testJSONErrorIncludesFileNameAndKey() throws {
-        // Missing required "title" field in a user story
+        // Missing required "userStoryTitle" field in an iteration definition
         let json = """
         {
-            "userStories": [
+            "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "description": "No title",
+                    "userStoryDescription": "No title",
                     "priority": 1,
                     "acceptanceCriteria": []
                 }
@@ -497,7 +481,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
             }
             let desc = ridlerError.errorDescription ?? ""
             XCTAssertTrue(desc.contains("ridl.json"), "Error should include filename: \(desc)")
-            XCTAssertTrue(desc.contains("title"), "Error should include key: \(desc)")
+            XCTAssertTrue(desc.contains("userStoryTitle"), "Error should include key: \(desc)")
         }
     }
 
@@ -515,5 +499,49 @@ final class FileSystemPRDStoreTests: XCTestCase {
             let desc = ridlerError.errorDescription ?? ""
             XCTAssertTrue(desc.contains("does-not-exist"), "Error should include path: \(desc)")
         }
+    }
+
+    // MARK: - V2 fields round-trip through store
+
+    func testV2FieldsPreservedThroughStore() throws {
+        let json = """
+        {
+            "version": "2.0.0",
+            "generatedBy": "ridl-cli",
+            "branchName": "feature/test",
+            "iterationDefinitions": [
+                {
+                    "id": "US-001",
+                    "userStoryTitle": "Story",
+                    "userStoryDescription": "Desc",
+                    "priority": 1,
+                    "acceptanceCriteria": ["AC1"],
+                    "prdReferences": ["Section 2.1"],
+                    "notes": "A note"
+                }
+            ],
+            "universalContext": {
+                "nonFunctionalRequirements": ["NFR1"],
+                "technicalArchitecture": ["Arch1"]
+            }
+        }
+        """
+        try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
+
+        let project = try store.loadProject(from: tempDir)
+        XCTAssertEqual(project.version, "2.0.0")
+        XCTAssertEqual(project.branchName, "feature/test")
+        XCTAssertEqual(project.iterationDefinitions[0].prdReferences, ["Section 2.1"])
+        XCTAssertEqual(project.iterationDefinitions[0].notes, "A note")
+        XCTAssertEqual(project.universalContext?.nonFunctionalRequirements, ["NFR1"])
+
+        // Write back and verify preservation
+        try store.writeProject(project, to: tempDir)
+        let reloaded = try store.loadProject(from: tempDir)
+        XCTAssertEqual(reloaded.version, "2.0.0")
+        XCTAssertEqual(reloaded.generatedBy, "ridl-cli")
+        XCTAssertEqual(reloaded.branchName, "feature/test")
+        XCTAssertEqual(reloaded.iterationDefinitions[0].prdReferences, ["Section 2.1"])
+        XCTAssertEqual(reloaded.universalContext?.technicalArchitecture, ["Arch1"])
     }
 }
