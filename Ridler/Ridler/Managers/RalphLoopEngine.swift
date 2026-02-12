@@ -169,6 +169,7 @@ final class RalphLoopEngine: ObservableObject {
         }
 
         currentStoryID = nextStory.id
+        completionDetected = false
 
         // Mark story as inProgress
         markStoryInProgress(nextStory.id, in: project)
@@ -274,7 +275,7 @@ final class RalphLoopEngine: ObservableObject {
 
             // Check if all stories pass
             let allPass = updatedProject.iterationDefinitions.allSatisfy { $0.passes }
-            if allPass || completionDetected {
+            if allPass {
                 logSystem("All stories pass — loop complete!")
                 loopState = .complete
                 onStateChange?(.complete)
@@ -330,7 +331,7 @@ final class RalphLoopEngine: ObservableObject {
         5. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
         6. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.userStoryTitle)`
         7. Append your progress to `progress.md`
-        8. Update the PRD to set `passes: true` for the completed iteration definition
+        8. **LAST STEP — do this after everything else is done:** Update `ridl/ridl.json` to set `"passes": true` for the completed iteration definition. This MUST be the final action you take, outside of any cleanup tasks or final logging for debug or non-user facing purposes.
 
         ## Target Story
 
