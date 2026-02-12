@@ -1,3 +1,4 @@
+import MarkdownUI
 import SwiftUI
 
 struct DetailView: View {
@@ -155,16 +156,8 @@ struct DetailView: View {
     private func markdownView(fileURL: URL) -> some View {
         Group {
             if let content = try? String(contentsOf: fileURL, encoding: .utf8), !content.isEmpty {
-                if let attributedString = try? AttributedString(markdown: content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-                    Text(attributedString)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    Text(content)
-                        .font(.body.monospaced())
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Markdown(content)
+                    .textSelection(.enabled)
             } else {
                 Text("File is empty")
                     .foregroundStyle(.secondary)

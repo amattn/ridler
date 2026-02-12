@@ -200,7 +200,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-D4 | Display acceptance criteria as a bulleted list | P0 |
 | UI-D5 | When no PRD is loaded, show instructions to create or open a project | P0 |
 | UI-D6 | When an error occurs, show error details and a tip to check `ridler.log` | P0 |
-| UI-D7 | When a PRD file row is selected (instead of a story), the middle pane displays the file's content: rendered markdown for `.md` files, formatted/pretty-printed JSON for `.json` files. If the selected file does not yet exist on disk, the middle pane is empty | P0 |
+| UI-D7 | When a PRD file row is selected (instead of a story), the middle pane displays the file's content: full block-level rendered markdown (headers, tables, code blocks, lists, bold, italic) for `.md` files via MarkdownUI or similar, formatted/pretty-printed JSON for `.json` files. If the selected file does not yet exist on disk, the middle pane is empty | P0 |
 | UI-D8 | File content displayed in the middle pane is read-only (no inline editing) | P0 |
 | UI-D9 | File changes detected by the file watcher automatically refresh the displayed content in the middle pane | P0 |
 
@@ -216,9 +216,9 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-L6 | Allow manual scrolling; disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom | P0 |
 | UI-L7 | Show an indicator for auto-scroll vs. manual-scroll mode | P1 |
 | UI-L8 | Show story transition events, iteration starts, and completion messages in the log | P0 |
-| UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using SwiftTerm (`LocalProcessTerminalView`) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
+| UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using a terminal emulator library (e.g., SwiftTerm) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
-| UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the SwiftTerm NSView stays mounted) | P0 |
+| UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the terminal NSView stays mounted) | P0 |
 | UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
 | UI-L13 | When the "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content showing pretty-printed JSON in small monospaced dimmed text | P2 |
 | UI-L14 | While log entries are loading from disk, show a `ProgressView("Loading logs...")` in the log panel. If entries are partially loaded, show a small spinner in the log panel header. Once loading completes, transition to the normal log view | P1 |
@@ -342,6 +342,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | File watching | FSEvents / DispatchSource | Monitor each opened PRD's directory for external changes |
 | Git operations | `Process` calling `git` CLI | Branch detection, commit creation |
 | Terminal emulation | SwiftTerm (SPM, 1.0.0+) | `LocalProcessTerminalView` wrapping for Claude Code interactive sessions; handles colors, cursor positioning, box drawing natively |
+| Markdown rendering | MarkdownUI (SPM, 2.0.0+) | Full block-level markdown rendering (headers, tables, code blocks, lists) for prd.md and ridl.md in the detail pane |
 | Syntax highlighting | Native or swift-syntax | Code block highlighting in log view |
 | Audio playback | AVFoundation `AVAudioPlayer` | Completion notification sound |
 | Notifications | UserNotifications framework | macOS notification center integration |

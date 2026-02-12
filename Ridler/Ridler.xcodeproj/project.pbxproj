@@ -48,6 +48,7 @@
 		A10039 /* SwiftTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20041 /* SwiftTerminalView.swift */; };
 		A10040 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = SP0002 /* SwiftTerm */; };
 		A10041 /* UniversalContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20042 /* UniversalContext.swift */; };
+		A10042 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = SP0004 /* MarkdownUI */; };
 		C10001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20001 /* ModelTests.swift */; };
 		C10002 /* PRDStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20003 /* PRDStoreTests.swift */; };
 		C10003 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20004 /* FileWatcherTests.swift */; };
@@ -130,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10040 /* SwiftTerm in Frameworks */,
+				A10042 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +293,7 @@
 			name = Ridler;
 			packageProductDependencies = (
 				SP0002 /* SwiftTerm */,
+				SP0004 /* MarkdownUI */,
 			);
 			productName = Ridler;
 			productReference = A20005 /* Ridler.app */;
@@ -343,6 +346,7 @@
 			mainGroup = A40000;
 			packageReferences = (
 				SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				SP0003 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			productRefGroup = A40006 /* Products */;
 			projectDirPath = "";
@@ -685,6 +689,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		SP0003 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -692,6 +704,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
+		};
+		SP0004 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP0003 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
