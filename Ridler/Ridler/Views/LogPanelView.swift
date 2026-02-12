@@ -107,18 +107,66 @@ struct LogPanelView: View {
 
 private struct LogEntryRow: View {
     let entry: LogEntry
+    @State private var showRawJSON = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            entryIcon
-                .frame(width: 16, alignment: .center)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                entryIcon
+                    .frame(width: 16, alignment: .center)
 
-            contentView
+                contentView
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if SettingsManager.shared.verboseLog, let rawJSON = entry.rawJSON {
+                rawJSONSection(rawJSON)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 3)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
+    }
+
+    @ViewBuilder
+    private func rawJSONSection(_ rawJSON: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                showRawJSON.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: showRawJSON ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8))
+                    Text("Raw JSON")
+                        .font(.system(size: 9))
+                }
+                .foregroundStyle(.secondary)
+                .padding(.leading, 36)
+                .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+
+            if showRawJSON {
+                Text(prettyJSON(rawJSON))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .padding(.leading, 36)
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func prettyJSON(_ raw: String) -> String {
+        guard let data = raw.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: pretty, encoding: .utf8) else {
+            return raw
+        }
+        return str
     }
 
     @ViewBuilder

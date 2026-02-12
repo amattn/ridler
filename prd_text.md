@@ -73,6 +73,8 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | RL-11 | Detect the `<ridler-complete/>` signal from Claude to exit the loop early when all stories are done | P0 |
 | RL-12 | Create one git commit per completed story using the format `feat: [US-001] - Story Title` | P0 |
 | RL-13 | Append implementation details, file changes, and learnings to `progress.md` after each iteration | P0 |
+| RL-14 | Parse all Claude Code `stream-json` message variants correctly: nested `message.content[]` arrays (where content blocks can be `text`, `tool_use`, or `tool_result`), `type="user"` messages containing tool results (string content, array content, and `is_error` blocks with XML tags stripped), `type="system"` with `subtype="init"` (extract model, cwd, version instead of dumping full JSON), and agent sub-prompts (user text blocks with `parent_tool_use_id`). Both the flat format (`{"type":"assistant","content":"text"}`) and the nested format (`{"type":"assistant","message":{"content":[...]}}`) must produce human-readable log entries — no blank entries or raw JSON dumps | P0 |
+| RL-15 | Store the raw JSON line on each parsed `LogEntry` (`rawJSON: String?`, nil for system-generated entries) so it is available for verbose/debug display | P1 |
 
 ### 3.3 Parallel PRD Execution
 
@@ -216,6 +218,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
 | UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the SwiftTerm NSView stays mounted) | P0 |
 | UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
+| UI-L13 | When the "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content showing pretty-printed JSON in small monospaced dimmed text | P2 |
 
 #### 3.6.8 Status Bar (Bottom)
 

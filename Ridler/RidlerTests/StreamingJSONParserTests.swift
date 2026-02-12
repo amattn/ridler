@@ -425,6 +425,222 @@ final class StreamingJSONParserTests: XCTestCase {
         XCTAssertLessThanOrEqual(entry!.timestamp, after)
     }
 
+    // MARK: - Nested Assistant Text (Real Claude Code Output)
+
+    func testParseNestedAssistantMessage() {
+        let json = #"{"session_id":"abc","type":"assistant","message":{"content":[{"type":"text","text":"I will help you."}],"id":"msg_1","role":"assistant","model":"claude-opus-4-6"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .assistantText)
+        XCTAssertEqual(entry?.content, "I will help you.")
+    }
+
+    func testParseNestedAssistantMessageMultipleBlocks() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"text","text":"First."},{"type":"text","text":"Second."}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .assistantText)
+        XCTAssertEqual(entry?.content, "First.\nSecond.")
+    }
+
+    // MARK: - Nested Assistant with Tool Use Blocks
+
+    func testParseAssistantWithToolUseBlock() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_01","name":"Read","input":{"file_path":"/src/main.swift"}}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("Read"))
+        XCTAssertTrue(entry!.content.contains("/src/main.swift"))
+    }
+
+    func testParseAssistantWithBashToolUseBlock() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_02","name":"Bash","input":{"command":"xcodebuild build"}}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("Bash"))
+        XCTAssertTrue(entry!.content.contains("$ xcodebuild build"))
+    }
+
+    func testParseAssistantWithGlobToolUseBlock() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_03","name":"Glob","input":{"pattern":"**/*.swift"}}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("Glob"))
+        XCTAssertTrue(entry!.content.contains("**/*.swift"))
+    }
+
+    func testParseAssistantWithTaskToolUseBlock() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_04","name":"Task","input":{"description":"Explore project","subagent_type":"Explore","prompt":"Explore the Xcode project..."}}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("Task"))
+        XCTAssertTrue(entry!.content.contains("Explore the Xcode project"))
+    }
+
+    func testParseAssistantWithTodoWriteToolUseBlock() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_05","name":"TodoWrite","input":{"todos":[{"content":"Fix build","status":"pending"}]}}],"role":"assistant"}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("TodoWrite"))
+    }
+
+    // MARK: - Nested Tool Use / Tool Result (flat type)
+
+    func testParseNestedToolUse() {
+        let json = #"{"type":"tool_use","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/src/main.swift"}}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolUse)
+        XCTAssertTrue(entry!.content.contains("Read"))
+        XCTAssertTrue(entry!.content.contains("/src/main.swift"))
+    }
+
+    func testParseNestedToolResult() {
+        let json = #"{"type":"tool_result","message":{"content":[{"type":"text","text":"file contents here"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolResult)
+        XCTAssertEqual(entry?.content, "file contents here")
+    }
+
+    func testParseNestedResult() {
+        let json = #"{"type":"result","message":{"content":[{"type":"text","text":"Task completed. <ridler-complete/>"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .assistantText)
+        XCTAssertTrue(entry!.content.contains("Task completed."))
+    }
+
+    // MARK: - User Messages (tool results returned to Claude)
+
+    func testParseUserToolResultWithStringContent() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_01","type":"tool_result","content":"     1→import Foundation\n     2→class Parser { }"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolResult)
+        XCTAssertTrue(entry!.content.contains("import Foundation"))
+    }
+
+    func testParseUserToolResultWithError() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"<tool_use_error>File does not exist.</tool_use_error>","is_error":true,"tool_use_id":"toolu_01"}]},"tool_use_result":"Error: File does not exist."}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .error)
+        XCTAssertTrue(entry!.content.contains("File does not exist"))
+        // XML tags should be stripped
+        XCTAssertFalse(entry!.content.contains("<tool_use_error>"))
+    }
+
+    func testParseUserToolResultWithSiblingError() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"<tool_use_error>Sibling tool call errored</tool_use_error>","is_error":true,"tool_use_id":"toolu_01"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .error)
+        XCTAssertTrue(entry!.content.contains("Sibling tool call errored"))
+    }
+
+    func testParseUserToolResultWithContentArray() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_01","type":"tool_result","content":[{"type":"text","text":"Agent summary here."},{"type":"text","text":"agentId: abc123"}]}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolResult)
+        XCTAssertTrue(entry!.content.contains("Agent summary here."))
+        XCTAssertTrue(entry!.content.contains("agentId: abc123"))
+    }
+
+    func testParseUserToolResultTodoWriteResponse() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_01","type":"tool_result","content":"Todos have been modified successfully."}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .toolResult)
+        XCTAssertTrue(entry!.content.contains("Todos have been modified"))
+    }
+
+    func testParseUserTextBlockAsAgentPrompt() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Explore the Xcode project at /path/to/project"}]},"parent_tool_use_id":"toolu_01"}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .system)
+        XCTAssertTrue(entry!.content.contains("[agent prompt]"))
+        XCTAssertTrue(entry!.content.contains("Explore the Xcode project"))
+    }
+
+    // MARK: - System Init Messages
+
+    func testParseSystemInitMessage() {
+        let json = #"{"type":"system","subtype":"init","cwd":"/Users/kai/project","model":"claude-opus-4-6","claude_code_version":"2.1.39","session_id":"abc"}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.type, .system)
+        XCTAssertTrue(entry!.content.contains("[system:init]"))
+        XCTAssertTrue(entry!.content.contains("claude-opus-4-6"))
+        XCTAssertTrue(entry!.content.contains("/Users/kai/project"))
+        XCTAssertTrue(entry!.content.contains("v2.1.39"))
+    }
+
+    func testParseSystemInitDoesNotDumpFullJSON() {
+        let json = #"{"type":"system","subtype":"init","cwd":"/proj","model":"claude-opus-4-6","tools":["Bash","Read","Edit"],"session_id":"abc","claude_code_version":"2.1.39"}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        // Should NOT contain the tools array dump
+        XCTAssertFalse(entry!.content.contains("[\"Bash\""))
+    }
+
+    // MARK: - rawJSON Population
+
+    func testRawJSONIsPopulated() {
+        let json = #"{"type": "assistant", "content": "Hello"}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertNotNil(entry?.rawJSON)
+        XCTAssertTrue(entry!.rawJSON!.contains("assistant"))
+    }
+
+    func testRawJSONIsPopulatedForNestedFormat() {
+        let json = #"{"type":"assistant","message":{"content":[{"type":"text","text":"nested"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry)
+        XCTAssertNotNil(entry?.rawJSON)
+        XCTAssertTrue(entry!.rawJSON!.contains("message"))
+    }
+
+    func testRawJSONNilForManualLogEntry() {
+        let entry = LogEntry(type: .system, content: "manual entry")
+        XCTAssertNil(entry.rawJSON)
+    }
+
+    func testRawJSONPopulatedForUserMessage() {
+        let json = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"ok","tool_use_id":"toolu_01"}]}}"#
+        let entry = parser.parseLine(json)
+
+        XCTAssertNotNil(entry?.rawJSON)
+    }
+
     // MARK: - Edge Cases
 
     func testLineWithLeadingTrailingWhitespace() {

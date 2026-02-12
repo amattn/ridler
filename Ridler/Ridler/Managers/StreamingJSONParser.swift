@@ -6,11 +6,16 @@ import os
 ///
 /// Claude Code with `--output-format stream-json` outputs newline-delimited JSON objects.
 /// Each object has a `type` field indicating the message type:
-/// - `assistant`: text content from Claude
-/// - `tool_use`: a tool invocation (Read, Edit, Write, Bash, etc.)
-/// - `tool_result`: the result of a tool invocation
+/// - `assistant`: text content from Claude, OR tool_use invocations wrapped in message.content[]
+/// - `user`: tool results returned to Claude (message.content[] with tool_result blocks)
+/// - `tool_use`: a tool invocation (flat format)
+/// - `tool_result`: the result of a tool invocation (flat format)
 /// - `result`: the final result of the session
+/// - `system`: system messages, including `subtype: "init"` for session initialization
 /// - Other types are treated as system messages
+///
+/// Supports both flat format (`{"type":"assistant","content":"text"}`) and
+/// nested format where content lives inside a `message` dict (`{"type":"assistant","message":{"content":[...]}}`).
 final class StreamingJSONParser {
     private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "StreamingJSONParser")
 
@@ -49,7 +54,7 @@ final class StreamingJSONParser {
             return nil
         }
 
-        let entry = parseJSON(json)
+        let entry = parseJSON(json, rawJSON: trimmed)
 
         // Also check for ridler-complete signal in parsed content
         if entry.content.contains("<ridler-complete/>") {
@@ -71,102 +76,190 @@ final class StreamingJSONParser {
 
     // MARK: - Private
 
-    private func parseJSON(_ json: [String: Any]) -> LogEntry {
+    private func parseJSON(_ json: [String: Any], rawJSON: String) -> LogEntry {
         let type = json["type"] as? String ?? ""
 
         switch type {
         case "assistant":
-            return parseAssistantMessage(json)
+            return parseAssistantMessage(json, rawJSON: rawJSON)
+        case "user":
+            return parseUserMessage(json, rawJSON: rawJSON)
         case "tool_use":
-            return parseToolUse(json)
+            return parseToolUse(json, rawJSON: rawJSON)
         case "tool_result":
-            return parseToolResult(json)
+            return parseToolResult(json, rawJSON: rawJSON)
         case "result":
-            return parseResult(json)
+            return parseResult(json, rawJSON: rawJSON)
         case "error":
-            return parseError(json)
+            return parseError(json, rawJSON: rawJSON)
         default:
-            return parseSystemMessage(json, type: type)
+            return parseSystemMessage(json, type: type, rawJSON: rawJSON)
         }
     }
 
-    private func parseAssistantMessage(_ json: [String: Any]) -> LogEntry {
-        let content: String
+    // MARK: - Assistant Messages
+
+    private func parseAssistantMessage(_ json: [String: Any], rawJSON: String) -> LogEntry {
+        // Flat format: top-level content string
         if let message = json["content"] as? String {
-            content = message
-        } else if let contentArray = json["content"] as? [[String: Any]] {
-            // Content can be an array of content blocks
-            content = contentArray.compactMap { block -> String? in
-                if block["type"] as? String == "text" {
-                    return block["text"] as? String
-                }
-                return nil
-            }.joined(separator: "\n")
-        } else if let message = json["message"] as? String {
-            content = message
-        } else {
-            content = extractFallbackContent(from: json)
+            return LogEntry(type: .assistantText, content: message, rawJSON: rawJSON)
         }
-        return LogEntry(type: .assistantText, content: content)
-    }
 
-    private func parseToolUse(_ json: [String: Any]) -> LogEntry {
-        let toolName = json["tool"] as? String
-            ?? json["name"] as? String
-            ?? "unknown"
-
-        var content = "Tool: \(toolName)"
-
-        if let input = json["input"] as? [String: Any] {
-            // Show a compact representation of the tool input
-            if let command = input["command"] as? String {
-                content += "\n$ \(command)"
-            } else if let filePath = input["file_path"] as? String {
-                content += "\n\(filePath)"
-            } else if let pattern = input["pattern"] as? String {
-                content += "\nPattern: \(pattern)"
+        // Flat format: top-level content array
+        if let contentArray = json["content"] as? [[String: Any]] {
+            let text = extractTextFromContentArray(contentArray)
+            if !text.isEmpty {
+                return LogEntry(type: .assistantText, content: text, rawJSON: rawJSON)
             }
         }
 
-        return LogEntry(type: .toolUse, content: content)
+        // Nested format: message.content array
+        if let messageDict = json["message"] as? [String: Any],
+           let contentArray = messageDict["content"] as? [[String: Any]] {
+            // Check for text blocks first
+            let text = extractTextFromContentArray(contentArray)
+            if !text.isEmpty {
+                return LogEntry(type: .assistantText, content: text, rawJSON: rawJSON)
+            }
+
+            // Check for tool_use blocks (assistant messages often wrap tool_use this way)
+            let toolUseBlocks = contentArray.filter { ($0["type"] as? String) == "tool_use" }
+            if !toolUseBlocks.isEmpty {
+                let content = toolUseBlocks.map { formatToolUseBlock($0) }.joined(separator: "\n")
+                return LogEntry(type: .toolUse, content: content, rawJSON: rawJSON)
+            }
+
+            // Nested string content
+            if let text = messageDict["content"] as? String {
+                return LogEntry(type: .assistantText, content: text, rawJSON: rawJSON)
+            }
+        }
+
+        // Flat format: top-level message string
+        if let message = json["message"] as? String {
+            return LogEntry(type: .assistantText, content: message, rawJSON: rawJSON)
+        }
+
+        return LogEntry(type: .assistantText, content: extractFallbackContent(from: json), rawJSON: rawJSON)
     }
 
-    private func parseToolResult(_ json: [String: Any]) -> LogEntry {
+    // MARK: - User Messages (tool results returned to Claude)
+
+    private func parseUserMessage(_ json: [String: Any], rawJSON: String) -> LogEntry {
+        guard let messageDict = json["message"] as? [String: Any],
+              let contentArray = messageDict["content"] as? [[String: Any]] else {
+            // No message.content — try top-level tool_use_result
+            if let resultStr = json["tool_use_result"] as? String {
+                return LogEntry(type: .toolResult, content: resultStr, rawJSON: rawJSON)
+            }
+            return LogEntry(type: .system, content: extractFallbackContent(from: json), rawJSON: rawJSON)
+        }
+
+        // Check what kind of blocks we have
+        let toolResultBlocks = contentArray.filter { ($0["type"] as? String) == "tool_result" }
+        let textBlocks = contentArray.filter { ($0["type"] as? String) == "text" }
+
+        // tool_result blocks: extract content from each
+        if !toolResultBlocks.isEmpty {
+            let isError = toolResultBlocks.contains { ($0["is_error"] as? Bool) == true }
+            let parts = toolResultBlocks.compactMap { extractToolResultBlockContent($0) }
+            let content = parts.joined(separator: "\n")
+
+            if !content.isEmpty {
+                return LogEntry(type: isError ? .error : .toolResult, content: content, rawJSON: rawJSON)
+            }
+
+            // Fall back to top-level tool_use_result
+            if let resultStr = json["tool_use_result"] as? String {
+                return LogEntry(type: isError ? .error : .toolResult, content: resultStr, rawJSON: rawJSON)
+            }
+        }
+
+        // text blocks: user prompt to agent (sub-conversation)
+        if !textBlocks.isEmpty {
+            let text = extractTextFromContentArray(textBlocks)
+            if !text.isEmpty {
+                return LogEntry(type: .system, content: "[agent prompt] \(text)", rawJSON: rawJSON)
+            }
+        }
+
+        // Fallback to tool_use_result string if present
+        if let resultStr = json["tool_use_result"] as? String {
+            return LogEntry(type: .toolResult, content: resultStr, rawJSON: rawJSON)
+        }
+
+        return LogEntry(type: .toolResult, content: extractFallbackContent(from: json), rawJSON: rawJSON)
+    }
+
+    // MARK: - Tool Use (flat format)
+
+    private func parseToolUse(_ json: [String: Any], rawJSON: String) -> LogEntry {
+        // Try top-level fields first, then nested message dict
+        let source: [String: Any]
+        if json["tool"] != nil || json["name"] != nil || json["input"] != nil {
+            source = json
+        } else if let messageDict = json["message"] as? [String: Any],
+                  let contentArray = messageDict["content"] as? [[String: Any]] {
+            source = contentArray.first { ($0["type"] as? String) == "tool_use" } ?? json
+        } else {
+            source = json
+        }
+
+        return LogEntry(type: .toolUse, content: formatToolUseBlock(source), rawJSON: rawJSON)
+    }
+
+    // MARK: - Tool Result (flat format)
+
+    private func parseToolResult(_ json: [String: Any], rawJSON: String) -> LogEntry {
         let content: String
         if let output = json["output"] as? String {
             content = output
         } else if let contentArray = json["content"] as? [[String: Any]] {
-            content = contentArray.compactMap { block -> String? in
-                if block["type"] as? String == "text" {
-                    return block["text"] as? String
-                }
-                return nil
-            }.joined(separator: "\n")
+            content = extractTextFromContentArray(contentArray)
+        } else if let messageDict = json["message"] as? [String: Any] {
+            if let contentArray = messageDict["content"] as? [[String: Any]] {
+                content = extractTextFromContentArray(contentArray)
+            } else if let output = messageDict["output"] as? String {
+                content = output
+            } else {
+                content = extractFallbackContent(from: json)
+            }
         } else {
             content = extractFallbackContent(from: json)
         }
-        return LogEntry(type: .toolResult, content: content)
+        return LogEntry(type: .toolResult, content: content, rawJSON: rawJSON)
     }
 
-    private func parseResult(_ json: [String: Any]) -> LogEntry {
+    // MARK: - Result
+
+    private func parseResult(_ json: [String: Any], rawJSON: String) -> LogEntry {
         let content: String
         if let result = json["result"] as? String {
             content = result
         } else if let text = json["text"] as? String {
             content = text
+        } else if let messageDict = json["message"] as? [String: Any] {
+            if let contentArray = messageDict["content"] as? [[String: Any]] {
+                content = extractTextFromContentArray(contentArray)
+            } else if let result = messageDict["result"] as? String {
+                content = result
+            } else {
+                content = extractFallbackContent(from: json)
+            }
         } else {
             content = extractFallbackContent(from: json)
         }
 
-        // Check for completion signal in result
         if content.contains("<ridler-complete/>") {
             completionSubject.send()
         }
 
-        return LogEntry(type: .assistantText, content: content)
+        return LogEntry(type: .assistantText, content: content, rawJSON: rawJSON)
     }
 
-    private func parseError(_ json: [String: Any]) -> LogEntry {
+    // MARK: - Error
+
+    private func parseError(_ json: [String: Any], rawJSON: String) -> LogEntry {
         let content: String
         if let error = json["error"] as? [String: Any] {
             let message = error["message"] as? String ?? "Unknown error"
@@ -179,21 +272,100 @@ final class StreamingJSONParser {
         } else {
             content = extractFallbackContent(from: json)
         }
-        return LogEntry(type: .error, content: content)
+        return LogEntry(type: .error, content: content, rawJSON: rawJSON)
     }
 
-    private func parseSystemMessage(_ json: [String: Any], type: String) -> LogEntry {
-        let content: String
-        if let message = json["message"] as? String {
-            content = "[\(type)] \(message)"
-        } else {
-            content = "[\(type)] \(extractFallbackContent(from: json))"
+    // MARK: - System Messages
+
+    private func parseSystemMessage(_ json: [String: Any], type: String, rawJSON: String) -> LogEntry {
+        // Handle system init messages with subtype
+        if let subtype = json["subtype"] as? String {
+            let details = formatSystemInit(json, subtype: subtype)
+            return LogEntry(type: .system, content: details, rawJSON: rawJSON)
         }
-        return LogEntry(type: .system, content: content)
+
+        if let message = json["message"] as? String {
+            return LogEntry(type: .system, content: "[\(type)] \(message)", rawJSON: rawJSON)
+        }
+
+        return LogEntry(type: .system, content: "[\(type)] \(extractFallbackContent(from: json))", rawJSON: rawJSON)
+    }
+
+    // MARK: - Helpers
+
+    /// Format a system init message with key info extracted.
+    private func formatSystemInit(_ json: [String: Any], subtype: String) -> String {
+        var parts: [String] = ["[system:\(subtype)]"]
+        if let model = json["model"] as? String {
+            parts.append("model: \(model)")
+        }
+        if let cwd = json["cwd"] as? String {
+            parts.append("cwd: \(cwd)")
+        }
+        if let version = json["claude_code_version"] as? String {
+            parts.append("v\(version)")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// Format a single tool_use block into human-readable text.
+    private func formatToolUseBlock(_ block: [String: Any]) -> String {
+        let toolName = block["tool"] as? String
+            ?? block["name"] as? String
+            ?? "unknown"
+
+        var content = "Tool: \(toolName)"
+
+        if let input = block["input"] as? [String: Any] {
+            if let command = input["command"] as? String {
+                content += "\n$ \(command)"
+            } else if let filePath = input["file_path"] as? String {
+                content += "\n\(filePath)"
+            } else if let pattern = input["pattern"] as? String {
+                content += "\nPattern: \(pattern)"
+            } else if let prompt = input["prompt"] as? String {
+                // Task/agent tool — show the prompt (truncated)
+                let truncated = prompt.prefix(200)
+                content += "\n\(truncated)\(prompt.count > 200 ? "..." : "")"
+            }
+        }
+
+        return content
+    }
+
+    /// Extract content from a tool_result block inside a user message.
+    /// The `content` field can be a string or an array of text blocks.
+    private func extractToolResultBlockContent(_ block: [String: Any]) -> String? {
+        // Content as a plain string
+        if let contentStr = block["content"] as? String {
+            // Strip tool_use_error XML tags for cleaner display
+            let cleaned = contentStr
+                .replacingOccurrences(of: "<tool_use_error>", with: "")
+                .replacingOccurrences(of: "</tool_use_error>", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleaned.isEmpty ? nil : cleaned
+        }
+
+        // Content as an array of text blocks
+        if let contentArray = block["content"] as? [[String: Any]] {
+            let text = extractTextFromContentArray(contentArray)
+            return text.isEmpty ? nil : text
+        }
+
+        return nil
+    }
+
+    /// Extract text from a content array of content blocks (e.g., `[{"type":"text","text":"..."}]`).
+    private func extractTextFromContentArray(_ contentArray: [[String: Any]]) -> String {
+        contentArray.compactMap { block -> String? in
+            if block["type"] as? String == "text" {
+                return block["text"] as? String
+            }
+            return nil
+        }.joined(separator: "\n")
     }
 
     private func extractFallbackContent(from json: [String: Any]) -> String {
-        // Attempt to serialize back to a compact JSON string for display
         if let data = try? JSONSerialization.data(withJSONObject: json, options: []),
            let text = String(data: data, encoding: .utf8) {
             return text
