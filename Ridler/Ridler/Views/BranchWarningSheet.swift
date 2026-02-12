@@ -3,6 +3,7 @@ import SwiftUI
 struct BranchWarningSheet: View {
     let currentBranch: String
     let prdName: String
+    let suggestedBranch: String?
     let onCreateBranch: (String) -> Void
     let onContinue: () -> Void
     let onCancel: () -> Void
@@ -12,16 +13,18 @@ struct BranchWarningSheet: View {
     init(
         currentBranch: String,
         prdName: String,
+        suggestedBranch: String? = nil,
         onCreateBranch: @escaping (String) -> Void,
         onContinue: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.currentBranch = currentBranch
         self.prdName = prdName
+        self.suggestedBranch = suggestedBranch
         self.onCreateBranch = onCreateBranch
         self.onContinue = onContinue
         self.onCancel = onCancel
-        self._branchName = State(initialValue: "ridler/\(prdName)")
+        self._branchName = State(initialValue: suggestedBranch ?? "ridler/\(prdName)")
     }
 
     var body: some View {
