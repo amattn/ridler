@@ -3,6 +3,7 @@ import SwiftUI
 struct LogPanelView: View {
     let entries: [LogEntry]
     let isRunning: Bool
+    var isLoading: Bool = false
 
     @State private var autoScroll = true
 
@@ -25,6 +26,11 @@ struct LogPanelView: View {
         HStack {
             Text("Log")
                 .font(.headline)
+
+            if isLoading && !entries.isEmpty {
+                ProgressView()
+                    .controlSize(.small)
+            }
 
             Spacer()
 
@@ -61,10 +67,20 @@ struct LogPanelView: View {
 
     private var emptyState: some View {
         ScrollView {
-            Text("No log output yet")
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if isLoading {
+                VStack(spacing: 8) {
+                    ProgressView()
+                    Text("Loading logs...")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
                 .padding()
+            } else {
+                Text("No log output yet")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+            }
         }
     }
 
@@ -324,12 +340,19 @@ private struct HighlightedCodeView: NSViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
-        guard let textView = nsView.documentView as? NSTextView,
-              let layoutManager = textView.layoutManager,
-              let textContainer = textView.textContainer else { return nil }
-
         let width = proposal.width ?? 300
-        textContainer.containerSize = NSSize(width: max(width - 16, 50), height: CGFloat.greatestFiniteMagnitude)
+        let targetWidth = max(width - 16, 50)
+
+        // Use a temporary layout system to measure size without mutating the
+        // live view's textContainer (which would invalidate layout and cause
+        // SwiftUI to call sizeThatFits again in an infinite loop).
+        let highlighted = SyntaxHighlighter.highlight(code: code, language: language)
+        let textStorage = NSTextStorage(attributedString: highlighted)
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: NSSize(width: targetWidth, height: .greatestFiniteMagnitude))
+        textContainer.lineFragmentPadding = 0
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
         layoutManager.ensureLayout(for: textContainer)
         let usedRect = layoutManager.usedRect(for: textContainer)
 

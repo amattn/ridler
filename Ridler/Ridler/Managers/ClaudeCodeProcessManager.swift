@@ -69,17 +69,11 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         self.stderrData = Data()
         self.currentCommand = "claude --dangerously-skip-permissions --verbose --output-format stream-json -p <prompt>"
 
-        // Set up log file handle for raw output capture
-        let logFileHandle = createLogFileHandle(at: logFileURL)
-
         // Stream stdout line-by-line
         var stdoutBuffer = Data()
         stdoutPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-
-            // Write raw data to log file
-            logFileHandle?.write(data)
 
             stdoutBuffer.append(data)
 
@@ -99,12 +93,6 @@ final class ClaudeCodeProcessManager: ProcessManaging {
             let data = handle.availableData
             guard !data.isEmpty else { return }
 
-            // Write raw stderr to log file
-            if let stderrPrefix = "[stderr] ".data(using: .utf8) {
-                logFileHandle?.write(stderrPrefix)
-            }
-            logFileHandle?.write(data)
-
             self?.queue.async {
                 self?.stderrData.append(data)
             }
@@ -117,9 +105,6 @@ final class ClaudeCodeProcessManager: ProcessManaging {
             // Close pipe handlers
             stdoutPipe.fileHandleForReading.readabilityHandler = nil
             stderrPipe.fileHandleForReading.readabilityHandler = nil
-
-            // Close log file
-            logFileHandle?.closeFile()
 
             var capturedData = Data()
             self.queue.sync {
@@ -183,26 +168,4 @@ final class ClaudeCodeProcessManager: ProcessManaging {
         return env
     }
 
-    private func createLogFileHandle(at url: URL) -> FileHandle? {
-        let fileManager = FileManager.default
-        let dirURL = url.deletingLastPathComponent()
-
-        // Ensure directory exists
-        try? fileManager.createDirectory(at: dirURL, withIntermediateDirectories: true)
-
-        // Create or append to log file
-        if !fileManager.fileExists(atPath: url.path) {
-            fileManager.createFile(atPath: url.path, contents: nil)
-        }
-
-        guard let handle = try? FileHandle(forWritingTo: url) else { return nil }
-        handle.seekToEndOfFile()
-
-        // Write session separator
-        if let separator = "\n\n=== Claude Code Session: \(ISO8601DateFormatter().string(from: Date())) ===\n\n".data(using: .utf8) {
-            handle.write(separator)
-        }
-
-        return handle
-    }
 }

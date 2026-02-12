@@ -71,10 +71,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | RL-8 | Support configurable max iterations per PRD (default: remaining stories + 5, minimum 5) | P0 |
 | RL-9 | Allow runtime adjustment of max iterations via UI controls (+5 / -5) | P1 |
 | RL-11 | Detect the `<ridler-complete/>` signal from Claude to exit the loop early when all stories are done | P0 |
-| RL-12 | Create one git commit per completed story using the format `feat: [US-001] - Story Title` | P0 |
+| RL-12 | Create one git commit per completed story using the format `feature: [US-001] - Story Title` | P0 |
 | RL-13 | Append implementation details, file changes, and learnings to `progress.md` after each iteration | P0 |
 | RL-14 | Parse all Claude Code `stream-json` message variants correctly: nested `message.content[]` arrays (where content blocks can be `text`, `tool_use`, or `tool_result`), `type="user"` messages containing tool results (string content, array content, and `is_error` blocks with XML tags stripped), `type="system"` with `subtype="init"` (extract model, cwd, version instead of dumping full JSON), and agent sub-prompts (user text blocks with `parent_tool_use_id`). Both the flat format (`{"type":"assistant","content":"text"}`) and the nested format (`{"type":"assistant","message":{"content":[...]}}`) must produce human-readable log entries — no blank entries or raw JSON dumps | P0 |
 | RL-15 | Store the raw JSON line on each parsed `LogEntry` (`rawJSON: String?`, nil for system-generated entries) so it is available for verbose/debug display | P1 |
+| RL-16 | Persist all log entries to `ridler.log` as newline-delimited JSON (NDJSON). Every line is fully valid JSON. Claude Code output lines have `ridler_story_id` and `ridler_timestamp` injected as top-level fields before writing. System-generated entries (loop start, pause, stop, story transitions) are serialized as JSON with `ridler_type: "system"`, `ridler_story_id`, `ridler_timestamp`, and `content` fields. The `ridler_` prefix avoids conflicts with Claude Code's own fields | P0 |
+| RL-17 | On PRD open, load existing log entries from `ridler.log` on a background thread, parse each JSON line, extract `ridler_story_id` and `ridler_timestamp`, and populate `LogStore` without blocking the main UI thread | P0 |
 
 ### 3.3 Parallel PRD Execution
 
@@ -106,7 +108,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | GI-1 | Detect if the project is on a protected branch (main/master) before starting a loop | P0 |
 | GI-2 | Show a warning dialog offering three options: create a `ridler/{prd-name}` branch (recommended), continue on current branch, or cancel | P0 |
 | GI-3 | Allow editing the suggested branch name in the warning dialog | P1 |
-| GI-4 | Create one commit per completed story with message format `feat: [US-001] - Story Title` | P0 |
+| GI-4 | Create one commit per completed story with message format `feature: [US-001] - Story Title` | P0 |
 
 ### 3.6 User Interface
 
@@ -219,6 +221,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 | UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the SwiftTerm NSView stays mounted) | P0 |
 | UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
 | UI-L13 | When the "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content showing pretty-printed JSON in small monospaced dimmed text | P2 |
+| UI-L14 | While log entries are loading from disk, show a `ProgressView("Loading logs...")` in the log panel. If entries are partially loaded, show a small spinner in the log panel header. Once loading completes, transition to the normal log view | P1 |
 
 #### 3.6.8 Status Bar (Bottom)
 
@@ -405,7 +408,7 @@ Ridler is built and maintained by both human developers and AI coding agents. Th
 | DX-1 | All user-facing errors must be displayed in a native alert dialog with a clear, specific message (never silently swallowed) | P0 |
 | DX-2 | Error alerts must include a "Copy" button that copies the full error message to the clipboard for easy pasting into bug reports, chat, or agent prompts | P0 |
 | DX-3 | JSON decoding errors must identify the file name, the problematic key or field, and the JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`) | P0 |
-| DX-4 | File-not-found errors must include the full path that was searched and, for companion file lookups, list which filenames were tried (e.g., "No ridl.json or prd.json found in /path/to/dir") | P0 |
+| DX-4 | File-not-found errors must include the full path that was searched and, for companion file lookups, list which filenames were tried (e.g., "No ridl.json or prd.md found in /path/to/dir") | P0 |
 | DX-5 | Process errors (Claude Code crashes, non-zero exit codes) must include the exit code, stderr output (if any), and the command that was run | P1 |
 | DX-6 | Git errors must include the git command that failed and its stderr output | P1 |
 
@@ -427,7 +430,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 |----|-------------|----------|
 | DX-20 | All errors, state transitions, and significant events are logged to the unified macOS logging system (`os_log`) with appropriate log levels (`.error`, `.info`, `.debug`) | P1 |
 | DX-21 | Log messages include structured metadata (PRD name, story ID, iteration number) so they can be filtered in Console.app | P1 |
-| DX-22 | The per-PRD `ridler.log` file captures the full raw stdout/stderr of each Claude Code invocation for post-mortem debugging | P0 |
+| DX-22 | The per-PRD `ridler.log` file captures all log entries as newline-delimited JSON (NDJSON), including both Claude Code output (with injected `ridler_story_id` and `ridler_timestamp`) and system-generated entries, for post-mortem debugging and log persistence across app restarts | P0 |
 
 ### 7.4 Code Readability and Agent Compatibility
 

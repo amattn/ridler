@@ -313,13 +313,15 @@ struct ContentView: View {
     }
 
     private var logPanelContent: some View {
+        let projectID = selectedProject?.id ?? ""
         let selectedStoryID: String? = {
             if case .story(let storyID) = sidebarSelection { return storyID }
             return nil
         }()
         return LogPanelView(
-            entries: logStore.entries(for: selectedProject?.id ?? "", storyID: selectedStoryID),
-            isRunning: selectedProject?.loopState == .running
+            entries: logStore.entries(for: projectID, storyID: selectedStoryID),
+            isRunning: selectedProject?.loopState == .running,
+            isLoading: logStore.loadingProjects.contains(projectID)
         )
     }
 
@@ -479,6 +481,10 @@ struct ContentView: View {
         if let dirURL = project.directoryURL {
             fileWatcher.watch(directoryURL: dirURL)
             RecentProjectsManager.shared.addRecent(dirURL)
+
+            let logFileURL = dirURL.appendingPathComponent("ridler.log")
+            logStore.openLogFile(at: logFileURL, for: projectToAdd.id)
+            logStore.loadEntries(from: logFileURL, for: projectToAdd.id)
         }
     }
 
@@ -494,6 +500,7 @@ struct ContentView: View {
             manager.terminate()
             terminalManagers.removeValue(forKey: project.id)
         }
+        logStore.closeLogFile(for: project.id)
         if let dirURL = project.directoryURL {
             fileWatcher.unwatch(directoryURL: dirURL)
         }

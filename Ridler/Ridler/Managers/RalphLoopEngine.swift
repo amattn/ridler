@@ -180,6 +180,7 @@ final class RalphLoopEngine: ObservableObject {
 
         // Build prompt
         let prompt = buildPrompt(for: nextStory, project: project)
+        logSystem("Prompt:\n\(prompt)")
 
         // Spawn Claude Code process
         let processManager = processManagerFactory()
@@ -212,7 +213,8 @@ final class RalphLoopEngine: ObservableObject {
                         timestamp: entry.timestamp,
                         type: entry.type,
                         content: entry.content,
-                        storyID: storyIDForIteration
+                        storyID: storyIDForIteration,
+                        rawJSON: entry.rawJSON
                     )
                     self.onLogEntry?(taggedEntry, self.projectID)
                 }
@@ -325,13 +327,13 @@ final class RalphLoopEngine: ObservableObject {
 
         ## Your Task
 
-        1. Read the PRD at `.chief/prds/ridler/prd.json`
+        1. Read the PRD at `ridl/ridl.json`
         2. Read `progress.md` if it exists (check Codebase Patterns section first)
         3. Pick the **highest priority** user story where `passes: false` -- After determining which story to work on, output exact story id, e.g.: <ralph-status>\(story.id)</ralph-status>
         4. Mark the story as `inProgress: true` in the PRD
         5. Implement that single user story
         6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-        7. If checks pass, commit ALL changes with message: `feat: [\(story.id)] - \(story.title)`
+        7. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.title)`
         8. Update the PRD to set `passes: true` and `inProgress: false` for the completed story
         9. Append your progress to `progress.md`
 
@@ -400,7 +402,7 @@ final class RalphLoopEngine: ObservableObject {
             storyTitle = story.title
         }
 
-        let commitMessage = "feat: [\(storyID)] - \(storyTitle)"
+        let commitMessage = "feature: [\(storyID)] - \(storyTitle)"
         let workingDirectory = directoryURL.deletingLastPathComponent()
 
         do {

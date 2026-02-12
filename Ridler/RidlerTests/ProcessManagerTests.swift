@@ -48,41 +48,28 @@ final class ProcessManagerTests: XCTestCase {
         XCTAssertFalse(manager.isRunning)
     }
 
-    // MARK: - Log File Creation Tests
+    // MARK: - Log File Creation Tests (moved to LogStore)
 
-    func testLogFileCreatedOnSpawn() throws {
-        let manager = ClaudeCodeProcessManager()
+    func testLogFileCreatedByLogStore() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let logFile = tempDir.appendingPathComponent("ridler.log")
+        let logStore = LogStore()
 
-        let exitExpectation = XCTestExpectation(description: "Process exits")
+        logStore.openLogFile(at: logFile, for: "test-project")
 
-        manager.exitPublisher
-            .sink { _ in
-                exitExpectation.fulfill()
-            }
-            .store(in: &cancellables)
-
-        // This will likely fail quickly because "claude" may not be in PATH,
-        // but it validates that the log file is created
-        do {
-            _ = try manager.spawn(
-                prompt: "test",
-                workingDirectory: tempDir,
-                logFileURL: logFile
-            )
-            // If claude is not installed, the process may exit immediately with an error
-            wait(for: [exitExpectation], timeout: 5.0)
-        } catch {
-            // If the spawn itself fails (e.g., env not found), that's also acceptable
-            // The test validates the log file creation path
+        // Wait for the ioQueue to finish creating the file
+        let expectation = XCTestExpectation(description: "File created")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+            expectation.fulfill()
         }
+        wait(for: [expectation], timeout: 2.0)
 
-        // Log file should have been created
         XCTAssertTrue(FileManager.default.fileExists(atPath: logFile.path))
+
+        logStore.closeLogFile(for: "test-project")
     }
 
     // MARK: - Process Error Reporting Tests
