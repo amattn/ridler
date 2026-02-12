@@ -334,8 +334,8 @@ final class RalphLoopEngine: ObservableObject {
         5. Implement that single user story
         6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
         7. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.title)`
-        8. Update the PRD to set `passes: true` and `inProgress: false` for the completed story
-        9. Append your progress to `progress.md`
+        8. Append your progress to `progress.md`
+        9. Update the PRD to set `passes: true` and `inProgress: false` for the completed story
 
         ## Target Story
 

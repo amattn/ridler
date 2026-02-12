@@ -781,7 +781,7 @@ final class RalphLoopEngineTests: XCTestCase {
         wait(for: [pausedExpectation], timeout: 3.0)
 
         XCTAssertEqual(mockGit.commitCallCount, 1, "Should create one commit per iteration")
-        XCTAssertEqual(mockGit.lastCommitMessage, "feat: [US-001] - First Story", "Commit message should follow format")
+        XCTAssertEqual(mockGit.lastCommitMessage, "feature: [US-001] - First Story", "Commit message should follow format")
     }
 
     func testGitCommitUsesProjectRootAsWorkingDirectory() throws {
