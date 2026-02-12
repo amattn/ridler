@@ -124,16 +124,49 @@ struct LogPanelView: View {
 private struct LogEntryRow: View {
     let entry: LogEntry
     @State private var showRawJSON = false
+    @State private var isExpanded: Bool
+
+    private var isPrompt: Bool {
+        entry.type == .system && (entry.content.hasPrefix("Prompt:") || entry.content.hasPrefix("[agent prompt] "))
+    }
+
+    private var lineCount: Int {
+        entry.content.components(separatedBy: "\n").count
+    }
+
+    private var isLongEntry: Bool {
+        lineCount > 20
+    }
+
+    init(entry: LogEntry) {
+        self.entry = entry
+        let prompt = entry.type == .system && (entry.content.hasPrefix("Prompt:") || entry.content.hasPrefix("[agent prompt] "))
+        let lines = entry.content.components(separatedBy: "\n").count
+        _isExpanded = State(initialValue: prompt || lines <= 20)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: 4) {
+                // Disclosure triangle for long entries
+                if isLongEntry {
+                    Button { isExpanded.toggle() } label: {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 10)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Spacer().frame(width: 10)
+                }
+
                 entryIcon
                     .frame(width: 16, alignment: .center)
 
                 contentView
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -185,13 +218,26 @@ private struct LogEntryRow: View {
         return str
     }
 
+    private var displayContent: String {
+        if !isExpanded && isLongEntry {
+            let lines = entry.content.components(separatedBy: "\n")
+            return lines.prefix(5).joined(separator: "\n")
+        }
+        return entry.content
+    }
+
+    private var remainingLineCount: Int {
+        lineCount - 5
+    }
+
     @ViewBuilder
     private var contentView: some View {
-        let segments = SyntaxHighlighter.parseSegments(entry.content)
+        let content = displayContent
+        let segments = SyntaxHighlighter.parseSegments(content)
         let hasCodeBlocks = segments.contains { if case .codeBlock = $0 { return true } else { return false } }
 
-        if hasCodeBlocks {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            if hasCodeBlocks {
                 ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                     switch segment {
                     case .text(let text):
@@ -206,13 +252,19 @@ private struct LogEntryRow: View {
                         HighlightedCodeView(code: code, language: language)
                     }
                 }
+            } else {
+                Text(content)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(textColor)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        } else {
-            Text(entry.content)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(textColor)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+
+            if !isExpanded && isLongEntry {
+                Text("(\(remainingLineCount) more lines)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -223,6 +275,7 @@ private struct LogEntryRow: View {
     }
 
     private var iconName: String {
+        if isPrompt { return "paperplane.fill" }
         switch entry.type {
         case .assistantText:
             return "bubble.left.fill"
@@ -263,6 +316,7 @@ private struct LogEntryRow: View {
     }
 
     private var iconColor: Color {
+        if isPrompt { return .orange }
         switch entry.type {
         case .assistantText:
             return .cyan
@@ -278,6 +332,7 @@ private struct LogEntryRow: View {
     }
 
     private var textColor: Color {
+        if isPrompt { return .orange }
         switch entry.type {
         case .error:
             return .red
@@ -289,6 +344,7 @@ private struct LogEntryRow: View {
     }
 
     private var backgroundColor: Color {
+        if isPrompt { return .orange.opacity(0.05) }
         switch entry.type {
         case .error:
             return .red.opacity(0.05)

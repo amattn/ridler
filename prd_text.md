@@ -222,6 +222,8 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
 | UI-L13 | When the "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content showing pretty-printed JSON in small monospaced dimmed text | P2 |
 | UI-L14 | While log entries are loading from disk, show a `ProgressView("Loading logs...")` in the log panel. If entries are partially loaded, show a small spinner in the log panel header. Once loading completes, transition to the normal log view | P1 |
+| UI-L15 | Log entries longer than 20 lines are collapsed by default with a disclosure triangle. Clicking the triangle expands/collapses the entry. When collapsed, show the first 5 lines with a muted "(N more lines)" indicator. Exception: prompt entries (content prefixed with `"Prompt:"` or `"[agent prompt]"`) default to expanded | P1 |
+| UI-L16 | Prompt log entries (engine prompts starting with `"Prompt:"` and agent prompts starting with `"[agent prompt]"`) are styled with an orange icon (`paperplane.fill`), orange text, and a light orange background — visible in both light and dark mode | P1 |
 
 #### 3.6.8 Status Bar (Bottom)
 
