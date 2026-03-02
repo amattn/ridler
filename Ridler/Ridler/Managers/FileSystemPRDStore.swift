@@ -9,11 +9,12 @@ struct FileSystemPRDStore: PRDStore {
         let fileURL = resolvedDir.appendingPathComponent("ridl.json")
 
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            Self.logger.error("File not found: ridl.json at \(resolvedDir.path)")
-            throw RidlerError.fileNotFound(
-                path: resolvedDir.path,
-                filenames: ["ridl.json"]
-            )
+            // ridl.json is optional — return a minimal project from the directory
+            Self.logger.info("ridl.json not found at \(resolvedDir.path), creating minimal project")
+            let dirName = resolvedDir.lastPathComponent
+            var minimal = PRDProject(name: dirName, directoryURL: resolvedDir)
+            minimal.directoryURL = resolvedDir
+            return minimal
         }
 
         let data: Data
