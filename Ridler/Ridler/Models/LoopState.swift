@@ -21,7 +21,7 @@ enum LoopState: String, Codable, Equatable {
         case .stopped:
             return [.running]
         case .complete:
-            return []
+            return [.ready]
         case .error:
             return [.running]
         }

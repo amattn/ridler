@@ -527,7 +527,13 @@ struct ContentView: View {
             do {
                 let reloaded = try store.loadProject(from: dirURL)
                 var updated = reloaded
-                updated.loopState = openProjects[index].loopState
+                let oldState = openProjects[index].loopState
+                // If project was complete but now has incomplete stories, reset to ready
+                if oldState == .complete && reloaded.iterationDefinitions.contains(where: { !$0.passes }) {
+                    updated.loopState = .ready
+                } else {
+                    updated.loopState = oldState
+                }
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
                 updated.audioNotificationsEnabled = openProjects[index].audioNotificationsEnabled
