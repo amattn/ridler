@@ -7,6 +7,8 @@ struct LoopToolbarView: View {
     var onStop: () -> Void = {}
     var onMaxIterationsChanged: ((Int) -> Void)?
     var onAudioNotificationsChanged: ((Bool) -> Void)?
+    var onPauseAfterStoryChanged: ((Bool) -> Void)?
+    var onPauseAfterMilestoneChanged: ((Bool) -> Void)?
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
 
@@ -48,7 +50,24 @@ struct LoopToolbarView: View {
                 .help("Play sound on completion")
 
             // Pause after story toggle
-            Toggle("Pause after story", isOn: $project.pauseAfterStory)
+            Toggle("Pause after story", isOn: Binding(
+                get: { project.pauseAfterStory },
+                set: { newValue in
+                    project.pauseAfterStory = newValue
+                    onPauseAfterStoryChanged?(newValue)
+                }
+            ))
+                .toggleStyle(.checkbox)
+                .font(.system(size: 11))
+
+            // Pause after milestone toggle
+            Toggle("Pause after milestone", isOn: Binding(
+                get: { project.pauseAfterMilestone },
+                set: { newValue in
+                    project.pauseAfterMilestone = newValue
+                    onPauseAfterMilestoneChanged?(newValue)
+                }
+            ))
                 .toggleStyle(.checkbox)
                 .font(.system(size: 11))
         }

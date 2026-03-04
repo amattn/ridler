@@ -28,6 +28,8 @@ final class RalphLoopEngine: ObservableObject {
     private var projectName: String = ""
     private var directoryURL: URL?
     private var pauseAfterStory = false
+    private var pauseAfterMilestone = false
+    private var milestones: [Milestone]?
     private var audioNotificationsEnabled = true
     private var maxIterations = 0
     private var iterationCount = 0
@@ -64,6 +66,8 @@ final class RalphLoopEngine: ObservableObject {
         self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
+        self.pauseAfterMilestone = project.pauseAfterMilestone
+        self.milestones = project.milestones
         self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
@@ -85,6 +89,8 @@ final class RalphLoopEngine: ObservableObject {
         self.projectName = project.name ?? project.id
         self.directoryURL = project.directoryURL
         self.pauseAfterStory = project.pauseAfterStory
+        self.pauseAfterMilestone = project.pauseAfterMilestone
+        self.milestones = project.milestones
         self.audioNotificationsEnabled = project.audioNotificationsEnabled
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
@@ -119,6 +125,11 @@ final class RalphLoopEngine: ObservableObject {
     /// Updates the pause-after-story setting.
     func updatePauseAfterStory(_ value: Bool) {
         self.pauseAfterStory = value
+    }
+
+    /// Updates the pause-after-milestone setting.
+    func updatePauseAfterMilestone(_ value: Bool) {
+        self.pauseAfterMilestone = value
     }
 
     /// Updates the max iterations setting.
@@ -296,6 +307,14 @@ final class RalphLoopEngine: ObservableObject {
             return
         }
 
+        // Check if we should pause after milestone
+        if pauseAfterMilestone, let milestones, isLastStoryInMilestone(storyID, milestones: milestones) {
+            loopState = .paused
+            onStateChange?(.paused)
+            logSystem("Paused after milestone containing \(storyID)")
+            return
+        }
+
         // Continue to next iteration
         runNextIteration()
     }
@@ -305,6 +324,19 @@ final class RalphLoopEngine: ObservableObject {
             .filter { !$0.passes }
             .sorted { $0.priority < $1.priority }
             .first
+    }
+
+    /// Returns true if the story is the last one in its milestone (i.e. all other stories in that milestone now pass).
+    private func isLastStoryInMilestone(_ storyID: String, milestones: [Milestone]) -> Bool {
+        guard let directoryURL, let project = try? prdStore.loadProject(from: directoryURL) else { return false }
+        for milestone in milestones {
+            guard milestone.storyIDs.contains(storyID) else { continue }
+            let allOthersPass = milestone.storyIDs.allSatisfy { id in
+                id == storyID || (project.iterationDefinitions.first { $0.id == id }?.passes ?? false)
+            }
+            if allOthersPass { return true }
+        }
+        return false
     }
 
     private func markStoryInProgress(_ storyID: String, in project: PRDProject) {

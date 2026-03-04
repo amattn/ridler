@@ -205,7 +205,7 @@ struct SidebarView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 12)
-                Text(milestone.theme ?? milestone.name)
+                Text(milestone.name)
                     .font(.system(size: 12, weight: .semibold))
                 if let version = milestone.version {
                     Text(version)
@@ -224,6 +224,13 @@ struct SidebarView: View {
         .padding(.vertical, 6)
 
         if !isCollapsed {
+            if let theme = milestone.theme {
+                Text(theme)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 2)
+            }
             ForEach(stories) { story in
                 storyRow(story: story)
             }

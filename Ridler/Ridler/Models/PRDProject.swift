@@ -12,6 +12,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
     var iterationCount: Int
 
     var pauseAfterStory: Bool
+    var pauseAfterMilestone: Bool
     var audioNotificationsEnabled: Bool
     var maxIterations: Int
     var loopStartDate: Date?
@@ -46,6 +47,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         loopState: LoopState = .ready,
         iterationCount: Int = 0,
         pauseAfterStory: Bool = false,
+        pauseAfterMilestone: Bool = false,
         audioNotificationsEnabled: Bool = true,
         maxIterations: Int = 0,
         loopStartDate: Date? = nil,
@@ -63,6 +65,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         self.loopState = loopState
         self.iterationCount = iterationCount
         self.pauseAfterStory = pauseAfterStory
+        self.pauseAfterMilestone = pauseAfterMilestone
         self.audioNotificationsEnabled = audioNotificationsEnabled
         self.maxIterations = maxIterations
         self.loopStartDate = loopStartDate
@@ -87,6 +90,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
         loopState = .ready
         iterationCount = 0
         pauseAfterStory = false
+        pauseAfterMilestone = false
         audioNotificationsEnabled = true
         maxIterations = 0
         loopStartDate = nil

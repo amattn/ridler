@@ -63,6 +63,14 @@ struct ContentView: View {
                         onAudioNotificationsChanged: { enabled in
                             let project = openProjects[selectedIndex]
                             loopEngines[project.id]?.updateAudioNotifications(enabled)
+                        },
+                        onPauseAfterStoryChanged: { value in
+                            let project = openProjects[selectedIndex]
+                            loopEngines[project.id]?.updatePauseAfterStory(value)
+                        },
+                        onPauseAfterMilestoneChanged: { value in
+                            let project = openProjects[selectedIndex]
+                            loopEngines[project.id]?.updatePauseAfterMilestone(value)
                         }
                     )
                 }
@@ -536,6 +544,7 @@ struct ContentView: View {
                 }
                 updated.iterationCount = openProjects[index].iterationCount
                 updated.pauseAfterStory = openProjects[index].pauseAfterStory
+                updated.pauseAfterMilestone = openProjects[index].pauseAfterMilestone
                 updated.audioNotificationsEnabled = openProjects[index].audioNotificationsEnabled
                 updated.maxIterations = openProjects[index].maxIterations
                 updated.loopStartDate = openProjects[index].loopStartDate
@@ -571,6 +580,7 @@ struct ContentView: View {
                 let currentState = openProjects[idx].loopState
                 let currentIteration = openProjects[idx].iterationCount
                 let currentPause = openProjects[idx].pauseAfterStory
+                let currentPauseMilestone = openProjects[idx].pauseAfterMilestone
                 let currentAudio = openProjects[idx].audioNotificationsEnabled
                 let currentMax = openProjects[idx].maxIterations
                 let currentStart = openProjects[idx].loopStartDate
@@ -578,6 +588,7 @@ struct ContentView: View {
                 openProjects[idx].loopState = currentState
                 openProjects[idx].iterationCount = currentIteration
                 openProjects[idx].pauseAfterStory = currentPause
+                openProjects[idx].pauseAfterMilestone = currentPauseMilestone
                 openProjects[idx].audioNotificationsEnabled = currentAudio
                 openProjects[idx].maxIterations = currentMax
                 openProjects[idx].loopStartDate = currentStart

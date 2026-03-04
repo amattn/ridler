@@ -170,6 +170,8 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Progress bar at the bottom: filled portion, percentage, and count (e.g., `2/4 stories`)
 - [ ] Clicking a story selects it and shows its detail in the middle pane
 - [ ] If PRD defines milestones, group stories under collapsible milestone headers with summary (e.g., `3/5 stories`)
+- [ ] Milestone header displays the milestone **name** (short ID, e.g., "v0.1"), not the theme
+- [ ] If the milestone has a theme, display it as a secondary label above the first iteration definition inside the collapsible area (collapses together with the stories)
 - [ ] If no milestones, display as flat list
 
 ---
@@ -243,6 +245,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Running→Error: Claude Code fails after retry exhaustion
 - [ ] Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red)
 - [ ] "Pause after story" mode: when enabled, auto-transitions Running→Paused after a story completes
+- [ ] "Pause after milestone" mode: when enabled, auto-transitions Running→Paused after the last story in a milestone completes (only applies when PRD defines milestones)
 - [ ] Unit tests for all valid state transitions and rejection of invalid transitions
 
 ---
@@ -258,6 +261,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Show elapsed time since loop started (format: `Xh Ym Zs`)
 - [ ] Show color-coded state badge
 - [ ] "Pause after story" toggle (checkbox or switch), default off
+- [ ] "Pause after milestone" toggle (checkbox) to the right of "Pause after story", default off; only effective when PRD defines milestones
 
 ---
 
