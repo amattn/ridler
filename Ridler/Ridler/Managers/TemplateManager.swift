@@ -86,8 +86,42 @@ final class TemplateManager {
         projectDirectoryURL: URL,
         context: [String: Any?]
     ) throws -> String {
+        let promptsDir = promptsDirectory(for: projectDirectoryURL)
+        let templatePath = promptsDir.appendingPathComponent("\(templateName).liquid").path
+        logger.info("Rendering template: \(templateName).liquid from \(templatePath)")
+        logger.info("Template context keys: \(formatContextSummary(context))")
         let templateString = try loadTemplate(named: templateName, projectDirectoryURL: projectDirectoryURL)
-        return try renderString(templateString, fileName: "\(templateName).liquid", context: context)
+        let result = try renderString(templateString, fileName: "\(templateName).liquid", context: context)
+        logger.info("Template \(templateName).liquid rendered (\(result.count) chars)")
+        return result
+    }
+
+    /// Formats context dictionary into a human-readable summary for logging.
+    private static func formatContextSummary(_ context: [String: Any?]) -> String {
+        var parts: [String] = []
+        for (key, value) in context.sorted(by: { $0.key < $1.key }) {
+            switch value {
+            case nil:
+                parts.append("\(key)=nil")
+            case let dict as [String: Any?]:
+                let subkeys = dict.keys.sorted().joined(separator: ", ")
+                parts.append("\(key)={\(subkeys)}")
+            case let dict as [String: Any]:
+                let subkeys = dict.keys.sorted().joined(separator: ", ")
+                parts.append("\(key)={\(subkeys)}")
+            case let array as [Any]:
+                parts.append("\(key)=[\(array.count) items]")
+            case let str as String:
+                if str.count > 60 {
+                    parts.append("\(key)=\"\(str.prefix(57))...\"")
+                } else {
+                    parts.append("\(key)=\"\(str)\"")
+                }
+            default:
+                parts.append("\(key)=\(value!)")
+            }
+        }
+        return parts.joined(separator: ", ")
     }
 
     /// Renders a raw template string with the given context.

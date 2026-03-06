@@ -501,6 +501,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Unit tests: render default templates with mock story/project data and verify output matches expected prompt structure
 - [ ] Unit tests: custom templates in `ridl/prompts/` folder are used instead of bundled defaults
 - [ ] Unit tests: malformed template produces a clear error and prevents loop start
+- [ ] Each template render emits log entries visible in the log panel (right pane) and persisted to `ridler.log`, listing the template names and path, a summary of the context keys and values, and the rendered output size
 
 ---
 

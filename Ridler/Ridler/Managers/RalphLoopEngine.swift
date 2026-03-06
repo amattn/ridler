@@ -207,7 +207,12 @@ final class RalphLoopEngine: ObservableObject {
 
         logSystem("Iteration \(iterationCount): Starting \(nextStory.id) — \(nextStory.userStoryTitle)")
 
-        // Build prompt
+        // Build prompt from templates
+        let templateNames = TemplateManager.agentTemplateNames.map { "\($0).liquid" }.joined(separator: ", ")
+        let promptsPath = directoryURL.appendingPathComponent("prompts").path
+        logSystem("Rendering templates: \(templateNames) from \(promptsPath)")
+        logSystem("Template context: story.id=\(nextStory.id), story.priority=\(nextStory.priority), story.acceptance_criteria=[\(nextStory.acceptanceCriteria.count) items], project.universalContext=\(project.universalContext != nil ? "present" : "nil"), progress_content=\(progressContentExists(in: directoryURL) ? "present" : "nil")")
+
         let prompt: String
         do {
             prompt = try buildPrompt(for: nextStory, project: project)
@@ -215,6 +220,7 @@ final class RalphLoopEngine: ObservableObject {
             transitionToError("Template rendering failed: \(error.localizedDescription)")
             return
         }
+        logSystem("Prompt rendered (\(prompt.count) chars) from \(TemplateManager.agentTemplateNames.count) templates")
         logSystem("Prompt:\n\(prompt)")
 
         // Spawn Claude Code process
@@ -369,6 +375,10 @@ final class RalphLoopEngine: ObservableObject {
             updated.iterationDefinitions[index].inProgress = true
         }
         onProjectUpdated?(updated)
+    }
+
+    private func progressContentExists(in directoryURL: URL) -> Bool {
+        FileManager.default.fileExists(atPath: directoryURL.appendingPathComponent("progress.md").path)
     }
 
     private func buildPrompt(for story: IterationDefinition, project: PRDProject) throws -> String {
