@@ -273,7 +273,7 @@ final class RalphLoopEngine: ObservableObject {
         logSystem("Iteration \(iterationCount) completed for \(storyID)")
 
         // Append progress entry for this iteration
-        appendProgress(storyID: storyID, exitCode: result.exitCode)
+        appendIterationLog(storyID: storyID, exitCode: result.exitCode)
 
         // Create git commit for the completed story
         commitStoryChanges(storyID: storyID)
@@ -473,10 +473,10 @@ final class RalphLoopEngine: ObservableObject {
         }
     }
 
-    private func appendProgress(storyID: String, exitCode: Int32) {
+    private func appendIterationLog(storyID: String, exitCode: Int32) {
         guard let directoryURL else { return }
 
-        let progressURL = directoryURL.appendingPathComponent("progress.md")
+        let iterationsURL = directoryURL.appendingPathComponent("iterations.md")
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
         let timestamp = dateFormatter.string(from: Date())
@@ -500,19 +500,19 @@ final class RalphLoopEngine: ObservableObject {
         """
 
         do {
-            if FileManager.default.fileExists(atPath: progressURL.path) {
-                let handle = try FileHandle(forWritingTo: progressURL)
+            if FileManager.default.fileExists(atPath: iterationsURL.path) {
+                let handle = try FileHandle(forWritingTo: iterationsURL)
                 handle.seekToEndOfFile()
                 if let data = entry.data(using: .utf8) {
                     handle.write(data)
                 }
                 handle.closeFile()
             } else {
-                try entry.data(using: .utf8)?.write(to: progressURL, options: .atomic)
+                try entry.data(using: .utf8)?.write(to: iterationsURL, options: .atomic)
             }
-            Self.logger.info("Appended progress entry for \(storyID)")
+            Self.logger.info("Appended iteration log entry for \(storyID)")
         } catch {
-            Self.logger.warning("Failed to append progress for \(storyID): \(error.localizedDescription)")
+            Self.logger.warning("Failed to append iteration log for \(storyID): \(error.localizedDescription)")
         }
     }
 
