@@ -208,7 +208,13 @@ final class RalphLoopEngine: ObservableObject {
         logSystem("Iteration \(iterationCount): Starting \(nextStory.id) — \(nextStory.userStoryTitle)")
 
         // Build prompt
-        let prompt = buildPrompt(for: nextStory, project: project)
+        let prompt: String
+        do {
+            prompt = try buildPrompt(for: nextStory, project: project)
+        } catch {
+            transitionToError("Template rendering failed: \(error.localizedDescription)")
+            return
+        }
         logSystem("Prompt:\n\(prompt)")
 
         // Spawn Claude Code process
@@ -365,7 +371,7 @@ final class RalphLoopEngine: ObservableObject {
         onProjectUpdated?(updated)
     }
 
-    private func buildPrompt(for story: IterationDefinition, project: PRDProject) -> String {
+    private func buildPrompt(for story: IterationDefinition, project: PRDProject) throws -> String {
         // Load progress.md content if it exists
         var progressContent: String? = nil
         if let directoryURL {
@@ -373,27 +379,11 @@ final class RalphLoopEngine: ObservableObject {
             progressContent = try? String(contentsOf: progressURL, encoding: .utf8)
         }
 
-        do {
-            return try TemplateManager.buildAgentPrompt(
-                for: story,
-                project: project,
-                progressContent: progressContent
-            )
-        } catch {
-            // Fall back to a minimal prompt if template rendering fails
-            Self.logger.error("Template rendering failed: \(error.localizedDescription)")
-            logSystem("Warning: Template rendering failed, using minimal prompt: \(error.localizedDescription)")
-            return """
-            Implement story \(story.id): \(story.userStoryTitle)
-
-            \(story.userStoryDescription)
-
-            Acceptance Criteria:
-            \(story.acceptanceCriteria.map { "- \($0)" }.joined(separator: "\n"))
-
-            After completing, reply with: <ridler-complete/>
-            """
-        }
+        return try TemplateManager.buildAgentPrompt(
+            for: story,
+            project: project,
+            progressContent: progressContent
+        )
     }
 
     private func commitStoryChanges(storyID: String) {

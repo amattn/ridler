@@ -54,35 +54,30 @@ final class ClaudeTerminalManager: ObservableObject {
         var arguments = ["claude"]
         var initialInput: String? = nil
 
-        if fileExists {
-            // Interactive mode: launch bare claude, send context as first user message
-            let editPrompt: String
-            if let projectDir = Self.projectDirectory(from: workingDirectory) {
-                editPrompt = (try? TemplateManager.buildEditPrompt(
+        guard let projectDir = Self.projectDirectory(from: workingDirectory) else {
+            Self.logger.error("Could not find project directory from \(workingDirectory.path)")
+            configError = "Could not find project directory containing prd.md"
+            return
+        }
+
+        do {
+            if fileExists {
+                // Interactive mode: launch bare claude, send context as first user message
+                let editPrompt = try TemplateManager.buildEditPrompt(
                     filePath: filePath, fileName: fileName, projectDirectoryURL: projectDir
-                )) ?? "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first."
+                )
+                initialInput = editPrompt + "\n"
             } else {
-                editPrompt = "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first."
-            }
-            initialInput = editPrompt + "\n"
-        } else {
-            // Generation mode: use -p for one-shot execution
-            let prompt: String
-            if let projectDir = Self.projectDirectory(from: workingDirectory) {
-                prompt = (try? TemplateManager.buildCreatePrompt(
+                // Generation mode: use -p for one-shot execution
+                let prompt = try TemplateManager.buildCreatePrompt(
                     filePath: filePath, fileName: fileName, projectDirectoryURL: projectDir
-                )) ?? "The file \(filePath) does not exist yet. Please create it with appropriate initial content."
-            } else {
-                switch fileName {
-                case "ridl.md":
-                    prompt = "The file \(filePath) does not exist yet. Please create ridl.md from the existing prd.md in the same directory. Read prd.md first, then create ridl.md with user stories and acceptance criteria."
-                case "ridl.json":
-                    prompt = "The file \(filePath) does not exist yet. Please create ridl.json from the existing ridl.md or prd.md in the same directory. Read the existing files first, then create ridl.json in the proper format."
-                default:
-                    prompt = "The file \(filePath) does not exist yet. Please create it with appropriate initial content."
-                }
+                )
+                arguments += ["-p", prompt]
             }
-            arguments += ["-p", prompt]
+        } catch {
+            Self.logger.error("Template rendering failed: \(error.localizedDescription)")
+            configError = "Template error: \(error.localizedDescription)"
+            return
         }
 
         let session = SessionConfig(
