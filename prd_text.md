@@ -64,7 +64,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | RL-1 | Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat | P0 |
 | RL-2 | Each iteration invokes Claude Code as a fresh subprocess with `--dangerously-skip-permissions --verbose --output-format stream-json` flags (`--verbose` is required when combining `--output-format stream-json` with `-p`) | P0 |
 | RL-3 | Select the next story by filtering `passes: false`, sorting by `priority` ascending, and picking the first | P0 |
-| RL-4 | Build the prompt from: target story details (ID, title, description, acceptance criteria), embedded agent instructions, and `progress.md` context | P0 |
+| RL-4 | Build the prompt by rendering Liquid templates from the project's `ridl/prompts/` folder with story and project context (see Section 3.10 — Prompt Templates). Context includes: target story details (ID, title, description, acceptance criteria), agent instructions, and `progress.md` content | P0 |
 | RL-5 | Parse Claude's streaming JSON output in real-time and display in the log view | P0 |
 | RL-6 | On story completion, set `passes: true` and `inProgress: false` in `ridl.json` | P0 |
 | RL-7 | On all stories complete, transition to the Complete state and play an audio notification | P0 |
@@ -100,6 +100,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | LS-7 | Paused/Stopped/Error → Running: User presses Start to resume | P0 |
 | LS-8 | Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red) | P0 |
 | LS-9 | Running → Paused: When "Pause after story" is enabled, the loop automatically transitions to Paused after a story completes (same as a manual pause) | P0 |
+| LS-10 | Running → Paused: When "Pause after milestone" is enabled and the PRD defines milestones, the loop automatically transitions to Paused after the last story in a milestone completes | P0 |
 
 ### 3.5 Git Integration
 
@@ -166,6 +167,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-T4 | Show color-coded state badge: `[Ready]`, `[Running]`, `[Paused]`, `[Stopped]`, `[Complete]`, `[Error]` | P0 |
 | UI-T5 | Display +/- stepper control to adjust max iterations at runtime | P1 |
 | UI-T6 | Display a toggle (checkbox or switch) labeled "Pause after story" that, when enabled, automatically pauses the loop after each story completes. Default: off | P0 |
+| UI-T7 | Display a "Pause after milestone" toggle (checkbox) to the right of "Pause after story". Default: off. Only effective when PRD defines milestones | P0 |
 
 #### 3.6.4 PRD File Browser (Left Pane, above Stories)
 
@@ -176,6 +178,8 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-FB3 | If `ridl.md` or `ridl.json` does not yet exist on disk, the corresponding row is still selectable but visually distinguished (dimmed text, badge, or "(not yet created)" note) to indicate the file is missing. The visual indicator is removed once the file is created (detected via file watcher) | P1 |
 | UI-FB4 | A visual separator (divider line) separates the file rows from the stories list below | P0 |
 | UI-FB5 | File rows remain visible and selectable regardless of loop state (Ready, Running, Paused, etc.) | P0 |
+| UI-FB6 | Below the PRD files, a collapsible "Prompt Templates" header lists `.liquid` files from `ridl/prompts/` (e.g., `agent_instructions.liquid`, `story_context.liquid`, `progress_report.liquid`). Prompt template rows show a template icon and filename. If `ridl/prompts/` does not exist yet, the section shows "(defaults — run once to generate)" | P0 |
+| UI-FB7 | Selecting a prompt template file shows its content in the middle pane and enables editing via Claude terminal in the right pane (same behavior as PRD files) | P0 |
 
 #### 3.6.5 Stories Panel (Left Pane)
 
@@ -187,7 +191,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-S4 | Show a progress bar at the bottom: filled portion, percentage, and count (e.g., `2/4 stories`) | P0 |
 | UI-S5 | Clicking a story selects it and shows its detail in the middle pane | P0 |
 | UI-S6 | Show a yellow warning banner if a story has `inProgress: true` from a previously interrupted session | P1 |
-| UI-S7 | If the PRD defines milestones, group stories under collapsible milestone headers. Each header shows the milestone name and a summary (e.g., `3/5 stories`). Clicking a header toggles the group open/closed. All groups are expanded by default | P0 |
+| UI-S7 | If the PRD defines milestones, group stories under collapsible milestone headers. Each header shows the milestone **name** (short ID, e.g., "v0.1"), not the theme. If the milestone has a theme, display it as a secondary label above the first story inside the collapsible area (collapses together with the stories). Each header shows a summary (e.g., `3/5 stories`). Clicking a header toggles the group open/closed. All groups are expanded by default | P0 |
 | UI-S8 | If the PRD has no milestones, display stories as a flat list (no grouping) | P0 |
 
 #### 3.6.6 Story Detail Panel (Middle Pane)
@@ -216,7 +220,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | UI-L6 | Allow manual scrolling; disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom | P0 |
 | UI-L7 | Show an indicator for auto-scroll vs. manual-scroll mode | P1 |
 | UI-L8 | Show story transition events, iteration starts, and completion messages in the log | P0 |
-| UI-L9 | When a PRD file row is selected, the right pane switches from log view to an interactive Claude Code terminal session using a terminal emulator library (e.g., SwiftTerm) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
+| UI-L9 | When a PRD file row or prompt template row is selected, the right pane switches from log view to an interactive Claude Code terminal session using a terminal emulator library (e.g., SwiftTerm) for full TUI rendering (colors, cursor positioning, selection menus, box drawing). If the file exists, Claude is launched with the file path as the initial prompt context. If the file does not yet exist, Claude is launched with an appropriate prompt to create that file (e.g., "Create ridl.md from the existing prd.md"). For prompt templates, Claude is launched with knowledge of available Liquid variables (story, project, progress_content). The terminal environment sets `TERM=xterm-256color` and `COLORTERM=truecolor` | P0 |
 | UI-L10 | While the Ralph loop is running, the Claude terminal pane is disabled and displays a message: "Pause the loop to edit this file" | P0 |
 | UI-L11 | When the user switches back to a story row, the right pane visually reverts to the log view, but the terminal session remains alive in the background (rendered in a ZStack with opacity toggle so the terminal NSView stays mounted) | P0 |
 | UI-L12 | If the user starts the loop while a Claude editing session is alive, the session is terminated (with confirmation dialog if mid-conversation). Closing or deleting a PRD tab also terminates its terminal session | P1 |
@@ -262,6 +266,19 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | KB-7 | `⌘L` — Focus Log Panel | P1 |
 | KB-8 | `⌘E` — Edit current PRD (launch Claude Code) | P1 |
 | KB-9 | Standard macOS menu bar with File, Edit, View, PRD, Window, Help menus | P0 |
+
+### 3.10 Prompt Templates (Liquid)
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| PT-1 | Add a Swift Liquid templating library as a dependency (e.g., [nicklama/Liqid](https://github.com/nicklama/Liqid) or equivalent) | P0 |
+| PT-2 | Default prompt templates bundled in the app as resources: **Agent loop templates** (`agent_instructions.liquid`, `story_context.liquid`, `progress_report.liquid`) used by `RalphLoopEngine.buildPrompt`, and **Interactive editing templates** (`edit_file.liquid`, `create_file.liquid`) used by `ClaudeTerminalManager`. `create_file.liquid` uses `{% if %}` branches on `file_name` to provide file-specific instructions | P0 |
+| PT-3 | On first loop start for a project, if no templates exist in `ridl/prompts/`, create the directory and copy the bundled defaults there | P0 |
+| PT-4 | `buildPrompt(for:project:)` reads `.liquid` files from the project's `ridl/prompts/` folder and renders them with a context dictionary containing: `story.id`, `story.title`, `story.description`, `story.priority`, `story.acceptance_criteria`, `story.prd_references` (optional), `project.universal_context.*` fields (optional), `progress_content`, `file_path`, `file_name`, `file_exists` (for editing templates) | P0 |
+| PT-5 | If a template file is missing from `ridl/prompts/`, copy the bundled default before rendering | P0 |
+| PT-6 | If a template fails to parse: display an inline error banner in the middle pane (file name, line number, parse error), show a red error icon next to the template filename in the sidebar, and transition loop to Error state | P0 |
+| PT-7 | Templates support standard Liquid features: variables (`{{ story.id }}`), conditionals (`{% if %}` / `{% endif %}`), loops (`{% for %}` / `{% endfor %}`), filters | P0 |
+| PT-8 | Existing hardcoded prompt strings in `RalphLoopEngine.buildPrompt` and `ClaudeTerminalManager.start` are removed and replaced by template rendering | P0 |
 
 ---
 
@@ -342,6 +359,7 @@ The app reads PRDs (markdown + JSON), breaks them into iteration definitions, an
 | File watching | FSEvents / DispatchSource | Monitor each opened PRD's directory for external changes |
 | Git operations | `Process` calling `git` CLI | Branch detection, commit creation |
 | Terminal emulation | SwiftTerm (SPM, 1.0.0+) | `LocalProcessTerminalView` wrapping for Claude Code interactive sessions; handles colors, cursor positioning, box drawing natively |
+| Liquid templating | Liqid or equivalent (SPM) | Render `.liquid` prompt templates with story/project context variables |
 | Markdown rendering | MarkdownUI (SPM, 2.0.0+) | Full block-level markdown rendering (headers, tables, code blocks, lists) for prd.md and ridl.md in the detail pane |
 | Syntax highlighting | Native or swift-syntax | Code block highlighting in log view |
 | Audio playback | AVFoundation `AVAudioPlayer` | Completion notification sound |
@@ -498,8 +516,8 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 - Open PRD via folder or .md file from any location on disk
 - Create new PRD (ridl/ folder convention with prd.md)
 - PRD tab bar with state indicators
-- PRD file browser (prd.md, ridl.md, ridl.json rows)
-- Edit PRD files via Claude Code terminal in right pane
+- PRD file browser (prd.md, ridl.md, ridl.json rows, prompt templates)
+- Edit PRD files and prompt templates via Claude Code terminal in right pane
 - File watcher for external PRD changes
 - Empty state with Open/New PRD buttons
 - Error alerts with descriptive messages and copy-to-clipboard for all open/load failures
@@ -509,8 +527,9 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 - Display stories list and story detail
 - Start/Pause/Stop loop controls
 - Ralph loop execution (single PRD)
+- Liquid prompt templates stored per project (`ridl/prompts/`)
 - Claude Code subprocess management with streaming JSON parsing
-- Log view with streaming output
+- Log view with streaming output and NDJSON persistence (`ridler.log`)
 - Git commit per story
 - Protected branch detection and warning dialog
 
@@ -544,7 +563,7 @@ When the "Debug mode" toggle is enabled in Settings, additional diagnostic infor
 | 3 | Should settings be in a dedicated Settings window? | **Yes.** A dedicated macOS Settings/Preferences window (`⌘,`) for app-wide configuration. |
 | 4 | Should the app store any state outside the PRD's directory? | **Yes — app-wide preferences.** Open Recent, audio settings, window state, and defaults are stored in the app's preferences file. PRD-specific state (ridl.json, progress.md, ridler.log) stays alongside the PRD file. |
 | 5 | Should the responsive layout from the TUI (stacked vs. side-by-side) be replicated? | **No.** SwiftUI's NavigationSplitView handles window resizing natively. The sidebar collapses automatically on narrow windows. |
-| 6 | Should the app auto-retry when Claude Code crashes? | **No.** Auto-retry on crash was considered and removed. On process failure the engine transitions directly to Error state. Users can manually resume via Start/Resume. |
+| 6 | Should the app auto-retry when Claude Code crashes? | **Yes, optionally.** Auto-retry is supported but disabled by default (toggle in Settings). After retry exhaustion, the engine transitions to Error state. Users can always manually resume via Start/Resume. |
 
 ## 11. Open Questions
 

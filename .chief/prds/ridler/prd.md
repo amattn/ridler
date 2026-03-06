@@ -4,7 +4,7 @@
 
 Ridler is a native macOS SwiftUI application (macOS 14+, Apple Silicon only) that transforms Product Requirements Documents into working code by orchestrating Claude Code in an autonomous loop. It is a feature-complete native equivalent of [minicodemonkey/chief](https://github.com/minicodemonkey/chief), replacing the terminal-based Bubble Tea TUI with a native SwiftUI interface.
 
-The app reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file.
+The app reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file. Prompt templates use the Liquid templating format and are stored per-project in the `ridl/` folder, allowing customization without code changes.
 
 **Key Design Principles:** Native-first SwiftUI, feature parity with Chief CLI, zero configuration (PRD state lives alongside PRD files), non-blocking parallel execution, transparent real-time streaming.
 
@@ -154,6 +154,9 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Each row shows a file-type icon and filename
 - [ ] Selecting a file row deselects the currently selected story (mutual exclusion)
 - [ ] If `ridl.md` or `ridl.json` does not exist on disk, the row is visually distinguished (dimmed or "(not yet created)" note)
+- [ ] Below the PRD files, a collapsible "Prompt Templates" header lists `.liquid` files from `ridl/prompts/` (e.g., `prompt.liquid`, `story.liquid`, `progress_report.liquid`)
+- [ ] Prompt template rows show a template icon and filename; if `ridl/prompts/` does not exist yet, the section shows "(defaults — run once to generate)"
+- [ ] Selecting a prompt template file shows its content in the middle pane (same behavior as PRD files)
 - [ ] A visual divider separates file rows from the stories list below
 - [ ] File rows remain visible and selectable regardless of loop state
 
@@ -293,6 +296,8 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Handle partial reads and buffer boundaries correctly
 - [ ] Detect the `<ridler-complete/>` signal in Claude's output
 - [ ] Streaming latency < 100ms from Claude output to parsed entry
+- [ ] Parse all Claude Code `stream-json` message variants correctly: nested `message.content[]` arrays (text, tool_use, tool_result), `type="user"` messages with tool results (string, array, `is_error` with XML stripped), `type="system"` with `subtype="init"` (extract model/cwd/version), and agent sub-prompts (user text blocks with `parent_tool_use_id`). Both flat and nested formats must produce human-readable log entries
+- [ ] Store the raw JSON line on each parsed `LogEntry` (`rawJSON: String?`, nil for system-generated entries) for verbose/debug display
 - [ ] Unit tests with captured real Claude output and malformed JSON
 
 ---
@@ -308,6 +313,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Auto-scroll to follow new output while loop is running
 - [ ] Manual scrolling: disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom
 - [ ] Show story transition events, iteration starts, completion messages in the log
+- [ ] Persist all log entries to `ridler.log` as newline-delimited JSON (NDJSON). Claude Code output lines have `ridler_story_id` and `ridler_timestamp` injected. System-generated entries serialized with `ridler_type: "system"`. The `ridler_` prefix avoids conflicts with Claude Code's own fields
+- [ ] On PRD open, load existing log entries from `ridler.log` on a background thread without blocking the main UI thread
+- [ ] When "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content
+- [ ] While log entries are loading from disk, show a `ProgressView("Loading logs...")` in the log panel
+- [ ] Log entries longer than 20 lines are collapsed by default with a disclosure triangle; when collapsed, show the first 5 lines with a muted "(N more lines)" indicator
+- [ ] Prompt log entries (engine prompts starting with "Prompt:" and agent prompts starting with "[agent prompt]") are styled with an orange icon, orange text, and a light orange background
 
 ---
 
@@ -318,7 +329,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 **Acceptance Criteria:**
 - [ ] Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat
 - [ ] Select next story by filtering `passes: false`, sorting by `priority` ascending, picking the first
-- [ ] Build prompt from: target story details (ID, title, description, acceptance criteria), embedded agent instructions, and `progress.md` context
+- [ ] Build prompt by rendering Liquid templates from the `ridl/` folder with story and project context (see US-045)
 - [ ] Each iteration invokes Claude Code as a fresh subprocess
 - [ ] On story completion, set `passes: true` and `inProgress: false` in `ridl.json`
 - [ ] On all stories complete, transition to Complete state and play audio notification
@@ -459,6 +470,40 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ---
 
+### US-045: Liquid prompt templates stored per project
+**Priority:** 45
+**Description:** As a developer or power user, I want agent prompt templates stored as Liquid files in each project's `ridl/` folder so that I can customize agent behavior per project without modifying app code.
+
+**Acceptance Criteria:**
+- [ ] Add a Swift Liquid templating library as a dependency (e.g., [nicklama/Liqid](https://github.com/nicklama/Liqid) or equivalent)
+- [ ] Default prompt templates bundled in the app as resources:
+  - **Agent loop templates** (used by `RalphLoopEngine.buildPrompt`):
+    - `agent_instructions.liquid` — main agent instructions (task steps, quality requirements, stop condition)
+    - `story_context.liquid` — target story details (ID, title, description, acceptance criteria, PRD references, universal context)
+    - `progress_report.liquid` — progress.md append format
+  - **Interactive editing templates** (used by `ClaudeTerminalManager`):
+    - `edit_file.liquid` — prompt for editing an existing PRD or template file
+    - `create_file.liquid` — prompt for creating a missing file; uses `{% if %}` branches on `file_name` to provide file-specific instructions (e.g., `ridl.md` reads from `prd.md`, `ridl.json` reads from `ridl.md` or `prd.md`, all others get generic instructions)
+- [ ] On first loop start for a project, if no templates exist in `ridl/prompts/`, create the directory and copy the bundled defaults there
+- [ ] `buildPrompt(for:project:)` reads `.liquid` files from the project's `ridl/prompts/` folder and renders them with a context dictionary containing:
+  - `story.id`, `story.title`, `story.description`, `story.priority`, `story.acceptance_criteria`
+  - `story.prd_references` (optional)
+  - `project.universal_context.non_functional_requirements` (optional)
+  - `project.universal_context.developer_experience` (optional)
+  - `project.universal_context.technical_architecture` (optional)
+  - `progress_content` (contents of `progress.md` if it exists)
+  - `file_path`, `file_name`, `file_exists` (for interactive editing templates)
+- [ ] If a template file is missing, copy the bundled default into `ridl/prompts/` before rendering
+- [ ] If a template fails to parse: display an inline error banner above the template preview in the middle pane showing the file name, line number, and parse error message; show a red error icon next to the template filename in the sidebar; transition loop to Error state and prevent running until the template is fixed
+- [ ] Templates support standard Liquid features: variables (`{{ story.id }}`), conditionals (`{% if %}` / `{% endif %}`), loops (`{% for %}` / `{% endfor %}`), filters
+- [ ] Existing hardcoded prompt strings in `RalphLoopEngine.buildPrompt` are removed and replaced by template rendering
+- [ ] Existing hardcoded prompt strings in `ClaudeTerminalManager.start` are removed and replaced by template rendering
+- [ ] Unit tests: render default templates with mock story/project data and verify output matches expected prompt structure
+- [ ] Unit tests: custom templates in `ridl/prompts/` folder are used instead of bundled defaults
+- [ ] Unit tests: malformed template produces a clear error and prevents loop start
+
+---
+
 ### Milestone: v0.4 — Release Ready
 
 ---
@@ -521,6 +566,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Auto-retry on crash toggle (default: off)
 - [ ] Verbose log toggle (default: off) — show raw Claude JSON in log view
 - [ ] Debug mode toggle (default: off)
+- [ ] Claude Config Dir setting (directory path, default empty/system default) — custom `CLAUDE_CONFIG_DIR` path passed to Claude Code subprocesses; validated on save
 - [ ] Settings persisted via UserDefaults
 
 ---
@@ -549,14 +595,15 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ---
 
-### US-040: Claude Code terminal for PRD editing
+### US-040: Claude Code terminal for PRD and template editing
 **Priority:** 40
-**Description:** As a user, I want to edit PRD files via an interactive Claude Code session so that I can author and modify PRDs without leaving Ridler.
+**Description:** As a user, I want to edit PRD files and prompt templates via an interactive Claude Code session so that I can author and modify project configuration without leaving Ridler.
 
 **Acceptance Criteria:**
-- [ ] When a PRD file row is selected, right pane switches to an interactive Claude Code terminal
+- [ ] When a PRD file row or prompt template row is selected in the sidebar, right pane switches to an interactive Claude Code terminal
 - [ ] If the file exists, Claude is launched with the file path as context
 - [ ] If the file does not exist, Claude is launched with a prompt to create it (e.g., "Create ridl.md from the existing prd.md")
+- [ ] For prompt templates, Claude is launched with the template file path and knowledge of available Liquid variables (story, project, progress_content)
 - [ ] While the Ralph loop is running, the Claude terminal pane is disabled with message: "Pause the loop to edit this file"
 - [ ] Switching back to a story row reverts the right pane to log view
 - [ ] If a Claude session is active and user starts the loop, the session is terminated (with confirmation dialog if mid-conversation)

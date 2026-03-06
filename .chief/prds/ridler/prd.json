@@ -154,6 +154,8 @@
         "Each row shows a file-type icon and filename",
         "Selecting a file row deselects the currently selected story (mutual exclusion)",
         "If ridl.md or ridl.json does not exist on disk, the row is visually distinguished (dimmed or \"(not yet created)\" note)",
+        "Below the PRD files, a collapsible \"Prompt Templates\" header lists .liquid files from ridl/prompts/ (e.g., agent_instructions.liquid, story_context.liquid, progress_report.liquid). If ridl/prompts/ does not exist yet, the section shows \"(defaults — run once to generate)\"",
+        "Selecting a prompt template file shows its content in the middle pane (same behavior as PRD files)",
         "A visual divider separates file rows from the stories list below",
         "File rows remain visible and selectable regardless of loop state"
       ],
@@ -172,6 +174,8 @@
         "Progress bar at the bottom: filled portion, percentage, and count (e.g., 2/4 stories)",
         "Clicking a story selects it and shows its detail in the middle pane",
         "If PRD defines milestones, group stories under collapsible milestone headers with summary (e.g., 3/5 stories)",
+        "Milestone header displays the milestone name (short ID, e.g., \"v0.1\"), not the theme",
+        "If the milestone has a theme, display it as a secondary label above the first iteration definition inside the collapsible area (collapses together with the stories)",
         "If no milestones, display as flat list"
       ],
       "priority": 11,
@@ -251,6 +255,7 @@
         "Running→Error: Claude Code fails after retry exhaustion",
         "Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red)",
         "\"Pause after story\" mode: when enabled, auto-transitions Running→Paused after a story completes",
+        "\"Pause after milestone\" mode: when enabled, auto-transitions Running→Paused after the last story in a milestone completes (only applies when PRD defines milestones)",
         "Unit tests for all valid state transitions and rejection of invalid transitions"
       ],
       "priority": 16,
@@ -267,7 +272,8 @@
         "Show iteration counter: current iteration / max iterations",
         "Show elapsed time since loop started (format: Xh Ym Zs)",
         "Show color-coded state badge",
-        "\"Pause after story\" toggle (checkbox or switch), default off"
+        "\"Pause after story\" toggle (checkbox or switch), default off",
+        "\"Pause after milestone\" toggle (checkbox) to the right of \"Pause after story\", default off; only effective when PRD defines milestones"
       ],
       "priority": 17,
       "passes": true,
@@ -303,6 +309,8 @@
         "Handle partial reads and buffer boundaries correctly",
         "Detect the \u003cridler-complete/\u003e signal in Claude's output",
         "Streaming latency \u003c 100ms from Claude output to parsed entry",
+        "Parse all Claude Code stream-json message variants correctly: nested message.content[] arrays (text, tool_use, tool_result), type=user messages with tool results (string, array, is_error with XML stripped), type=system with subtype=init (extract model/cwd/version), and agent sub-prompts. Both flat and nested formats must produce human-readable log entries",
+        "Store the raw JSON line on each parsed LogEntry (rawJSON: String?, nil for system-generated entries) for verbose/debug display",
         "Unit tests with captured real Claude output and malformed JSON"
       ],
       "priority": 19,
@@ -319,7 +327,13 @@
         "Tool call entries show icons per tool type (Read, Edit, Write, Bash, etc.)",
         "Auto-scroll to follow new output while loop is running",
         "Manual scrolling: disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom",
-        "Show story transition events, iteration starts, completion messages in the log"
+        "Show story transition events, iteration starts, completion messages in the log",
+        "Persist all log entries to ridler.log as newline-delimited JSON (NDJSON). Claude Code output lines have ridler_story_id and ridler_timestamp injected. System-generated entries serialized with ridler_type: system. The ridler_ prefix avoids conflicts with Claude Code's own fields",
+        "On PRD open, load existing log entries from ridler.log on a background thread without blocking the main UI thread",
+        "When Verbose log setting is enabled and a log entry has rawJSON, display a collapsible Raw JSON disclosure below the parsed content",
+        "While log entries are loading from disk, show a ProgressView in the log panel",
+        "Log entries longer than 20 lines are collapsed by default with a disclosure triangle; when collapsed, show the first 5 lines with a muted (N more lines) indicator",
+        "Prompt log entries (engine prompts starting with Prompt: and agent prompts starting with [agent prompt]) are styled with an orange icon, orange text, and a light orange background"
       ],
       "priority": 20,
       "passes": true,
@@ -332,7 +346,7 @@
       "acceptanceCriteria": [
         "Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat",
         "Select next story by filtering passes: false, sorting by priority ascending, picking the first",
-        "Build prompt from: target story details (ID, title, description, acceptance criteria), embedded agent instructions, and progress.md context",
+        "Build prompt by rendering Liquid templates from the ridl/prompts/ folder with story and project context (see US-045)",
         "Each iteration invokes Claude Code as a fresh subprocess",
         "On story completion, set passes: true and inProgress: false in ridl.json",
         "On all stories complete, transition to Complete state and play audio notification",
@@ -559,6 +573,7 @@
         "Auto-retry on crash toggle (default: off)",
         "Verbose log toggle (default: off) — show raw Claude JSON in log view",
         "Debug mode toggle (default: off)",
+        "Claude Config Dir setting (directory path, default empty/system default) — custom CLAUDE_CONFIG_DIR path passed to Claude Code subprocesses; validated on save",
         "Settings persisted via UserDefaults"
       ],
       "priority": 37,
@@ -595,12 +610,13 @@
     },
     {
       "id": "US-040",
-      "title": "Claude Code terminal for PRD editing",
-      "description": "As a user, I want to edit PRD files via an interactive Claude Code session so that I can author and modify PRDs without leaving Ridler.",
+      "title": "Claude Code terminal for PRD and template editing",
+      "description": "As a user, I want to edit PRD files and prompt templates via an interactive Claude Code session so that I can author and modify project configuration without leaving Ridler.",
       "acceptanceCriteria": [
-        "When a PRD file row is selected, right pane switches to an interactive Claude Code terminal",
+        "When a PRD file row or prompt template row is selected in the sidebar, right pane switches to an interactive Claude Code terminal",
         "If the file exists, Claude is launched with the file path as context",
         "If the file does not exist, Claude is launched with a prompt to create it (e.g., \"Create ridl.md from the existing prd.md\")",
+        "For prompt templates, Claude is launched with the template file path and knowledge of available Liquid variables (story, project, progress_content)",
         "While the Ralph loop is running, the Claude terminal pane is disabled with message: \"Pause the loop to edit this file\"",
         "Switching back to a story row reverts the right pane to log view",
         "If a Claude session is active and user starts the loop, the session is terminated (with confirmation dialog if mid-conversation)"
@@ -659,6 +675,27 @@
       ],
       "priority": 44,
       "passes": true,
+      "inProgress": false
+    },
+    {
+      "id": "US-045",
+      "title": "Liquid prompt templates stored per project",
+      "description": "As a developer or power user, I want agent prompt templates stored as Liquid files in each project's ridl/ folder so that I can customize agent behavior per project without modifying app code.",
+      "acceptanceCriteria": [
+        "Add a Swift Liquid templating library as a dependency (e.g., nicklama/Liqid or equivalent)",
+        "Default prompt templates bundled in the app as resources: agent_instructions.liquid, story_context.liquid, progress_report.liquid (used by RalphLoopEngine.buildPrompt), and edit_file.liquid, create_file.liquid (used by ClaudeTerminalManager)",
+        "On first loop start for a project, if no templates exist in ridl/prompts/, create the directory and copy the bundled defaults there",
+        "buildPrompt(for:project:) reads .liquid files from the project's ridl/prompts/ folder and renders them with a context dictionary containing: story.id, story.title, story.description, story.priority, story.acceptance_criteria, story.prd_references (optional), project.universal_context fields (optional), progress_content, file_path, file_name, file_exists (for editing templates)",
+        "If a template file is missing, copy the bundled default into ridl/prompts/ before rendering",
+        "If a template fails to parse: display an inline error banner above the template preview in the middle pane showing the file name, line number, and parse error message; show a red error icon next to the template filename in the sidebar; transition loop to Error state and prevent running until the template is fixed",
+        "Templates support standard Liquid features: variables ({{ story.id }}), conditionals ({% if %} / {% endif %}), loops ({% for %} / {% endfor %}), filters",
+        "Existing hardcoded prompt strings in RalphLoopEngine.buildPrompt and ClaudeTerminalManager.start are removed and replaced by template rendering",
+        "Unit tests: render default templates with mock story/project data and verify output matches expected prompt structure",
+        "Unit tests: custom templates in ridl/prompts/ folder are used instead of bundled defaults",
+        "Unit tests: malformed template produces a clear error and prevents loop start"
+      ],
+      "priority": 45,
+      "passes": false,
       "inProgress": false
     }
   ]
