@@ -75,6 +75,23 @@ final class RalphLoopEngine: ObservableObject {
         self.completionDetected = false
         self.currentStoryID = nil
 
+        // Ensure default prompt templates exist in the project's prompts directory
+        if let directoryURL = project.directoryURL {
+            do {
+                try TemplateManager.ensureTemplatesExist(in: directoryURL)
+            } catch {
+                transitionToError("Failed to initialize prompt templates: \(error.localizedDescription)")
+                return
+            }
+
+            // Validate all templates before starting
+            let templateErrors = TemplateManager.validateAllTemplates(in: directoryURL)
+            if let firstError = templateErrors.values.first {
+                transitionToError("Template syntax error: \(firstError.errorDescription ?? firstError.message)")
+                return
+            }
+        }
+
         onStateChange?(.running)
         logSystem("Loop started")
 
@@ -349,106 +366,34 @@ final class RalphLoopEngine: ObservableObject {
     }
 
     private func buildPrompt(for story: IterationDefinition, project: PRDProject) -> String {
-        var prompt = """
-        # Chief Agent Instructions
-
-        You are an autonomous coding agent working on a software project.
-
-        ## Your Task
-
-        1. Read the PRD at `ridl/ridl.json`
-        2. Read `progress.md` if it exists (check Codebase Patterns section first)
-        3. Pick the **highest priority** iteration definition where `passes: false` -- After determining which story to work on, output exact story id, e.g.: <ralph-status>\(story.id)</ralph-status>
-        4. Implement that single iteration definition
-        5. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-        6. If checks pass, commit ALL changes with message: `feature: [\(story.id)] - \(story.userStoryTitle)`
-        7. Append your progress to `progress.md`
-        8. **LAST STEP — do this after everything else is done:** Update `ridl/ridl.json` to set `"passes": true` for the completed iteration definition. This MUST be the final action you take, outside of any cleanup tasks or final logging for debug or non-user facing purposes.
-
-        ## Target Story
-
-        - **ID:** \(story.id)
-        - **Title:** \(story.userStoryTitle)
-        - **Priority:** \(story.priority)
-        - **Description:** \(story.userStoryDescription)
-
-        ### Acceptance Criteria
-        """
-
-        for criterion in story.acceptanceCriteria {
-            prompt += "\n- \(criterion)"
-        }
-
-        // Add prdReferences if present
-        if let refs = story.prdReferences, !refs.isEmpty {
-            prompt += "\n\n### PRD References"
-            for ref in refs {
-                prompt += "\n- \(ref)"
-            }
-        }
-
-        // Add universalContext if present
-        if let ctx = project.universalContext {
-            prompt += "\n\n## Universal Context"
-            if let nfr = ctx.nonFunctionalRequirements, !nfr.isEmpty {
-                prompt += "\n\n### Non-Functional Requirements"
-                for item in nfr {
-                    prompt += "\n- \(item)"
-                }
-            }
-            if let devExp = ctx.developerExperience, !devExp.isEmpty {
-                prompt += "\n\n### Developer Experience"
-                for item in devExp {
-                    prompt += "\n- \(item)"
-                }
-            }
-            if let techArch = ctx.technicalArchitecture, !techArch.isEmpty {
-                prompt += "\n\n### Technical Architecture"
-                for item in techArch {
-                    prompt += "\n- \(item)"
-                }
-            }
-        }
-
-        prompt += """
-
-
-        ## Progress Report Format
-
-        APPEND to progress.md (never replace, always append):
-        ```
-        ## [Date/Time] - [\(story.id)]
-        - What was implemented
-        - Files changed
-        - **Learnings for future iterations:**
-          - Patterns discovered
-          - Gotchas encountered
-          - Useful context
-        ---
-        ```
-
-        ## Quality Requirements
-
-        - ALL commits must pass your project's quality checks (typecheck, lint, test)
-        - Do NOT commit broken code
-        - Keep changes focused and minimal
-        - Follow existing code patterns
-
-        ## Stop Condition
-
-        After completing the user story, reply with:
-        <ridler-complete/>
-        """
-
-        // Include progress.md context if it exists
+        // Load progress.md content if it exists
+        var progressContent: String? = nil
         if let directoryURL {
             let progressURL = directoryURL.appendingPathComponent("progress.md")
-            if let progressContent = try? String(contentsOf: progressURL, encoding: .utf8) {
-                prompt += "\n\n## Previous Progress\n\n\(progressContent)"
-            }
+            progressContent = try? String(contentsOf: progressURL, encoding: .utf8)
         }
 
-        return prompt
+        do {
+            return try TemplateManager.buildAgentPrompt(
+                for: story,
+                project: project,
+                progressContent: progressContent
+            )
+        } catch {
+            // Fall back to a minimal prompt if template rendering fails
+            Self.logger.error("Template rendering failed: \(error.localizedDescription)")
+            logSystem("Warning: Template rendering failed, using minimal prompt: \(error.localizedDescription)")
+            return """
+            Implement story \(story.id): \(story.userStoryTitle)
+
+            \(story.userStoryDescription)
+
+            Acceptance Criteria:
+            \(story.acceptanceCriteria.map { "- \($0)" }.joined(separator: "\n"))
+
+            After completing, reply with: <ridler-complete/>
+            """
+        }
     }
 
     private func commitStoryChanges(storyID: String) {

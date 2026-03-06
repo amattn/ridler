@@ -6,6 +6,7 @@ struct SidebarView: View {
     var onResume: (() -> Void)?
 
     @State private var isFileSectionExpanded = true
+    @State private var isTemplateSectionExpanded = true
     @State private var collapsedMilestones: Set<String> = []
     @State private var interruptedWarningDismissed = false
 
@@ -61,6 +62,8 @@ struct SidebarView: View {
             ForEach(PRDFileName.allCases, id: \.self) { file in
                 fileRow(file: file, project: project)
             }
+
+            promptTemplatesSection(project: project)
         }
     }
 
@@ -96,6 +99,86 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Prompt Templates Section
+
+    @ViewBuilder
+    private func promptTemplatesSection(project: PRDProject) -> some View {
+        Button {
+            withAnimation {
+                isTemplateSectionExpanded.toggle()
+            }
+        } label: {
+            HStack {
+                Image(systemName: isTemplateSectionExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 12)
+                Text("Prompt Templates")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal)
+        .padding(.vertical, 4)
+
+        if isTemplateSectionExpanded {
+            let templates = templateFiles(for: project)
+            if templates.isEmpty {
+                Text("(defaults \u{2014} run once to generate)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 2)
+            } else {
+                ForEach(templates, id: \.self) { name in
+                    templateRow(name: name, project: project)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func templateRow(name: String, project: PRDProject) -> some View {
+        let isSelected = selection == .promptTemplate(name)
+        let hasError = templateHasError(name: name, project: project)
+
+        Button {
+            selection = .promptTemplate(name)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: hasError ? "exclamationmark.triangle.fill" : "doc.text.below.ecg")
+                    .font(.system(size: 13))
+                    .foregroundStyle(hasError ? .red : .orange)
+                    .frame(width: 18)
+
+                Text(name)
+                    .font(.system(size: 13))
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 4)
+            .background(isSelected ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.3) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func templateHasError(name: String, project: PRDProject) -> Bool {
+        guard let dirURL = project.directoryURL else { return false }
+        let fileURL = dirURL.appendingPathComponent("prompts").appendingPathComponent(name)
+        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { return true }
+        return TemplateManager.validateTemplate(content: content, fileName: name) != nil
+    }
+
+    private func templateFiles(for project: PRDProject) -> [String] {
+        guard let dirURL = project.directoryURL else { return [] }
+        return TemplateManager.listTemplateFiles(in: dirURL)
     }
 
     // MARK: - Interrupted Story Banner

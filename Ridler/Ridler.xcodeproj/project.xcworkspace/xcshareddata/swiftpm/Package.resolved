@@ -1,6 +1,15 @@
 {
-  "originHash" : "f95bc7c3f6707e81e3c9ac6c7564a6ccca94840fd25ac5407792bca5ede3970e",
+  "originHash" : "e2513c57909e37d0a934bd347f6370086ca026685767d9cd2814f239b939820a",
   "pins" : [
+    {
+      "identity" : "liquidkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/epitonium-Swift-Packages/LiquidKit.git",
+      "state" : {
+        "revision" : "fba5b1a01b57a377dbf462ba3caab39b1733fe5c",
+        "version" : "1.0.0"
+      }
+    },
     {
       "identity" : "networkimage",
       "kind" : "remoteSourceControl",
@@ -8,6 +17,15 @@
       "state" : {
         "revision" : "2849f5323265386e200484b0d0f896e73c3411b9",
         "version" : "6.0.1"
+      }
+    },
+    {
+      "identity" : "strftimeformatter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/littleigloo/STRFTimeFormatter.git",
+      "state" : {
+        "revision" : "ee236efbdfe0fff6fdb47e1d761664f6abb0fbbf",
+        "version" : "1.0.0"
       }
     },
     {
@@ -26,6 +44,15 @@
       "state" : {
         "revision" : "5d9bdaa4228b381639fff09403e39a04926e2dbe",
         "version" : "0.7.1"
+      }
+    },
+    {
+      "identity" : "swift-html-entities",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/IBM-Swift/swift-html-entities.git",
+      "state" : {
+        "revision" : "d8ca73197f59ce260c71bd6d7f6eb8bbdccf508b",
+        "version" : "4.0.1"
       }
     },
     {

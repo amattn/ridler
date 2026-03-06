@@ -56,17 +56,31 @@ final class ClaudeTerminalManager: ObservableObject {
 
         if fileExists {
             // Interactive mode: launch bare claude, send context as first user message
-            initialInput = "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first.\n"
+            let editPrompt: String
+            if let projectDir = Self.projectDirectory(from: workingDirectory) {
+                editPrompt = (try? TemplateManager.buildEditPrompt(
+                    filePath: filePath, fileName: fileName, projectDirectoryURL: projectDir
+                )) ?? "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first."
+            } else {
+                editPrompt = "I want to edit the PRD file at: \(filePath)\n\nPlease read the file and help me modify it. Show me the current contents first."
+            }
+            initialInput = editPrompt + "\n"
         } else {
             // Generation mode: use -p for one-shot execution
             let prompt: String
-            switch fileName {
-            case "ridl.md":
-                prompt = "The file \(filePath) does not exist yet. Please create ridl.md from the existing prd.md in the same directory. Read prd.md first, then create ridl.md with user stories and acceptance criteria."
-            case "ridl.json":
-                prompt = "The file \(filePath) does not exist yet. Please create ridl.json from the existing ridl.md or prd.md in the same directory. Read the existing files first, then create ridl.json in the proper format."
-            default:
-                prompt = "The file \(filePath) does not exist yet. Please create it with appropriate initial content."
+            if let projectDir = Self.projectDirectory(from: workingDirectory) {
+                prompt = (try? TemplateManager.buildCreatePrompt(
+                    filePath: filePath, fileName: fileName, projectDirectoryURL: projectDir
+                )) ?? "The file \(filePath) does not exist yet. Please create it with appropriate initial content."
+            } else {
+                switch fileName {
+                case "ridl.md":
+                    prompt = "The file \(filePath) does not exist yet. Please create ridl.md from the existing prd.md in the same directory. Read prd.md first, then create ridl.md with user stories and acceptance criteria."
+                case "ridl.json":
+                    prompt = "The file \(filePath) does not exist yet. Please create ridl.json from the existing ridl.md or prd.md in the same directory. Read the existing files first, then create ridl.json in the proper format."
+                default:
+                    prompt = "The file \(filePath) does not exist yet. Please create it with appropriate initial content."
+                }
             }
             arguments += ["-p", prompt]
         }
@@ -113,6 +127,18 @@ final class ClaudeTerminalManager: ObservableObject {
         }
 
         activeSession = nil
+    }
+
+    /// Derives the project's ridl directory from the working directory.
+    private static func projectDirectory(from workingDirectory: URL) -> URL? {
+        let ridlDir = workingDirectory.appendingPathComponent("ridl")
+        if FileManager.default.fileExists(atPath: ridlDir.appendingPathComponent("prd.md").path) {
+            return ridlDir
+        }
+        if FileManager.default.fileExists(atPath: workingDirectory.appendingPathComponent("prd.md").path) {
+            return workingDirectory
+        }
+        return nil
     }
 
     /// Returns a process environment with an expanded PATH that includes

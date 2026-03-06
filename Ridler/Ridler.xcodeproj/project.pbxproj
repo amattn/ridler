@@ -56,8 +56,16 @@
 		C10005 /* StreamingJSONParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20006 /* StreamingJSONParserTests.swift */; };
 		C10006 /* LogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20007 /* LogStoreTests.swift */; };
 		C10007 /* RalphLoopEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20008 /* RalphLoopEngineTests.swift */; };
+		C10010 /* TemplateManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20011 /* TemplateManagerTests.swift */; };
 		C10008 /* GitManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20009 /* GitManagerTests.swift */; };
 		C10009 /* SyntaxHighlighterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20010 /* SyntaxHighlighterTests.swift */; };
+		A10043 /* LiquidKit in Frameworks */ = {isa = PBXBuildFile; productRef = SP0006 /* LiquidKit */; };
+		A10044 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20043 /* TemplateManager.swift */; };
+		A10045 /* agent_instructions.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20044 /* agent_instructions.liquid */; };
+		A10046 /* story_context.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20045 /* story_context.liquid */; };
+		A10047 /* progress_report.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20046 /* progress_report.liquid */; };
+		A10048 /* edit_file.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20047 /* edit_file.liquid */; };
+		A10049 /* create_file.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20048 /* create_file.liquid */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,7 +130,14 @@
 		C20008 /* RalphLoopEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RalphLoopEngineTests.swift; sourceTree = "<group>"; };
 		C20009 /* GitManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitManagerTests.swift; sourceTree = "<group>"; };
 		C20010 /* SyntaxHighlighterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighterTests.swift; sourceTree = "<group>"; };
+		C20011 /* TemplateManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManagerTests.swift; sourceTree = "<group>"; };
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20043 /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
+		A20044 /* agent_instructions.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = agent_instructions.liquid; sourceTree = "<group>"; };
+		A20045 /* story_context.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = story_context.liquid; sourceTree = "<group>"; };
+		A20046 /* progress_report.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = progress_report.liquid; sourceTree = "<group>"; };
+		A20047 /* edit_file.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = edit_file.liquid; sourceTree = "<group>"; };
+		A20048 /* create_file.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = create_file.liquid; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +147,7 @@
 			files = (
 				A10040 /* SwiftTerm in Frameworks */,
 				A10042 /* MarkdownUI in Frameworks */,
+				A10043 /* LiquidKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,11 +180,24 @@
 				A40004 /* ViewModels */,
 				A40005 /* Managers */,
 				A40007 /* Protocols */,
+				A40009 /* PromptTemplates */,
 				A20003 /* Assets.xcassets */,
 				A20006 /* Ridler.entitlements */,
 				A40008 /* Preview Content */,
 			);
 			path = Ridler;
+			sourceTree = "<group>";
+		};
+		A40009 /* PromptTemplates */ = {
+			isa = PBXGroup;
+			children = (
+				A20044 /* agent_instructions.liquid */,
+				A20045 /* story_context.liquid */,
+				A20046 /* progress_report.liquid */,
+				A20047 /* edit_file.liquid */,
+				A20048 /* create_file.liquid */,
+			);
+			path = PromptTemplates;
 			sourceTree = "<group>";
 		};
 		A40002 /* Models */ = {
@@ -228,6 +257,7 @@
 				A20035 /* RecentProjectsManager.swift */,
 				A20036 /* SettingsManager.swift */,
 				A20039 /* ClaudeTerminalManager.swift */,
+				A20043 /* TemplateManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -271,6 +301,7 @@
 				C20008 /* RalphLoopEngineTests.swift */,
 				C20009 /* GitManagerTests.swift */,
 				C20010 /* SyntaxHighlighterTests.swift */,
+				C20011 /* TemplateManagerTests.swift */,
 			);
 			path = RidlerTests;
 			sourceTree = "<group>";
@@ -294,6 +325,7 @@
 			packageProductDependencies = (
 				SP0002 /* SwiftTerm */,
 				SP0004 /* MarkdownUI */,
+				SP0006 /* LiquidKit */,
 			);
 			productName = Ridler;
 			productReference = A20005 /* Ridler.app */;
@@ -347,6 +379,7 @@
 			packageReferences = (
 				SP0001 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				SP0003 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				SP0005 /* XCRemoteSwiftPackageReference "LiquidKit" */,
 			);
 			productRefGroup = A40006 /* Products */;
 			projectDirPath = "";
@@ -365,6 +398,11 @@
 			files = (
 				A10004 /* Preview Assets.xcassets in Resources */,
 				A10003 /* Assets.xcassets in Resources */,
+				A10045 /* agent_instructions.liquid in Resources */,
+				A10046 /* story_context.liquid in Resources */,
+				A10047 /* progress_report.liquid in Resources */,
+				A10048 /* edit_file.liquid in Resources */,
+				A10049 /* create_file.liquid in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -413,6 +451,7 @@
 				A10038 /* ClaudeTerminalView.swift in Sources */,
 				A10039 /* SwiftTerminalView.swift in Sources */,
 				A10041 /* UniversalContext.swift in Sources */,
+				A10044 /* TemplateManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,6 +468,7 @@
 				C10007 /* RalphLoopEngineTests.swift in Sources */,
 				C10008 /* GitManagerTests.swift in Sources */,
 				C10009 /* SyntaxHighlighterTests.swift in Sources */,
+				C10010 /* TemplateManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -697,6 +737,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		SP0005 /* XCRemoteSwiftPackageReference "LiquidKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/epitonium-Swift-Packages/LiquidKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -709,6 +757,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = SP0003 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
+		};
+		SP0006 /* LiquidKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP0005 /* XCRemoteSwiftPackageReference "LiquidKit" */;
+			productName = LiquidKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

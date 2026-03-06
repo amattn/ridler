@@ -3,11 +3,11 @@ import SwiftUI
 /// View that displays an interactive Claude Code terminal session for editing PRD files.
 /// Shows in the right pane when a PRD file row is selected in the sidebar.
 struct ClaudeTerminalView: View {
-    let fileName: PRDFileName
+    let fileDisplayName: String
     let project: PRDProject?
     let isLoopRunning: Bool
     @ObservedObject var terminalManager: ClaudeTerminalManager
-    let onStartSession: (PRDFileName) -> Void
+    let onStartSession: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,7 +32,7 @@ struct ClaudeTerminalView: View {
         HStack {
             Image(systemName: "terminal")
                 .foregroundStyle(.cyan)
-            Text("Claude Code \u{2014} \(fileName.rawValue)")
+            Text("Claude Code \u{2014} \(fileDisplayName)")
                 .font(.headline)
 
             Spacer()
@@ -88,12 +88,12 @@ struct ClaudeTerminalView: View {
             Image(systemName: "terminal")
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
-            Text("Edit \(fileName.rawValue) with Claude Code")
+            Text("Edit \(fileDisplayName) with Claude Code")
                 .font(.body)
                 .foregroundStyle(.secondary)
 
             Button {
-                onStartSession(fileName)
+                onStartSession()
             } label: {
                 Label("Start Editing Session", systemImage: "play.fill")
             }
@@ -115,7 +115,7 @@ struct ClaudeTerminalView: View {
                 HStack {
                     Spacer()
                     Button {
-                        onStartSession(fileName)
+                        onStartSession()
                     } label: {
                         Label("Start New Session", systemImage: "play.fill")
                     }

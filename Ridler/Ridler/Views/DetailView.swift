@@ -17,6 +17,8 @@ struct DetailView: View {
                     }
                 case .file(let fileName):
                     fileContentView(fileName: fileName, project: project)
+                case .promptTemplate(let name):
+                    templateContentView(name: name, project: project)
                 }
             } else {
                 placeholderView
@@ -135,6 +137,77 @@ struct DetailView: View {
             } else {
                 emptyFileView(fileName: fileName)
             }
+        }
+    }
+
+    private func templateContentView(name: String, project: PRDProject) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Image(systemName: "doc.text.below.ecg")
+                    .foregroundStyle(.orange)
+                Text(name)
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            if let dirURL = project.directoryURL {
+                let templateURL = dirURL.appendingPathComponent("prompts").appendingPathComponent(name)
+                if let content = try? String(contentsOf: templateURL, encoding: .utf8), !content.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        templateErrorBanner(content: content, fileName: name)
+
+                        ScrollView {
+                            Text(content)
+                                .font(.body.monospaced())
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } else {
+                    VStack(spacing: 8) {
+                        Image(systemName: "doc")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.secondary)
+                        Text("Template file not found")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func templateErrorBanner(content: String, fileName: String) -> some View {
+        if let error = TemplateManager.validateTemplate(content: content, fileName: fileName) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                    .font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Template Error")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(error.message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(10)
+            .background(Color.red.opacity(0.1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+            .cornerRadius(6)
+            .padding()
         }
     }
 

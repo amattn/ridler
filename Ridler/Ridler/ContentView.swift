@@ -167,7 +167,7 @@ struct ContentView: View {
                     let project = openProjects[idx]
                     terminalManagers[project.id]?.terminate()
                     // Switch sidebar selection to a story to show log view
-                    if case .file = sidebarSelection {
+                    if sidebarSelection?.isFileSelection == true {
                         sidebarSelection = nil
                     }
                     startLoop(for: idx)
@@ -289,8 +289,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var rightPaneView: some View {
-        let showTerminal = selectedProject != nil
-            && { if case .file = sidebarSelection { return true } else { return false } }()
+        let showTerminal = selectedProject != nil && (sidebarSelection?.isFileSelection ?? false)
 
         ZStack {
             // Log panel — always rendered, visible when not showing terminal
@@ -302,17 +301,14 @@ struct ContentView: View {
             if let project = selectedProject,
                getOrCreateTerminalManager(for: project).hasSessionHistory || showTerminal {
                 let manager = getOrCreateTerminalManager(for: project)
-                let fileName: PRDFileName = {
-                    if case .file(let f) = sidebarSelection { return f }
-                    return .prdMd
-                }()
+                let displayName = sidebarSelection?.fileDisplayName ?? PRDFileName.prdMd.rawValue
                 ClaudeTerminalView(
-                    fileName: fileName,
+                    fileDisplayName: displayName,
                     project: project,
                     isLoopRunning: project.loopState == .running,
                     terminalManager: manager,
-                    onStartSession: { file in
-                        startTerminalSession(file: file, project: project)
+                    onStartSession: {
+                        startTerminalSessionForSelection(project: project)
                     }
                 )
                 .opacity(showTerminal ? 1 : 0)
@@ -356,6 +352,27 @@ struct ContentView: View {
             fileExists: fileExists,
             fileName: file.rawValue
         )
+    }
+
+    private func startTerminalSessionForSelection(project: PRDProject) {
+        guard let dirURL = project.directoryURL else { return }
+        switch sidebarSelection {
+        case .file(let file):
+            startTerminalSession(file: file, project: project)
+        case .promptTemplate(let name):
+            let filePath = dirURL.appendingPathComponent("prompts").appendingPathComponent(name).path
+            let fileExists = FileManager.default.fileExists(atPath: filePath)
+            let workingDir = dirURL.deletingLastPathComponent()
+            let manager = getOrCreateTerminalManager(for: project)
+            manager.start(
+                filePath: filePath,
+                workingDirectory: workingDir,
+                fileExists: fileExists,
+                fileName: name
+            )
+        default:
+            break
+        }
     }
 
     private func stateIndicator(for project: PRDProject) -> some View {
