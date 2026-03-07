@@ -246,7 +246,7 @@ struct SidebarView: View {
                     }
 
                     // Show ungrouped stories (not in any milestone)
-                    let groupedIDs = Set(milestones.flatMap { $0.storyIDs })
+                    let groupedIDs = Set(milestones.flatMap { $0.definitionIds })
                     let ungrouped = project.iterationDefinitions.filter { !groupedIDs.contains($0.id) }
                     if !ungrouped.isEmpty {
                         ForEach(ungrouped) { story in
@@ -268,7 +268,7 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func milestoneGroup(milestone: Milestone, project: PRDProject) -> some View {
-        let stories = milestone.storyIDs.compactMap { id in
+        let stories = milestone.definitionIds.compactMap { id in
             project.iterationDefinitions.first { $0.id == id }
         }
         let passedCount = stories.filter(\.isFrozen).count

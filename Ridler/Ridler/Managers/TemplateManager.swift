@@ -42,12 +42,6 @@ final class TemplateManager {
         "create_file",
     ]
 
-    /// Legacy template names from v2 that may exist in user projects
-    private static let legacyTemplateRenames: [String: String] = [
-        "story_context": "iteration_context",
-        "progress_report": "progress_format",
-    ]
-
     /// Error describing a template failure with file context.
     struct TemplateError: LocalizedError {
         let fileName: String
@@ -75,16 +69,6 @@ final class TemplateManager {
         if !fm.fileExists(atPath: promptsDir.path) {
             try fm.createDirectory(at: promptsDir, withIntermediateDirectories: true)
             logger.info("Created prompts directory at \(promptsDir.path)")
-        }
-
-        // Migrate legacy template names (v2 -> v3)
-        for (oldName, newName) in legacyTemplateRenames {
-            let oldURL = promptsDir.appendingPathComponent("\(oldName).liquid")
-            let newURL = promptsDir.appendingPathComponent("\(newName).liquid")
-            if fm.fileExists(atPath: oldURL.path) && !fm.fileExists(atPath: newURL.path) {
-                try fm.moveItem(at: oldURL, to: newURL)
-                logger.info("Migrated template \(oldName).liquid -> \(newName).liquid")
-            }
         }
 
         // Copy missing templates from bundle
@@ -247,22 +231,13 @@ final class TemplateManager {
         return parts.joined()
     }
 
-    /// Backward-compatible alias for buildImplementationPrompt.
-    static func buildAgentPrompt(
-        for story: IterationDefinition,
-        project: PRDProject,
-        progressContent: String?
-    ) throws -> String {
-        try buildImplementationPrompt(for: story, project: project, progressContent: progressContent, learningsContent: nil, emergentContent: nil)
-    }
-
     /// Builds the Liquid context dictionary for agent loop templates.
     static func buildAgentContext(
         for story: IterationDefinition,
         project: PRDProject,
         progressContent: String?,
-        learningsContent: String? = nil,
-        emergentContent: String? = nil
+        learningsContent: String?,
+        emergentContent: String?
     ) -> [String: Any?] {
         let criteriaList: [[String: Any]] = story.acceptanceCriteria.map { ac in
             ["criterion": ac.criterion, "status": ac.status.rawValue]
@@ -304,7 +279,6 @@ final class TemplateManager {
 
         return [
             "iteration": iterationDict,
-            "story": iterationDict, // backward compat for existing templates using {{ story.* }}
             "project": projectDict,
             "progress_content": progressContent,
             "learnings_content": learningsContent,

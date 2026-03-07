@@ -28,18 +28,20 @@ final class FileSystemPRDStoreTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Story 1",
-                    "userStoryDescription": "Description 1",
+                    "title": "Story 1",
+                    "description": "Description 1",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1", "AC2"],
-                    "passes": true
+                    "acceptanceCriteria": [
+                        {"criterion": "AC1", "status": "pass"},
+                        {"criterion": "AC2", "status": "pass"}
+                    ]
                 },
                 {
                     "id": "US-002",
-                    "userStoryTitle": "Story 2",
-                    "userStoryDescription": "Description 2",
+                    "title": "Story 2",
+                    "description": "Description 2",
                     "priority": 2,
-                    "acceptanceCriteria": ["AC3"]
+                    "acceptanceCriteria": [{"criterion": "AC3", "status": "not_started"}]
                 }
             ]
         }
@@ -66,8 +68,8 @@ final class FileSystemPRDStoreTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Minimal",
-                    "userStoryDescription": "Minimal story",
+                    "title": "Minimal",
+                    "description": "Minimal story",
                     "priority": 1,
                     "acceptanceCriteria": []
                 }
@@ -274,15 +276,15 @@ final class FileSystemPRDStoreTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Story",
-                    "userStoryDescription": "Desc",
+                    "title": "Story",
+                    "description": "Desc",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1"]
+                    "acceptanceCriteria": [{"criterion": "AC1", "status": "not_started"}]
                 }
             ],
             "milestones": [
                 {
-                    "id": "M1",
+                    "name": "M1",
                     "definitionIds": ["US-001"]
                 }
             ]
@@ -316,17 +318,17 @@ final class FileSystemPRDStoreTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Story 1",
-                    "userStoryDescription": "Desc 1",
+                    "title": "Story 1",
+                    "description": "Desc 1",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1"]
+                    "acceptanceCriteria": [{"criterion": "AC1", "status": "not_started"}]
                 },
                 {
                     "id": "US-002",
-                    "userStoryTitle": "Story 2",
-                    "userStoryDescription": "Desc 2",
+                    "title": "Story 2",
+                    "description": "Desc 2",
                     "priority": 2,
-                    "acceptanceCriteria": ["AC2"]
+                    "acceptanceCriteria": [{"criterion": "AC2", "status": "not_started"}]
                 }
             ]
         }
@@ -409,24 +411,24 @@ final class FileSystemPRDStoreTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Story 1",
-                    "userStoryDescription": "Desc 1",
+                    "title": "Story 1",
+                    "description": "Desc 1",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1"]
+                    "acceptanceCriteria": [{"criterion": "AC1", "status": "not_started"}]
                 },
                 {
                     "id": "US-002",
-                    "userStoryTitle": "Story 2",
-                    "userStoryDescription": "Desc 2",
+                    "title": "Story 2",
+                    "description": "Desc 2",
                     "priority": 2,
-                    "acceptanceCriteria": ["AC2"]
+                    "acceptanceCriteria": [{"criterion": "AC2", "status": "not_started"}]
                 },
                 {
                     "id": "US-003",
-                    "userStoryTitle": "Story 3",
-                    "userStoryDescription": "Desc 3",
+                    "title": "Story 3",
+                    "description": "Desc 3",
                     "priority": 3,
-                    "acceptanceCriteria": ["AC3"]
+                    "acceptanceCriteria": [{"criterion": "AC3", "status": "not_started"}]
                 }
             ]
         }
@@ -460,7 +462,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
     // MARK: - JSON error messages
 
     func testJSONErrorIncludesFileNameAndKey() throws {
-        // Missing both title and userStoryTitle — should fail
+        // Missing required title field — should fail
         let json = """
         {
             "iterationDefinitions": [
@@ -500,21 +502,21 @@ final class FileSystemPRDStoreTests: XCTestCase {
         }
     }
 
-    // MARK: - V2 fields round-trip through store
+    // MARK: - Metadata fields round-trip through store
 
-    func testV2FieldsPreservedThroughStore() throws {
+    func testMetadataFieldsPreservedThroughStore() throws {
         let json = """
         {
-            "version": "2.0.0",
+            "version": "3.0.0",
             "generatedBy": "ridl-cli",
             "branchName": "feature/test",
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Story",
-                    "userStoryDescription": "Desc",
+                    "title": "Story",
+                    "description": "Desc",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1"],
+                    "acceptanceCriteria": [{"criterion": "AC1", "status": "not_started"}],
                     "prdReferences": ["Section 2.1"],
                     "notes": "A note"
                 }
@@ -528,7 +530,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
         try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
 
         let project = try store.loadProject(from: tempDir)
-        XCTAssertEqual(project.version, "2.0.0")
+        XCTAssertEqual(project.version, "3.0.0")
         XCTAssertEqual(project.branchName, "feature/test")
         XCTAssertEqual(project.iterationDefinitions[0].prdReferences, ["Section 2.1"])
         XCTAssertEqual(project.iterationDefinitions[0].notes, "A note")
@@ -537,7 +539,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
         // Write back and verify preservation
         try store.writeProject(project, to: tempDir)
         let reloaded = try store.loadProject(from: tempDir)
-        XCTAssertEqual(reloaded.version, "2.0.0")
+        XCTAssertEqual(reloaded.version, "3.0.0")
         XCTAssertEqual(reloaded.generatedBy, "ridl-cli")
         XCTAssertEqual(reloaded.branchName, "feature/test")
         XCTAssertEqual(reloaded.iterationDefinitions[0].prdReferences, ["Section 2.1"])

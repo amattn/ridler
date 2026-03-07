@@ -407,8 +407,8 @@ final class RalphLoopEngine: ObservableObject {
     private func isLastStoryInMilestone(_ storyID: String, milestones: [Milestone]) -> Bool {
         guard let directoryURL, let project = try? prdStore.loadProject(from: directoryURL) else { return false }
         for milestone in milestones {
-            guard milestone.storyIDs.contains(storyID) else { continue }
-            let allOthersPass = milestone.storyIDs.allSatisfy { id in
+            guard milestone.definitionIds.contains(storyID) else { continue }
+            let allOthersPass = milestone.definitionIds.allSatisfy { id in
                 id == storyID || (project.iterationDefinitions.first { $0.id == id }?.isFrozen ?? false)
             }
             if allOthersPass { return true }

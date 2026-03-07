@@ -32,19 +32,19 @@ final class TemplateManagerTests: XCTestCase {
         let templateContent = """
         ## Target Iteration
 
-        - **ID:** {{ story.id }}
-        - **Title:** {{ story.title }}
-        - **Priority:** {{ story.priority }}
-        - **Description:** {{ story.description }}
+        - **ID:** {{ iteration.id }}
+        - **Title:** {{ iteration.title }}
+        - **Priority:** {{ iteration.priority }}
+        - **Description:** {{ iteration.description }}
 
         ### Acceptance Criteria
-        {% for criterion in story.acceptance_criteria %}- {{ criterion }}
+        {% for criterion in iteration.acceptance_criteria %}- {{ criterion }}
         {% endfor %}
         """
         writeTemplate("iteration_context.liquid", content: templateContent)
 
         let context: [String: Any?] = [
-            "story": [
+            "iteration": [
                 "id": "US-001",
                 "title": "Test Story",
                 "priority": 1,
@@ -129,7 +129,7 @@ final class TemplateManagerTests: XCTestCase {
         writeTemplate("progress_format.liquid", content: templateContent)
 
         let context: [String: Any?] = [
-            "story": ["id": "US-001"] as [String: Any],
+            "iteration": ["id": "US-001"] as [String: Any],
             "progress_content": "## 2026-01-01 - US-000\n- Completed setup",
         ]
 
@@ -155,7 +155,7 @@ final class TemplateManagerTests: XCTestCase {
         writeTemplate("progress_format.liquid", content: templateContent)
 
         let context: [String: Any?] = [
-            "story": ["id": "US-001"] as [String: Any],
+            "iteration": ["id": "US-001"] as [String: Any],
             "progress_content": nil,
         ]
 
@@ -172,11 +172,11 @@ final class TemplateManagerTests: XCTestCase {
     // MARK: - Custom Templates Override Defaults
 
     func testCustomTemplateUsedInsteadOfDefault() throws {
-        let customContent = "CUSTOM: Iteration {{ story.id }} is being worked on."
+        let customContent = "CUSTOM: Iteration {{ iteration.id }} is being worked on."
         writeTemplate("iteration_context.liquid", content: customContent)
 
         let context: [String: Any?] = [
-            "story": ["id": "US-042"] as [String: Any],
+            "iteration": ["id": "US-042"] as [String: Any],
         ]
 
         let result = try TemplateManager.render(
@@ -189,11 +189,11 @@ final class TemplateManagerTests: XCTestCase {
     }
 
     func testCustomAgentInstructionsOverride() throws {
-        let customContent = "You are a specialized agent for {{ story.id }}."
+        let customContent = "You are a specialized agent for {{ iteration.id }}."
         writeTemplate("agent_instructions.liquid", content: customContent)
 
         let context: [String: Any?] = [
-            "story": ["id": "US-100"] as [String: Any],
+            "iteration": ["id": "US-100"] as [String: Any],
         ]
 
         let result = try TemplateManager.render(
@@ -305,7 +305,7 @@ final class TemplateManagerTests: XCTestCase {
 
     func testListTemplateFilesReturnsLiquidFiles() {
         writeTemplate("agent.liquid", content: "test")
-        writeTemplate("story.liquid", content: "test")
+        writeTemplate("iteration.liquid", content: "test")
         // Write a non-liquid file
         let dir = promptsDir()
         try! "not a template".write(to: dir.appendingPathComponent("readme.txt"), atomically: true, encoding: .utf8)
@@ -314,7 +314,7 @@ final class TemplateManagerTests: XCTestCase {
 
         XCTAssertEqual(files.count, 2)
         XCTAssertTrue(files.contains("agent.liquid"))
-        XCTAssertTrue(files.contains("story.liquid"))
+        XCTAssertTrue(files.contains("iteration.liquid"))
         XCTAssertFalse(files.contains("readme.txt"))
     }
 

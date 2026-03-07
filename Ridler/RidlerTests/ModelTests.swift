@@ -51,62 +51,6 @@ final class IterationDefinitionTests: XCTestCase {
         XCTAssertEqual(story.acceptanceCriteria[1].status, .fail)
     }
 
-    func testV2LegacyFlatCriteriaDecoding() throws {
-        let json = """
-        {
-            "id": "US-003",
-            "userStoryTitle": "Legacy Story",
-            "userStoryDescription": "Uses v2 format",
-            "priority": 1,
-            "acceptanceCriteria": ["AC1", "AC2"]
-        }
-        """.data(using: .utf8)!
-
-        let story = try JSONDecoder().decode(IterationDefinition.self, from: json)
-
-        XCTAssertEqual(story.title, "Legacy Story")
-        XCTAssertEqual(story.description, "Uses v2 format")
-        XCTAssertFalse(story.isFrozen)
-        XCTAssertEqual(story.acceptanceCriteria.count, 2)
-        XCTAssertEqual(story.acceptanceCriteria[0].criterion, "AC1")
-        XCTAssertEqual(story.acceptanceCriteria[0].status, .notStarted)
-    }
-
-    func testV2LegacyWithPassesTrue() throws {
-        let json = """
-        {
-            "id": "US-004",
-            "userStoryTitle": "Passed Story",
-            "userStoryDescription": "Desc",
-            "priority": 1,
-            "acceptanceCriteria": ["AC1"],
-            "passes": true
-        }
-        """.data(using: .utf8)!
-
-        let story = try JSONDecoder().decode(IterationDefinition.self, from: json)
-
-        XCTAssertTrue(story.isFrozen)
-        XCTAssertEqual(story.acceptanceCriteria[0].status, .pass)
-    }
-
-    func testV2LegacyWithPassesFalse() throws {
-        let json = """
-        {
-            "id": "US-005",
-            "userStoryTitle": "Story",
-            "userStoryDescription": "Desc",
-            "priority": 1,
-            "acceptanceCriteria": ["AC1"]
-        }
-        """.data(using: .utf8)!
-
-        let story = try JSONDecoder().decode(IterationDefinition.self, from: json)
-
-        XCTAssertFalse(story.isFrozen)
-        XCTAssertEqual(story.acceptanceCriteria[0].status, .notStarted)
-    }
-
     func testIdentifiable() {
         let story = IterationDefinition(
             id: "US-005",
@@ -157,7 +101,7 @@ final class IterationDefinitionTests: XCTestCase {
         XCTAssertNil(story.notes)
     }
 
-    func testEncodingUsesV3Keys() throws {
+    func testEncodingKeys() throws {
         let story = IterationDefinition(
             id: "US-008",
             title: "Test",
@@ -171,10 +115,7 @@ final class IterationDefinitionTests: XCTestCase {
 
         XCTAssertTrue(jsonString.contains("\"title\""))
         XCTAssertTrue(jsonString.contains("\"description\""))
-        XCTAssertFalse(jsonString.contains("userStoryTitle"))
-        XCTAssertFalse(jsonString.contains("userStoryDescription"))
-        XCTAssertFalse(jsonString.contains("\"passes\""))
-        XCTAssertFalse(jsonString.contains("inProgress"))
+        XCTAssertTrue(jsonString.contains("\"acceptanceCriteria\""))
     }
 
     func testIsFrozenAllPass() {
@@ -385,7 +326,7 @@ final class LoopStateTests: XCTestCase {
 final class MilestoneTests: XCTestCase {
 
     func testRoundTripEncoding() throws {
-        let milestone = Milestone(name: "M1", storyIDs: ["US-001", "US-002"])
+        let milestone = Milestone(name: "M1", definitionIds: ["US-001", "US-002"])
 
         let data = try JSONEncoder().encode(milestone)
         let decoded = try JSONDecoder().decode(Milestone.self, from: data)
@@ -394,26 +335,24 @@ final class MilestoneTests: XCTestCase {
     }
 
     func testIdentifiable() {
-        let milestone = Milestone(name: "M1", storyIDs: [])
+        let milestone = Milestone(name: "M1", definitionIds: [])
         XCTAssertEqual(milestone.id, "M1")
     }
 
-    func testV2CodingKeys() throws {
-        let milestone = Milestone(name: "M1", storyIDs: ["US-001"], version: "1.0", theme: "Core Setup")
+    func testCodingKeys() throws {
+        let milestone = Milestone(name: "M1", definitionIds: ["US-001"], version: "1.0", theme: "Core Setup")
 
         let data = try JSONEncoder().encode(milestone)
         let jsonString = String(data: data, encoding: .utf8)!
 
-        XCTAssertTrue(jsonString.contains("\"id\""))
+        XCTAssertTrue(jsonString.contains("\"name\""))
         XCTAssertTrue(jsonString.contains("\"definitionIds\""))
-        XCTAssertFalse(jsonString.contains("\"name\""))
-        XCTAssertFalse(jsonString.contains("\"storyIDs\""))
     }
 
-    func testV2Decoding() throws {
+    func testDecoding() throws {
         let json = """
         {
-            "id": "M2",
+            "name": "M2",
             "definitionIds": ["US-003", "US-004"],
             "version": "2.0",
             "theme": "UI Layer"
@@ -423,15 +362,15 @@ final class MilestoneTests: XCTestCase {
         let milestone = try JSONDecoder().decode(Milestone.self, from: json)
 
         XCTAssertEqual(milestone.name, "M2")
-        XCTAssertEqual(milestone.storyIDs, ["US-003", "US-004"])
+        XCTAssertEqual(milestone.definitionIds, ["US-003", "US-004"])
         XCTAssertEqual(milestone.version, "2.0")
         XCTAssertEqual(milestone.theme, "UI Layer")
     }
 
-    func testV2OptionalFields() throws {
+    func testOptionalFields() throws {
         let json = """
         {
-            "id": "M3",
+            "name": "M3",
             "definitionIds": ["US-005"]
         }
         """.data(using: .utf8)!
@@ -460,7 +399,7 @@ final class PRDProjectTests: XCTestCase {
                     acceptanceCriteria: [AcceptanceCriterion(criterion: "AC1", status: .notStarted)]
                 )
             ],
-            milestones: [Milestone(name: "M1", storyIDs: ["US-001"])]
+            milestones: [Milestone(name: "M1", definitionIds: ["US-001"])]
         )
 
         let encoder = JSONEncoder()
@@ -478,7 +417,7 @@ final class PRDProjectTests: XCTestCase {
         XCTAssertEqual(decoded.iterationCount, 0)
     }
 
-    func testDecodingFromV2RidlJSON() throws {
+    func testDecodingFromRidlJSON() throws {
         let json = """
         {
             "project": "Ridler",
@@ -486,18 +425,20 @@ final class PRDProjectTests: XCTestCase {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryTitle": "Create project",
-                    "userStoryDescription": "Set up Xcode",
+                    "title": "Create project",
+                    "description": "Set up Xcode",
                     "priority": 1,
-                    "acceptanceCriteria": ["AC1", "AC2"],
-                    "passes": true
+                    "acceptanceCriteria": [
+                        {"criterion": "AC1", "status": "pass"},
+                        {"criterion": "AC2", "status": "pass"}
+                    ]
                 },
                 {
                     "id": "US-002",
-                    "userStoryTitle": "Add models",
-                    "userStoryDescription": "Define data models",
+                    "title": "Add models",
+                    "description": "Define data models",
                     "priority": 2,
-                    "acceptanceCriteria": ["AC3"]
+                    "acceptanceCriteria": [{"criterion": "AC3", "status": "not_started"}]
                 }
             ]
         }
@@ -589,10 +530,10 @@ final class PRDProjectTests: XCTestCase {
         XCTAssertTrue(reDecoded.iterationDefinitions[0].isFrozen)
     }
 
-    func testV2TopLevelFields() throws {
+    func testMetadataFields() throws {
         let json = """
         {
-            "version": "2.0.0",
+            "version": "3.0.0",
             "generatedBy": "ridl-cli",
             "branchName": "feature/my-feature",
             "iterationDefinitions": [],
@@ -606,7 +547,7 @@ final class PRDProjectTests: XCTestCase {
 
         let project = try JSONDecoder().decode(PRDProject.self, from: json)
 
-        XCTAssertEqual(project.version, "2.0.0")
+        XCTAssertEqual(project.version, "3.0.0")
         XCTAssertEqual(project.generatedBy, "ridl-cli")
         XCTAssertEqual(project.branchName, "feature/my-feature")
         XCTAssertNotNil(project.universalContext)
@@ -633,11 +574,11 @@ final class PRDProjectTests: XCTestCase {
         XCTAssertEqual(project.universalContext?.nonFunctionalRequirements, ["NFR1"])
     }
 
-    func testV2FieldsRoundTrip() throws {
+    func testMetadataFieldsRoundTrip() throws {
         let project = PRDProject(
-            name: "V2 Project",
+            name: "Test Project",
             iterationDefinitions: [],
-            version: "2.0.0",
+            version: "3.0.0",
             generatedBy: "ridl-cli",
             branchName: "dev/test",
             universalContext: UniversalContext(
@@ -651,7 +592,7 @@ final class PRDProjectTests: XCTestCase {
         let data = try JSONEncoder().encode(project)
         let decoded = try JSONDecoder().decode(PRDProject.self, from: data)
 
-        XCTAssertEqual(decoded.version, "2.0.0")
+        XCTAssertEqual(decoded.version, "3.0.0")
         XCTAssertEqual(decoded.generatedBy, "ridl-cli")
         XCTAssertEqual(decoded.branchName, "dev/test")
         XCTAssertEqual(decoded.universalContext?.nonFunctionalRequirements, ["NFR1"])

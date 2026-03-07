@@ -19,7 +19,6 @@ struct PRDProject: Codable, Identifiable, Equatable {
 
     var directoryURL: URL?
 
-    // v2 fields
     let version: String?
     let generatedBy: String?
     let branchName: String?
