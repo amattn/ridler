@@ -37,7 +37,7 @@ struct DetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Title
-                Text(story.userStoryTitle)
+                Text(story.title)
                     .font(.title2)
                     .fontWeight(.bold)
 
@@ -50,7 +50,7 @@ struct DetailView: View {
                 Divider()
 
                 // Description
-                Text(story.userStoryDescription)
+                Text(story.description)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -60,11 +60,11 @@ struct DetailView: View {
                         Text("Acceptance Criteria")
                             .font(.headline)
 
-                        ForEach(story.acceptanceCriteria, id: \.self) { criterion in
+                        ForEach(story.acceptanceCriteria) { ac in
                             HStack(alignment: .top, spacing: 8) {
-                                Text("\u{2022}")
-                                    .foregroundStyle(.secondary)
-                                Text(criterion)
+                                criterionStatusIcon(ac.status)
+                                    .frame(width: 14)
+                                Text(ac.criterion)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -316,9 +316,13 @@ struct DetailView: View {
     }
 
     private func statusIcon(for story: IterationDefinition) -> String {
-        if story.passes {
+        if story.isFrozen {
             return "checkmark.circle.fill"
-        } else if story.inProgress {
+        } else if story.hasErrors {
+            return "exclamationmark.triangle.fill"
+        } else if story.hasFailingCriteria {
+            return "xmark.circle.fill"
+        } else if story.acceptanceCriteria.contains(where: { $0.status == .pass }) {
             return "circle.inset.filled"
         } else {
             return "circle"
@@ -326,9 +330,13 @@ struct DetailView: View {
     }
 
     private func statusColor(for story: IterationDefinition) -> Color {
-        if story.passes {
+        if story.isFrozen {
             return .green
-        } else if story.inProgress {
+        } else if story.hasErrors {
+            return .yellow
+        } else if story.hasFailingCriteria {
+            return .red
+        } else if story.acceptanceCriteria.contains(where: { $0.status == .pass }) {
             return .cyan
         } else {
             return .secondary
@@ -336,12 +344,38 @@ struct DetailView: View {
     }
 
     private func statusText(for story: IterationDefinition) -> String {
-        if story.passes {
-            return "Passed"
-        } else if story.inProgress {
+        if story.isFrozen {
+            return "Complete"
+        } else if story.hasErrors {
+            return "Error"
+        } else if story.hasFailingCriteria {
+            return "Failing"
+        } else if story.acceptanceCriteria.contains(where: { $0.status == .pass }) {
             return "In Progress"
         } else {
             return "Pending"
+        }
+    }
+
+    @ViewBuilder
+    private func criterionStatusIcon(_ status: AcceptanceCriterion.CriterionStatus) -> some View {
+        switch status {
+        case .notStarted:
+            Image(systemName: "circle")
+                .foregroundStyle(.secondary)
+                .font(.system(size: 12))
+        case .fail:
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.red)
+                .font(.system(size: 12))
+        case .pass:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.system(size: 12))
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.yellow)
+                .font(.system(size: 12))
         }
     }
 }

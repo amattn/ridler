@@ -99,13 +99,32 @@ final class RalphLoopEngineTests: XCTestCase {
         return project
     }
 
+    /// Simulates both implementation and verification phases completing successfully.
+    /// `mockPM` is a closure that returns the current mock process manager (which changes between phases).
+    private func simulateTwoPhaseCompletion(mockPM: @escaping () -> MockProcessManager?, delay: TimeInterval = 0.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            // Phase 1: implementation completes
+            mockPM()?.sendLine("{\"type\":\"assistant\",\"content\":\"<ridler-complete/>\"}")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                mockPM()?.sendExit(code: 0)
+                // Phase 2: verification completes (mockPM now points to verification PM)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    mockPM()?.sendLine("{\"type\":\"assistant\",\"content\":\"<ridler-complete/>\"}")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        mockPM()?.sendExit(code: 0)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Story Selection Tests
 
     func testSelectsHighestPriorityStoryWithPassesFalse() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d1", priority: 2, acceptanceCriteria: ["a"], passes: true),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d2", priority: 1, acceptanceCriteria: ["b"], passes: false),
-            IterationDefinition(id: "US-003", userStoryTitle: "Third", userStoryDescription: "d3", priority: 3, acceptanceCriteria: ["c"], passes: false),
+            IterationDefinition(id: "US-001", title: "First", description: "d1", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .pass)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d2", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
+            IterationDefinition(id: "US-003", title: "Third", description: "d3", priority: 3, acceptanceCriteria: [AcceptanceCriterion(criterion: "c", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -136,8 +155,8 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testCompletesWhenAllStoriesPass() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d1", priority: 1, acceptanceCriteria: ["a"], passes: true),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d2", priority: 2, acceptanceCriteria: ["b"], passes: true),
+            IterationDefinition(id: "US-001", title: "First", description: "d1", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .pass)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d2", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .pass)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -161,7 +180,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testStartTransitionsToRunning() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -183,7 +202,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testPauseTransitionsToPaused() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -214,7 +233,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testStopKillsProcess() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -252,7 +271,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testIterationCountIncrements() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -274,7 +293,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testMaxIterationsStopsLoop() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         var project = try createTestProject(stories: stories)
         project.maxIterations = 1
@@ -300,7 +319,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testPromptContainsStoryDetails() throws {
         let stories = [
-            IterationDefinition(id: "US-042", userStoryTitle: "Test Feature", userStoryDescription: "Test description", priority: 5, acceptanceCriteria: ["Criterion A", "Criterion B"]),
+            IterationDefinition(id: "US-042", title: "Test Feature", description: "Test description", priority: 5, acceptanceCriteria: [AcceptanceCriterion(criterion: "Criterion A", status: .notStarted), AcceptanceCriterion(criterion: "Criterion B", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -348,7 +367,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testSystemLogMessagesEmitted() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -382,7 +401,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testWorkingDirectoryIsParentOfPRDDirectory() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -419,7 +438,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testMarksStoryAsInProgressViaCallback() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -443,22 +462,16 @@ final class RalphLoopEngineTests: XCTestCase {
         engine.start(project: project)
         wait(for: [runningExpectation], timeout: 2.0)
 
-        // inProgress is runtime-only (not written to disk in v2), verify via callback
+        // Verify the story is not yet frozen (criteria still notStarted)
         let story = updatedProject?.iterationDefinitions.first { $0.id == "US-001" }
-        XCTAssertTrue(story?.inProgress ?? false, "Story should be marked as inProgress via callback")
-
-        // Verify it was NOT written to disk (inProgress is not serialized in v2)
-        let store = FileSystemPRDStore()
-        let reloaded = try store.loadProject(from: tempDir)
-        let diskStory = reloaded.iterationDefinitions.first { $0.id == "US-001" }
-        XCTAssertFalse(diskStory?.inProgress ?? true, "inProgress should not be persisted to disk in v2")
+        XCTAssertFalse(story?.isFrozen ?? true, "Story should not be frozen yet")
     }
 
     // MARK: - Process Exit Handling
 
     func testProcessExitWithNonZeroCodeTransitionsToError() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -492,8 +505,8 @@ final class RalphLoopEngineTests: XCTestCase {
     func testProcessExitWithZeroCodeAndCompletionDetected() throws {
         // Create two stories, one passing, one not
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"], passes: true),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .pass)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -524,14 +537,23 @@ final class RalphLoopEngineTests: XCTestCase {
             let store = FileSystemPRDStore()
             var updated = (try? store.loadProject(from: self.tempDir)) ?? project
             if let idx = updated.iterationDefinitions.firstIndex(where: { $0.id == "US-002" }) {
-                updated.iterationDefinitions[idx].passes = true
+                for i in updated.iterationDefinitions[idx].acceptanceCriteria.indices {
+                    updated.iterationDefinitions[idx].acceptanceCriteria[i].status = .pass
+                }
             }
             try? store.writeProject(updated, to: self.tempDir)
 
-            // Send completion signal then successful exit
+            // Phase 1: implementation completes
             mockPM?.sendLine("{\"type\":\"assistant\",\"content\":\"Done! <ridler-complete/>\"}")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 mockPM?.sendExit(code: 0)
+                // Phase 2: verification completes (mockPM now points to verification PM)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    mockPM?.sendLine("{\"type\":\"assistant\",\"content\":\"<ridler-complete/>\"}")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        mockPM?.sendExit(code: 0)
+                    }
+                }
             }
         }
 
@@ -543,8 +565,8 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testPauseAfterStoryPausesOnIterationComplete() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         var project = try createTestProject(stories: stories)
         project.pauseAfterStory = true
@@ -568,19 +590,30 @@ final class RalphLoopEngineTests: XCTestCase {
 
         engine.start(project: project)
 
+        // Phase 1: implementation exits
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
+            mockPM?.sendLine("{\"type\":\"assistant\",\"content\":\"<ridler-complete/>\"}")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                mockPM?.sendExit(code: 0)
+                // Phase 2: verification exits (mockPM now points to the new verification PM)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    mockPM?.sendLine("{\"type\":\"assistant\",\"content\":\"<ridler-complete/>\"}")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        mockPM?.sendExit(code: 0)
+                    }
+                }
+            }
         }
 
         wait(for: [pausedExpectation], timeout: 3.0)
     }
 
-    // MARK: - Iterations.md Tests
+    // MARK: - Progress.md Tests
 
     func testIterationsFileCreatedAfterIteration() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -605,15 +638,13 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
-        // Verify iterations.md was created
-        let iterationsURL = tempDir.appendingPathComponent("iterations.md")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: iterationsURL.path), "iterations.md should be created")
+        // Verify progress.md was created
+        let iterationsURL = tempDir.appendingPathComponent("progress.md")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: iterationsURL.path), "progress.md should be created")
 
         let content = try String(contentsOf: iterationsURL, encoding: .utf8)
         XCTAssertTrue(content.contains("US-001"), "Iterations log should contain story ID")
@@ -624,13 +655,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testIterationsFileAppendsMultipleEntries() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
-        // Write initial content to iterations.md
-        let iterationsURL = tempDir.appendingPathComponent("iterations.md")
+        // Write initial content to progress.md
+        let iterationsURL = tempDir.appendingPathComponent("progress.md")
         try "## Existing Content\n---\n".write(to: iterationsURL, atomically: true, encoding: .utf8)
 
         var mockPM: MockProcessManager?
@@ -654,11 +685,9 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
         let content = try String(contentsOf: iterationsURL, encoding: .utf8)
         XCTAssertTrue(content.contains("Existing Content"), "Should preserve existing content")
@@ -667,7 +696,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testIterationsFileRecordsNonZeroExitCode() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -703,14 +732,14 @@ final class RalphLoopEngineTests: XCTestCase {
         wait(for: [errorExpectation], timeout: 3.0)
 
         // Iteration log should NOT be appended on error (exit code check happens before appendIterationLog)
-        let iterationsURL = tempDir.appendingPathComponent("iterations.md")
-        XCTAssertFalse(FileManager.default.fileExists(atPath: iterationsURL.path), "iterations.md should not be created on error exit")
+        let iterationsURL = tempDir.appendingPathComponent("progress.md")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: iterationsURL.path), "progress.md should not be created on error exit")
     }
 
     func testIterationsFileStoredInPRDDirectory() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -735,27 +764,25 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
-        // Verify iterations.md is in the PRD directory (same as ridl.json)
-        let iterationsURL = tempDir.appendingPathComponent("iterations.md")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: iterationsURL.path), "iterations.md should be in PRD directory")
+        // Verify progress.md is in the PRD directory (same as ridl.json)
+        let iterationsURL = tempDir.appendingPathComponent("progress.md")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: iterationsURL.path), "progress.md should be in PRD directory")
 
         // Verify it's NOT in the parent directory
-        let parentIterationsURL = tempDir.deletingLastPathComponent().appendingPathComponent("iterations.md")
-        XCTAssertFalse(FileManager.default.fileExists(atPath: parentIterationsURL.path), "iterations.md should not be in parent directory")
+        let parentIterationsURL = tempDir.deletingLastPathComponent().appendingPathComponent("progress.md")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: parentIterationsURL.path), "progress.md should not be in parent directory")
     }
 
     // MARK: - Git Commit Tests
 
     func testGitCommitAfterSuccessfulIteration() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -782,20 +809,19 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
-        XCTAssertEqual(mockGit.commitCallCount, 1, "Should create one commit per iteration")
-        XCTAssertEqual(mockGit.lastCommitMessage, "feature: [US-001] - First Story", "Commit message should follow format")
+        // Two commits: one for implementation, one for verification
+        XCTAssertEqual(mockGit.commitCallCount, 2, "Should create two commits per iteration (implementation + verification)")
+        XCTAssertEqual(mockGit.lastCommitMessage, "verify: [US-001] verification - First Story", "Last commit should be verification")
     }
 
     func testGitCommitUsesProjectRootAsWorkingDirectory() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -822,11 +848,9 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
         // Commit directory should be parent of PRD directory (project root)
         let expectedDir = tempDir.deletingLastPathComponent()
@@ -839,7 +863,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testGitCommitNotCalledOnError() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -875,8 +899,8 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testGitCommitFailureDoesNotStopLoop() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-002", userStoryTitle: "Second", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-002", title: "Second", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -904,11 +928,9 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
         // Loop should continue (paused as expected) even though commit failed
         // This verifies the commit error is non-fatal
@@ -916,8 +938,8 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testGitCommitLogMessage() throws {
         let stories = [
-            IterationDefinition(id: "US-042", userStoryTitle: "Cool Feature", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "US-043", userStoryTitle: "Other", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "US-042", title: "Cool Feature", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "US-043", title: "Other", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ]
         let project = try createTestProject(stories: stories)
 
@@ -951,11 +973,9 @@ final class RalphLoopEngineTests: XCTestCase {
         project2.pauseAfterStory = true
         engine.start(project: project2)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            mockPM?.sendExit(code: 0)
-        }
+        simulateTwoPhaseCompletion(mockPM: { mockPM })
 
-        wait(for: [pausedExpectation], timeout: 3.0)
+        wait(for: [pausedExpectation], timeout: 5.0)
 
         XCTAssertTrue(logMessages.contains(where: { $0.contains("Committed:") && $0.contains("US-042") }), "Should log commit message")
     }
@@ -964,7 +984,7 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testPromptIncludesUniversalContext() throws {
         let stories = [
-            IterationDefinition(id: "US-001", userStoryTitle: "First", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"],
+            IterationDefinition(id: "US-001", title: "First", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)],
                       prdReferences: ["Section 2.1", "Section 3.4"]),
         ]
 
@@ -976,7 +996,8 @@ final class RalphLoopEngineTests: XCTestCase {
             universalContext: UniversalContext(
                 nonFunctionalRequirements: ["Performance <100ms"],
                 developerExperience: ["Use SwiftUI"],
-                technicalArchitecture: nil
+                technicalArchitecture: nil,
+                testingAndVerification: nil
             )
         )
         let store = FileSystemPRDStore()
@@ -1029,16 +1050,16 @@ final class RalphLoopEngineTests: XCTestCase {
     func testThreeParallelEnginesRunIndependently() throws {
         // Create 3 separate projects with distinct stories
         let (projectA, _) = try createIsolatedTestProject(name: "ProjectA", stories: [
-            IterationDefinition(id: "A-001", userStoryTitle: "A Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "A-002", userStoryTitle: "A Story 2", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
+            IterationDefinition(id: "A-001", title: "A Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "A-002", title: "A Story 2", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "ProjectB", stories: [
-            IterationDefinition(id: "B-001", userStoryTitle: "B Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "B-001", title: "B Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "ProjectC", stories: [
-            IterationDefinition(id: "C-001", userStoryTitle: "C Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
-            IterationDefinition(id: "C-002", userStoryTitle: "C Story 2", userStoryDescription: "d", priority: 2, acceptanceCriteria: ["b"]),
-            IterationDefinition(id: "C-003", userStoryTitle: "C Story 3", userStoryDescription: "d", priority: 3, acceptanceCriteria: ["c"]),
+            IterationDefinition(id: "C-001", title: "C Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
+            IterationDefinition(id: "C-002", title: "C Story 2", description: "d", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "b", status: .notStarted)]),
+            IterationDefinition(id: "C-003", title: "C Story 3", description: "d", priority: 3, acceptanceCriteria: [AcceptanceCriterion(criterion: "c", status: .notStarted)]),
         ])
 
         var mockPM_A: MockProcessManager?
@@ -1111,13 +1132,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testPausingOneEngineDoesNotAffectOthers() throws {
         let (projectA, _) = try createIsolatedTestProject(name: "PauseA", stories: [
-            IterationDefinition(id: "PA-001", userStoryTitle: "PA Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "PA-001", title: "PA Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "PauseB", stories: [
-            IterationDefinition(id: "PB-001", userStoryTitle: "PB Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "PB-001", title: "PB Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "PauseC", stories: [
-            IterationDefinition(id: "PC-001", userStoryTitle: "PC Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "PC-001", title: "PC Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
 
         let engineA = RalphLoopEngine(
@@ -1177,13 +1198,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testStoppingOneEngineDoesNotAffectOthers() throws {
         let (projectA, _) = try createIsolatedTestProject(name: "StopA", stories: [
-            IterationDefinition(id: "SA-001", userStoryTitle: "SA Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "SA-001", title: "SA Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "StopB", stories: [
-            IterationDefinition(id: "SB-001", userStoryTitle: "SB Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "SB-001", title: "SB Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "StopC", stories: [
-            IterationDefinition(id: "SC-001", userStoryTitle: "SC Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "SC-001", title: "SC Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
 
         var mockPM_A: MockProcessManager?
@@ -1249,13 +1270,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testParallelIterationCountsAreIndependent() throws {
         let (projectA, _) = try createIsolatedTestProject(name: "IterA", stories: [
-            IterationDefinition(id: "IA-001", userStoryTitle: "IA Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "IA-001", title: "IA Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "IterB", stories: [
-            IterationDefinition(id: "IB-001", userStoryTitle: "IB Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "IB-001", title: "IB Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "IterC", stories: [
-            IterationDefinition(id: "IC-001", userStoryTitle: "IC Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "IC-001", title: "IC Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
 
         var iterationA = 0
@@ -1305,13 +1326,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testParallelLogEntriesAreIsolatedByProjectID() throws {
         let (projectA, _) = try createIsolatedTestProject(name: "LogA", stories: [
-            IterationDefinition(id: "LA-001", userStoryTitle: "LA Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "LA-001", title: "LA Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "LogB", stories: [
-            IterationDefinition(id: "LB-001", userStoryTitle: "LB Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "LB-001", title: "LB Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "LogC", stories: [
-            IterationDefinition(id: "LC-001", userStoryTitle: "LC Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "LC-001", title: "LC Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
 
         var logsA: [(LogEntry, String)] = []
@@ -1362,13 +1383,13 @@ final class RalphLoopEngineTests: XCTestCase {
 
     func testParallelErrorInOneDoesNotAffectOthers() throws {
         let (projectA, _) = try createIsolatedTestProject(name: "ErrA", stories: [
-            IterationDefinition(id: "EA-001", userStoryTitle: "EA Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "EA-001", title: "EA Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectB, _) = try createIsolatedTestProject(name: "ErrB", stories: [
-            IterationDefinition(id: "EB-001", userStoryTitle: "EB Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "EB-001", title: "EB Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
         let (projectC, _) = try createIsolatedTestProject(name: "ErrC", stories: [
-            IterationDefinition(id: "EC-001", userStoryTitle: "EC Story", userStoryDescription: "d", priority: 1, acceptanceCriteria: ["a"]),
+            IterationDefinition(id: "EC-001", title: "EC Story", description: "d", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "a", status: .notStarted)]),
         ])
 
         var mockPM_B: MockProcessManager?

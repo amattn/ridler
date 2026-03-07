@@ -1,14 +1,43 @@
-# Chief Agent Instructions
+# Implementation Agent Instructions
 
-You are an autonomous coding agent working on a software project.
+You are an autonomous coding agent working on a software project. This is the **implementation phase** (phase 1 of 3).
 
 ## Your Task
 
 1. Read the PRD at `ridl/ridl.json`
-2. Read `progress.md` if it exists (check Codebase Patterns section first)
-3. Pick the **highest priority** iteration definition where `passes: false` -- After determining which story to work on, output exact story id, e.g.: <ralph-status>{{ story.id }}</ralph-status>
-4. Implement that single iteration definition
-5. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-6. If checks pass, commit ALL changes with message: `feature: [{{ story.id }}] - {{ story.title }}`
-7. Append your progress to `progress.md`
-8. **LAST STEP — do this after everything else is done:** Update `ridl/ridl.json` to set `"passes": true` for the completed iteration definition. This MUST be the final action you take, outside of any cleanup tasks or final logging for debug or non-user facing purposes.
+2. Read `ridl/emergent.md`, `ridl/progress.md`, and `ridl/learnings.md` if they exist (check Codebase Patterns section first)
+3. **At any time** during this phase, append to these files as things come up — do not wait until the end:
+   - `ridl/learnings.md` — for **agent-facing** knowledge: codebase patterns, tool quirks, implementation techniques that worked or didn't, debugging tips, environment gotchas. Things that help future agents do the work better.
+   - `ridl/emergent.md` — for **human-facing** items that need to flow back to the PRD: design decisions made without human input, gaps or ambiguities in the requirements, assumptions that should be validated, scope questions, edge cases the PRD didn't anticipate.
+4. Pick the **highest priority** iteration definition where any acceptance criterion has `"status": "not_started"` or `"status": "fail"` -- After determining which iteration definition to work on, output its id: <ralph-status>{{ iteration.id }}</ralph-status>
+5. **Write failing tests first** — for each acceptance criterion, write a test that verifies it. Tests must fail before implementation (red).
+6. **Update `ridl/ridl.json`** — set each criterion you wrote tests for to `"status": "fail"`. This confirms the red phase.
+7. **Implement** until all tests pass (green)
+8. **Update `ridl/ridl.json`** — set each now-passing criterion to `"status": "pass"`.
+9. **Every time you run tests**, update ridl/ridl.json to reflect the current state. Criterion statuses should always match reality — `"not_started"` if not yet attempted, `"fail"` if the test fails, `"pass"` if it passes, `"error"` if something unexpected prevents evaluation.
+10. Run quality checks (typecheck, lint, test, format — use whatever your project requires)
+    - **If the format check fails**, run the format fix command first (e.g., `ruff format .` instead of `ruff format --check .`). Most formatting issues are mechanical — let the formatter fix them automatically. Only investigate manually if the fix command itself fails or produces unexpected results.
+11. If checks pass, commit ALL changes with message: `feature: [{{ iteration.id }}] implementation - {{ iteration.title }}`
+
+## Red/Green Discipline
+
+The acceptance criteria in ridl/ridl.json track status in real time:
+- `"not_started"` — you haven't touched this criterion yet
+- `"fail"` — you wrote a test and it fails (this is expected and correct during the red phase)
+- `"pass"` — implementation makes the test pass
+- `"error"` — something unexpected went wrong
+
+Update criterion statuses as you work so the harness can observe progress.
+
+## Important
+
+- Do NOT skip the red phase. Every test must demonstrably fail before you write the implementation.
+- Do NOT move on to verification or bookkeeping. Just implement and commit.
+- Keep changes focused on this single iteration definition.
+- If you are re-implementing after a failed verification, focus on the criteria with `"status": "fail"` — read `ridl/emergent.md` and `ridl/learnings.md` for context on what went wrong.
+
+## Completion
+
+When implementation is done, signal with exactly one of:
+- `<ridler-complete/>` — implementation finished, ready for verification
+- `<ridler-blocked/>` — cannot proceed, needs human input (document the blocker in `ridl/emergent.md`)

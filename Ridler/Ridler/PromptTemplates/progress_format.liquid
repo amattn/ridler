@@ -1,0 +1,31 @@
+
+# Progress Report Format
+
+This file tracks what was implemented in each RIDL iteration and how it was verified. Append-only — never replace existing entries.
+
+---
+
+APPEND to ridl/progress.md (never replace, always append):
+
+```
+## [Date/Time] - [{{ iteration.id }}] {{ iteration.title }}
+- **Phase:** [implementation | verification | bookkeeping]
+- What was implemented
+- Files changed
+- Verification results (what the verification agent confirmed or fixed)
+- How we proved this was successfully implemented (tests passed, manual verification, etc.)
+---
+```
+
+## Quality Requirements
+
+- ALL commits must pass your project's quality checks (typecheck, lint, test)
+- Do NOT commit broken code
+- Keep changes focused and minimal
+- Follow existing code patterns
+
+{% if progress_content %}
+## Previous Progress
+
+{{ progress_content }}
+{% endif %}

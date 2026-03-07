@@ -554,7 +554,7 @@ struct ContentView: View {
                 var updated = reloaded
                 let oldState = openProjects[index].loopState
                 // If project was complete but now has incomplete stories, reset to ready
-                if oldState == .complete && reloaded.iterationDefinitions.contains(where: { !$0.passes }) {
+                if oldState == .complete && reloaded.iterationDefinitions.contains(where: { !$0.isFrozen }) {
                     updated.loopState = .ready
                 } else {
                     updated.loopState = oldState
@@ -708,19 +708,19 @@ struct ContentView: View {
         case .ready:
             return "Ready"
         case .running:
-            if let story = project.iterationDefinitions.first(where: { $0.inProgress }) {
-                return "Working on: \(story.id) — \(story.userStoryTitle)"
+            if let story = project.iterationDefinitions.first(where: { !$0.isFrozen }) {
+                return "Working on: \(story.id) — \(story.title)"
             }
             return "Running..."
         case .paused:
-            if let story = project.iterationDefinitions.first(where: { $0.inProgress }) {
-                return "Paused on: \(story.id) — \(story.userStoryTitle)"
+            if let story = project.iterationDefinitions.first(where: { $0.hasFailingCriteria }) {
+                return "Paused on: \(story.id) — \(story.title)"
             }
             return "Paused"
         case .stopped:
             return "Stopped"
         case .complete:
-            let passCount = project.iterationDefinitions.filter { $0.passes }.count
+            let passCount = project.iterationDefinitions.filter { $0.isFrozen }.count
             return "Complete — \(passCount)/\(project.iterationDefinitions.count) stories passed"
         case .error:
             return "Error — check log for details"
@@ -730,7 +730,7 @@ struct ContentView: View {
     private func debugStatusInfo(for project: PRDProject?) -> DebugStatusInfo? {
         guard settings.debugMode, let project else { return nil }
         let engine = loopEngines[project.id]
-        let currentStory = project.iterationDefinitions.first(where: { $0.inProgress })
+        let currentStory = project.iterationDefinitions.first(where: { !$0.isFrozen })
 
         var elapsedStr: String?
         if let startDate = project.loopStartDate, project.loopState == .running {

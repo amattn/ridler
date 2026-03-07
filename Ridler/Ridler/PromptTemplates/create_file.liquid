@@ -1,1 +1,19 @@
-{% if file_name == "ridl.md" %}The file {{ file_path }} does not exist yet. Please create ridl.md from the existing prd.md in the same directory. Read prd.md first, then create ridl.md with user stories and acceptance criteria.{% elsif file_name == "ridl.json" %}The file {{ file_path }} does not exist yet. Please create ridl.json from the existing ridl.md or prd.md in the same directory. Read the existing files first, then create ridl.json in the proper format.{% else %}The file {{ file_path }} does not exist yet. Please create it with appropriate initial content.{% endif %}
+{% if file_name == "ridl.md" %}
+The file {{ file_path }} does not exist yet.
+Please create ridl.md from the existing prd.md in the same directory.
+Read prd.md first, then create ridl.md with iteration definitions and acceptance criteria.
+
+{% elsif file_name == "ridl.json" %}
+The file {{ file_path }} does not exist yet.
+Please create ridl.json from the existing ridl.md or prd.md in the same directory.
+Read the existing files first, then create ridl.json in the proper format.
+
+{% elsif file_name == "emergent.md" %}
+The file {{ file_path }} does not exist yet.
+Please create emergent.md with an empty template for capturing emergent design decisions, PRD ambiguities, assumptions, and edge cases discovered during RIDL iterations.
+
+{% else %}
+The file {{ file_path }} does not exist yet.
+Please create it with appropriate initial content.
+
+{% endif %}

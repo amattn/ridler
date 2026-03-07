@@ -1,0 +1,57 @@
+## Target Iteration Definition
+
+- **ID:** {{ iteration.id }}
+- **Title:** {{ iteration.title }}
+- **Priority:** {{ iteration.priority }}
+- **Description:** {{ iteration.description }}
+
+### Acceptance Criteria
+
+{% for ac in iteration.acceptance_criteria %}
+- [{{ ac.status }}] {{ ac.criterion }}
+{% endfor %}
+
+{% if iteration.prd_references %}
+### PRD References
+
+{% for ref in iteration.prd_references %}
+- {{ ref }}
+{% endfor %}
+{% endif %}
+
+{% if project.has_universal_context %}
+## Universal Context
+
+{% if project.non_functional_requirements %}
+### Non-Functional Requirements
+
+{% for item in project.non_functional_requirements %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if project.developer_experience %}
+### Developer Experience
+
+{% for item in project.developer_experience %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if project.technical_architecture %}
+### Technical Architecture
+
+{% for item in project.technical_architecture %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if project.testing_and_verification %}
+### Testing & Verification
+
+{% for item in project.testing_and_verification %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+{% endif %}

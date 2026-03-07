@@ -1,6 +1,19 @@
 import Foundation
 import SwiftUI
 
+/// Tracks which phase the engine is currently executing for an iteration definition.
+enum IterationPhase: String {
+    case implementation
+    case verification
+}
+
+/// Harness signals emitted by the agent to communicate completion state.
+enum HarnessSignal: Equatable {
+    case complete              // <ridler-complete/>
+    case verificationFailed    // <ridler-verification-failed/>
+    case blocked               // <ridler-blocked/>
+}
+
 enum LoopState: String, Codable, Equatable {
     case ready
     case running

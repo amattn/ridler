@@ -34,8 +34,9 @@ final class RalphLoopEngine: ObservableObject {
     private var maxIterations = 0
     private var iterationCount = 0
     private var loopState: LoopState = .ready
-    private var completionDetected = false
+    private var lastSignal: HarnessSignal?
     private var currentStoryID: String?
+    private var currentPhase: IterationPhase = .implementation
     private var audioPlayer: AVAudioPlayer?
 
     init(
@@ -72,8 +73,9 @@ final class RalphLoopEngine: ObservableObject {
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
-        self.completionDetected = false
+        self.lastSignal = nil
         self.currentStoryID = nil
+        self.currentPhase = .implementation
 
         // Ensure default prompt templates exist in the project's prompts directory
         if let directoryURL = project.directoryURL {
@@ -112,8 +114,9 @@ final class RalphLoopEngine: ObservableObject {
         self.maxIterations = project.maxIterations > 0 ? project.maxIterations : project.defaultMaxIterations
         self.iterationCount = project.iterationCount
         self.loopState = .running
-        self.completionDetected = false
+        self.lastSignal = nil
         self.currentStoryID = nil
+        self.currentPhase = .implementation
 
         onStateChange?(.running)
         logSystem("Loop resumed")
@@ -185,42 +188,59 @@ final class RalphLoopEngine: ObservableObject {
             return
         }
 
-        // Select next story: filter passes: false, sort by priority, pick first
-        guard let nextStory = selectNextStory(from: project) else {
-            // All stories pass — complete
-            logSystem("All stories pass — loop complete!")
-            loopState = .complete
-            onStateChange?(.complete)
-            playCompletionSound()
-            postCompletionNotification()
-            return
+        let nextStory: IterationDefinition
+
+        if currentPhase == .verification, let storyID = currentStoryID,
+           let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
+            // Verification phase: reuse the same story
+            nextStory = story
+        } else {
+            // Implementation phase: select next non-frozen story
+            guard let selected = selectNextStory(from: project) else {
+                logSystem("All stories pass — loop complete!")
+                loopState = .complete
+                onStateChange?(.complete)
+                playCompletionSound()
+                postCompletionNotification()
+                return
+            }
+            nextStory = selected
+            currentPhase = .implementation
         }
 
         currentStoryID = nextStory.id
-        completionDetected = false
+        lastSignal = nil
 
-        // Mark story as inProgress
-        markStoryInProgress(nextStory.id, in: project)
+        // Notify UI of the current story
+        onProjectUpdated?(project)
 
         iterationCount += 1
         onIterationChange?(iterationCount)
 
-        logSystem("Iteration \(iterationCount): Starting \(nextStory.id) — \(nextStory.userStoryTitle)")
+        let phaseLabel = currentPhase == .implementation ? "Implementation" : "Verification"
+        logSystem("Iteration \(iterationCount): \(phaseLabel) — \(nextStory.id) — \(nextStory.title)")
 
         // Build prompt from templates
-        let templateNames = TemplateManager.agentTemplateNames.map { "\($0).liquid" }.joined(separator: ", ")
+        let templateNames: [String]
+        switch currentPhase {
+        case .implementation:
+            templateNames = TemplateManager.implementationTemplateNames
+        case .verification:
+            templateNames = TemplateManager.verificationTemplateNames
+        }
+        let templateNamesStr = templateNames.map { "\($0).liquid" }.joined(separator: ", ")
         let promptsPath = directoryURL.appendingPathComponent("prompts").path
-        logSystem("Rendering templates: \(templateNames) from \(promptsPath)")
-        logSystem("Template context: story.id=\(nextStory.id), story.priority=\(nextStory.priority), story.acceptance_criteria=[\(nextStory.acceptanceCriteria.count) items], project.universalContext=\(project.universalContext != nil ? "present" : "nil"), progress_content=\(progressContentExists(in: directoryURL) ? "present" : "nil")")
+        logSystem("Rendering templates: \(templateNamesStr) from \(promptsPath)")
+        logSystem("Template context: iteration.id=\(nextStory.id), iteration.priority=\(nextStory.priority), iteration.acceptance_criteria=[\(nextStory.acceptanceCriteria.count) items], project.universalContext=\(project.universalContext != nil ? "present" : "nil"), progress_content=\(runtimeFileExists("progress.md", in: directoryURL) ? "present" : "nil")")
 
         let prompt: String
         do {
-            prompt = try buildPrompt(for: nextStory, project: project)
+            prompt = try buildPrompt(for: nextStory, project: project, phase: currentPhase)
         } catch {
             transitionToError("Template rendering failed: \(error.localizedDescription)")
             return
         }
-        logSystem("Prompt rendered (\(prompt.count) chars) from \(TemplateManager.agentTemplateNames.count) templates")
+        logSystem("Prompt rendered (\(prompt.count) chars) from \(templateNames.count) templates")
         logSystem("Prompt:\n\(prompt)")
 
         // Spawn Claude Code process
@@ -261,13 +281,13 @@ final class RalphLoopEngine: ObservableObject {
                 }
             cancellables.insert(entrySub)
 
-            // Listen for ridler-complete signal
-            let completionSub = parser.completionPublisher
+            // Listen for harness signals
+            let signalSub = parser.signalPublisher
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] in
-                    self?.completionDetected = true
+                .sink { [weak self] signal in
+                    self?.lastSignal = signal
                 }
-            cancellables.insert(completionSub)
+            cancellables.insert(signalSub)
 
             // Handle process exit
             let exitSub = processManager.exitPublisher
@@ -293,64 +313,92 @@ final class RalphLoopEngine: ObservableObject {
             return
         }
 
-        if result.exitCode != 0 && !completionDetected {
+        let phaseLabel = currentPhase == .implementation ? "implementation" : "verification"
+
+        // Handle blocked signal from either phase
+        if lastSignal == .blocked {
+            logSystem("Agent signaled blocked during \(phaseLabel) for \(storyID)")
+            loopState = .paused
+            onStateChange?(.paused)
+            return
+        }
+
+        // Handle non-zero exit with no signal
+        if result.exitCode != 0 && lastSignal == nil {
             logSystem("Claude Code exited with code \(result.exitCode): \(result.stderr)")
             transitionToError("Claude Code failed (exit \(result.exitCode)): \(result.stderr)")
             return
         }
 
-        logSystem("Iteration \(iterationCount) completed for \(storyID)")
+        logSystem("Iteration \(iterationCount) \(phaseLabel) completed for \(storyID)")
 
-        // Append progress entry for this iteration
-        appendIterationLog(storyID: storyID, exitCode: result.exitCode)
+        // Phase-specific handling
+        switch currentPhase {
+        case .implementation:
+            // Implementation done — commit and move to verification
+            commitStoryChanges(storyID: storyID, phase: .implementation)
+            currentPhase = .verification
+            logSystem("Transitioning to verification phase for \(storyID)")
+            runNextIteration()
 
-        // Create git commit for the completed story
-        commitStoryChanges(storyID: storyID)
-
-        // Reload project to check updated state
-        guard let directoryURL else { return }
-        do {
-            let updatedProject = try prdStore.loadProject(from: directoryURL)
-            onProjectUpdated?(updatedProject)
-
-            // Check if all stories pass
-            let allPass = updatedProject.iterationDefinitions.allSatisfy { $0.passes }
-            if allPass {
-                logSystem("All stories pass — loop complete!")
-                loopState = .complete
-                onStateChange?(.complete)
-                playCompletionSound()
-                postCompletionNotification()
+        case .verification:
+            if lastSignal == .verificationFailed {
+                // Verification found issues — loop back to implementation
+                commitStoryChanges(storyID: storyID, phase: .verification)
+                logSystem("Verification failed for \(storyID) — looping back to implementation")
+                currentPhase = .implementation
+                runNextIteration()
                 return
             }
-        } catch {
-            // Non-fatal — we continue the loop
-            Self.logger.warning("Failed to reload project after iteration: \(error.localizedDescription)")
-        }
 
-        // Check if we should pause
-        if loopState == .paused || pauseAfterStory {
-            loopState = .paused
-            onStateChange?(.paused)
-            logSystem("Paused after story \(storyID)")
-            return
-        }
+            // Verification passed — commit, log, and advance
+            commitStoryChanges(storyID: storyID, phase: .verification)
+            appendProgressLog(storyID: storyID, exitCode: result.exitCode)
 
-        // Check if we should pause after milestone
-        if pauseAfterMilestone, let milestones, isLastStoryInMilestone(storyID, milestones: milestones) {
-            loopState = .paused
-            onStateChange?(.paused)
-            logSystem("Paused after milestone containing \(storyID)")
-            return
-        }
+            // Reload project to check updated state
+            guard let directoryURL else { return }
+            do {
+                let updatedProject = try prdStore.loadProject(from: directoryURL)
+                onProjectUpdated?(updatedProject)
 
-        // Continue to next iteration
-        runNextIteration()
+                let allPass = updatedProject.iterationDefinitions.allSatisfy { $0.isFrozen }
+                if allPass {
+                    logSystem("All stories pass — loop complete!")
+                    loopState = .complete
+                    onStateChange?(.complete)
+                    playCompletionSound()
+                    postCompletionNotification()
+                    return
+                }
+            } catch {
+                Self.logger.warning("Failed to reload project after iteration: \(error.localizedDescription)")
+            }
+
+            // Check if we should pause
+            if loopState == .paused || pauseAfterStory {
+                loopState = .paused
+                onStateChange?(.paused)
+                logSystem("Paused after story \(storyID)")
+                return
+            }
+
+            // Check if we should pause after milestone
+            if pauseAfterMilestone, let milestones, isLastStoryInMilestone(storyID, milestones: milestones) {
+                loopState = .paused
+                onStateChange?(.paused)
+                logSystem("Paused after milestone containing \(storyID)")
+                return
+            }
+
+            // Continue to next iteration definition
+            currentPhase = .implementation
+            runNextIteration()
+        }
     }
 
     private func selectNextStory(from project: PRDProject) -> IterationDefinition? {
         project.iterationDefinitions
-            .filter { !$0.passes }
+            .filter { !$0.isFrozen }
             .sorted { $0.priority < $1.priority }
             .first
     }
@@ -361,52 +409,66 @@ final class RalphLoopEngine: ObservableObject {
         for milestone in milestones {
             guard milestone.storyIDs.contains(storyID) else { continue }
             let allOthersPass = milestone.storyIDs.allSatisfy { id in
-                id == storyID || (project.iterationDefinitions.first { $0.id == id }?.passes ?? false)
+                id == storyID || (project.iterationDefinitions.first { $0.id == id }?.isFrozen ?? false)
             }
             if allOthersPass { return true }
         }
         return false
     }
 
-    private func markStoryInProgress(_ storyID: String, in project: PRDProject) {
-        // inProgress is runtime-only (not serialized in v2), so just notify via callback
-        var updated = project
-        if let index = updated.iterationDefinitions.firstIndex(where: { $0.id == storyID }) {
-            updated.iterationDefinitions[index].inProgress = true
+    private func runtimeFileExists(_ filename: String, in directoryURL: URL) -> Bool {
+        FileManager.default.fileExists(atPath: directoryURL.appendingPathComponent(filename).path)
+    }
+
+    private func readRuntimeFile(_ filename: String) -> String? {
+        guard let directoryURL else { return nil }
+        let url = directoryURL.appendingPathComponent(filename)
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func buildPrompt(for story: IterationDefinition, project: PRDProject, phase: IterationPhase) throws -> String {
+        let progressContent = readRuntimeFile("progress.md")
+        let learningsContent = readRuntimeFile("learnings.md")
+        let emergentContent = readRuntimeFile("emergent.md")
+
+        switch phase {
+        case .implementation:
+            return try TemplateManager.buildImplementationPrompt(
+                for: story,
+                project: project,
+                progressContent: progressContent,
+                learningsContent: learningsContent,
+                emergentContent: emergentContent
+            )
+        case .verification:
+            return try TemplateManager.buildVerificationPrompt(
+                for: story,
+                project: project,
+                progressContent: progressContent,
+                learningsContent: learningsContent,
+                emergentContent: emergentContent
+            )
         }
-        onProjectUpdated?(updated)
     }
 
-    private func progressContentExists(in directoryURL: URL) -> Bool {
-        FileManager.default.fileExists(atPath: directoryURL.appendingPathComponent("progress.md").path)
-    }
-
-    private func buildPrompt(for story: IterationDefinition, project: PRDProject) throws -> String {
-        // Load progress.md content if it exists
-        var progressContent: String? = nil
-        if let directoryURL {
-            let progressURL = directoryURL.appendingPathComponent("progress.md")
-            progressContent = try? String(contentsOf: progressURL, encoding: .utf8)
-        }
-
-        return try TemplateManager.buildAgentPrompt(
-            for: story,
-            project: project,
-            progressContent: progressContent
-        )
-    }
-
-    private func commitStoryChanges(storyID: String) {
+    private func commitStoryChanges(storyID: String, phase: IterationPhase) {
         guard let directoryURL else { return }
 
         // Look up story title
         var storyTitle = storyID
         if let project = try? prdStore.loadProject(from: directoryURL),
            let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
-            storyTitle = story.userStoryTitle
+            storyTitle = story.title
         }
 
-        let commitMessage = "feature: [\(storyID)] - \(storyTitle)"
+        let commitMessage: String
+        switch phase {
+        case .implementation:
+            commitMessage = "feature: [\(storyID)] implementation - \(storyTitle)"
+        case .verification:
+            commitMessage = "verify: [\(storyID)] verification - \(storyTitle)"
+        }
+
         let workingDirectory = directoryURL.deletingLastPathComponent()
 
         do {
@@ -418,10 +480,10 @@ final class RalphLoopEngine: ObservableObject {
         }
     }
 
-    private func appendIterationLog(storyID: String, exitCode: Int32) {
+    private func appendProgressLog(storyID: String, exitCode: Int32) {
         guard let directoryURL else { return }
 
-        let iterationsURL = directoryURL.appendingPathComponent("iterations.md")
+        let progressURL = directoryURL.appendingPathComponent("progress.md")
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
         let timestamp = dateFormatter.string(from: Date())
@@ -431,7 +493,7 @@ final class RalphLoopEngine: ObservableObject {
         var storyTitle = storyID
         if let project = try? prdStore.loadProject(from: directoryURL),
            let story = project.iterationDefinitions.first(where: { $0.id == storyID }) {
-            storyTitle = "\(storyID) — \(story.userStoryTitle)"
+            storyTitle = "\(storyID) — \(story.title)"
         }
 
         let entry = """
@@ -439,25 +501,25 @@ final class RalphLoopEngine: ObservableObject {
         ## \(timestamp) - \(storyTitle)
         - **Iteration:** \(iterationCount)
         - **Status:** \(status)
-        - Claude Code session completed for this story
+        - **Phase:** verification complete
         ---
 
         """
 
         do {
-            if FileManager.default.fileExists(atPath: iterationsURL.path) {
-                let handle = try FileHandle(forWritingTo: iterationsURL)
+            if FileManager.default.fileExists(atPath: progressURL.path) {
+                let handle = try FileHandle(forWritingTo: progressURL)
                 handle.seekToEndOfFile()
                 if let data = entry.data(using: .utf8) {
                     handle.write(data)
                 }
                 handle.closeFile()
             } else {
-                try entry.data(using: .utf8)?.write(to: iterationsURL, options: .atomic)
+                try entry.data(using: .utf8)?.write(to: progressURL, options: .atomic)
             }
-            Self.logger.info("Appended iteration log entry for \(storyID)")
+            Self.logger.info("Appended progress log entry for \(storyID)")
         } catch {
-            Self.logger.warning("Failed to append iteration log for \(storyID): \(error.localizedDescription)")
+            Self.logger.warning("Failed to append progress log for \(storyID): \(error.localizedDescription)")
         }
     }
 

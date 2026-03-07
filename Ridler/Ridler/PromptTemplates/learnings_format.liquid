@@ -1,0 +1,31 @@
+# Learnings Format
+
+This file captures patterns, gotchas, and useful context discovered during RIDL iterations. Future agents read this to avoid repeating mistakes and to build on prior knowledge. Append-only — never replace existing entries.
+
+---
+
+APPEND to ridl/learnings.md (never replace, always append):
+
+Prefix each line item with a category tag:
+- `pattern:` — codebase conventions, naming patterns, file organization
+- `gotcha:` — surprising behavior, pitfalls, counterintuitive things
+- `technique:` — implementation approaches that worked (or didn't)
+- `tool:` — CLI quirks, tool flags, configuration workarounds
+- `debug:` — how to diagnose specific issues, useful log lines
+- `context:` — background knowledge useful for future iterations
+- `other:` — catch-all
+
+```
+## [Date/Time] - [{{ iteration.id }}] {{ iteration.title }}
+- **Phase:** [implementation | verification | bookkeeping]
+- pattern: [description]
+- gotcha: [description]
+- technique: [description]
+---
+```
+
+{% if learnings_content %}
+## Previous Learnings
+
+{{ learnings_content }}
+{% endif %}

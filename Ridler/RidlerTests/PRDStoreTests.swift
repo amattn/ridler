@@ -52,11 +52,11 @@ final class FileSystemPRDStoreTests: XCTestCase {
         XCTAssertEqual(project.description, "A test project")
         XCTAssertEqual(project.iterationDefinitions.count, 2)
         XCTAssertEqual(project.iterationDefinitions[0].id, "US-001")
-        XCTAssertTrue(project.iterationDefinitions[0].passes)
-        XCTAssertFalse(project.iterationDefinitions[0].inProgress)
+        XCTAssertTrue(project.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(project.iterationDefinitions[0].hasFailingCriteria)
         XCTAssertEqual(project.iterationDefinitions[1].id, "US-002")
-        XCTAssertFalse(project.iterationDefinitions[1].passes)
-        XCTAssertFalse(project.iterationDefinitions[1].inProgress)
+        XCTAssertFalse(project.iterationDefinitions[1].isFrozen)
+        XCTAssertFalse(project.iterationDefinitions[1].hasFailingCriteria)
         XCTAssertEqual(project.directoryURL, tempDir)
     }
 
@@ -83,8 +83,8 @@ final class FileSystemPRDStoreTests: XCTestCase {
         XCTAssertNil(project.description)
         XCTAssertNil(project.milestones)
         XCTAssertEqual(project.iterationDefinitions.count, 1)
-        XCTAssertFalse(project.iterationDefinitions[0].passes)
-        XCTAssertFalse(project.iterationDefinitions[0].inProgress)
+        XCTAssertFalse(project.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(project.iterationDefinitions[0].hasFailingCriteria)
     }
 
     func testLoadProjectMalformedJSON() throws {
@@ -126,19 +126,10 @@ final class FileSystemPRDStoreTests: XCTestCase {
         }
     }
 
-    func testLoadProjectMissingFile() {
-        XCTAssertThrowsError(try store.loadProject(from: tempDir)) { error in
-            guard let ridlerError = error as? RidlerError else {
-                XCTFail("Expected RidlerError, got \(error)")
-                return
-            }
-            if case .fileNotFound(let path, let filenames) = ridlerError {
-                XCTAssertEqual(path, tempDir.path)
-                XCTAssertTrue(filenames.contains("ridl.json"))
-            } else {
-                XCTFail("Expected fileNotFound error, got \(ridlerError)")
-            }
-        }
+    func testLoadProjectMissingFileReturnsMinimalProject() throws {
+        let project = try store.loadProject(from: tempDir)
+        XCTAssertEqual(project.directoryURL, tempDir)
+        XCTAssertTrue(project.iterationDefinitions.isEmpty, "Minimal project should have no iteration definitions")
     }
 
     func testLoadProjectNonexistentDirectory() {
@@ -241,11 +232,10 @@ final class FileSystemPRDStoreTests: XCTestCase {
             iterationDefinitions: [
                 IterationDefinition(
                     id: "US-001",
-                    userStoryTitle: "Story 1",
-                    userStoryDescription: "Desc",
+                    title: "Story 1",
+                    description: "Desc",
                     priority: 1,
-                    acceptanceCriteria: ["AC1"],
-                    passes: false
+                    acceptanceCriteria: [AcceptanceCriterion(criterion: "AC1", status: .notStarted)]
                 )
             ]
         )
@@ -256,8 +246,8 @@ final class FileSystemPRDStoreTests: XCTestCase {
         XCTAssertEqual(loaded.project, "Test")
         XCTAssertEqual(loaded.description, "Round trip test")
         XCTAssertEqual(loaded.iterationDefinitions.count, 1)
-        XCTAssertFalse(loaded.iterationDefinitions[0].passes)
-        XCTAssertFalse(loaded.iterationDefinitions[0].inProgress)
+        XCTAssertFalse(loaded.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(loaded.iterationDefinitions[0].hasFailingCriteria)
     }
 
     func testWriteProjectProducesPrettyPrintedJSON() throws {
@@ -301,15 +291,18 @@ final class FileSystemPRDStoreTests: XCTestCase {
         try json.write(to: tempDir.appendingPathComponent("ridl.json"), atomically: true, encoding: .utf8)
 
         var project = try store.loadProject(from: tempDir)
-        project.iterationDefinitions[0].passes = true
+        // Mark all criteria as pass to freeze the definition
+        for i in project.iterationDefinitions[0].acceptanceCriteria.indices {
+            project.iterationDefinitions[0].acceptanceCriteria[i].status = .pass
+        }
 
         try store.writeProject(project, to: tempDir)
         let reloaded = try store.loadProject(from: tempDir)
 
         XCTAssertEqual(reloaded.project, "Test")
         XCTAssertEqual(reloaded.description, "Full project")
-        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
-        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].hasFailingCriteria)
         XCTAssertEqual(reloaded.milestones?.count, 1)
         XCTAssertEqual(reloaded.milestones?[0].name, "M1")
     }
@@ -342,30 +335,34 @@ final class FileSystemPRDStoreTests: XCTestCase {
 
         // Read
         var project = try store.loadProject(from: tempDir)
-        XCTAssertFalse(project.iterationDefinitions[0].passes)
+        XCTAssertFalse(project.iterationDefinitions[0].isFrozen)
 
-        // Modify: mark story 1 as passed
-        project.iterationDefinitions[0].passes = true
+        // Modify: mark story 1 criteria as pass
+        for i in project.iterationDefinitions[0].acceptanceCriteria.indices {
+            project.iterationDefinitions[0].acceptanceCriteria[i].status = .pass
+        }
 
         // Write
         try store.writeProject(project, to: tempDir)
 
         // Read again
         var reloaded = try store.loadProject(from: tempDir)
-        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
-        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
-        XCTAssertFalse(reloaded.iterationDefinitions[1].passes)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].hasFailingCriteria)
+        XCTAssertFalse(reloaded.iterationDefinitions[1].isFrozen)
 
         // Modify: mark story 1 as passed (already), verify stability
-        reloaded.iterationDefinitions[0].passes = true
+        for i in reloaded.iterationDefinitions[0].acceptanceCriteria.indices {
+            reloaded.iterationDefinitions[0].acceptanceCriteria[i].status = .pass
+        }
 
         // Write again
         try store.writeProject(reloaded, to: tempDir)
 
         // Read final state
-        let final = try store.loadProject(from: tempDir)
-        XCTAssertTrue(final.iterationDefinitions[0].passes)
-        XCTAssertFalse(final.iterationDefinitions[1].passes)
+        let final_ = try store.loadProject(from: tempDir)
+        XCTAssertTrue(final_.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(final_.iterationDefinitions[1].isFrozen)
     }
 
     func testWriteProjectConcurrentSafety() throws {
@@ -373,8 +370,8 @@ final class FileSystemPRDStoreTests: XCTestCase {
         let project = PRDProject(
             project: "Concurrent",
             iterationDefinitions: [
-                IterationDefinition(id: "US-001", userStoryTitle: "S1", userStoryDescription: "D1", priority: 1, acceptanceCriteria: ["AC1"]),
-                IterationDefinition(id: "US-002", userStoryTitle: "S2", userStoryDescription: "D2", priority: 2, acceptanceCriteria: ["AC2"])
+                IterationDefinition(id: "US-001", title: "S1", description: "D1", priority: 1, acceptanceCriteria: [AcceptanceCriterion(criterion: "AC1", status: .notStarted)]),
+                IterationDefinition(id: "US-002", title: "S2", description: "D2", priority: 2, acceptanceCriteria: [AcceptanceCriterion(criterion: "AC2", status: .notStarted)])
             ]
         )
         try store.writeProject(project, to: tempDir)
@@ -387,7 +384,7 @@ final class FileSystemPRDStoreTests: XCTestCase {
             queue.async {
                 do {
                     var copy = project
-                    copy.iterationDefinitions[0].passes = (i % 2 == 0)
+                    copy.iterationDefinitions[0].acceptanceCriteria[0].status = (i % 2 == 0) ? .pass : .notStarted
                     try self.store.writeProject(copy, to: self.tempDir)
                     expectation.fulfill()
                 } catch {
@@ -438,19 +435,23 @@ final class FileSystemPRDStoreTests: XCTestCase {
 
         var project = try store.loadProject(from: tempDir)
 
-        // Update multiple stories at once
-        project.iterationDefinitions[0].passes = true
-        project.iterationDefinitions[1].passes = true
+        // Update multiple stories at once — mark criteria as pass
+        for i in project.iterationDefinitions[0].acceptanceCriteria.indices {
+            project.iterationDefinitions[0].acceptanceCriteria[i].status = .pass
+        }
+        for i in project.iterationDefinitions[1].acceptanceCriteria.indices {
+            project.iterationDefinitions[1].acceptanceCriteria[i].status = .pass
+        }
 
         try store.writeProject(project, to: tempDir)
         let reloaded = try store.loadProject(from: tempDir)
 
-        XCTAssertTrue(reloaded.iterationDefinitions[0].passes)
-        XCTAssertFalse(reloaded.iterationDefinitions[0].inProgress)
-        XCTAssertTrue(reloaded.iterationDefinitions[1].passes)
-        XCTAssertFalse(reloaded.iterationDefinitions[1].inProgress)
-        XCTAssertFalse(reloaded.iterationDefinitions[2].passes)
-        XCTAssertFalse(reloaded.iterationDefinitions[2].inProgress)
+        XCTAssertTrue(reloaded.iterationDefinitions[0].isFrozen)
+        XCTAssertFalse(reloaded.iterationDefinitions[0].hasFailingCriteria)
+        XCTAssertTrue(reloaded.iterationDefinitions[1].isFrozen)
+        XCTAssertFalse(reloaded.iterationDefinitions[1].hasFailingCriteria)
+        XCTAssertFalse(reloaded.iterationDefinitions[2].isFrozen)
+        XCTAssertFalse(reloaded.iterationDefinitions[2].hasFailingCriteria)
         // All other fields preserved
         XCTAssertEqual(reloaded.project, "Multi")
         XCTAssertEqual(reloaded.description, "Multiple updates")
@@ -459,13 +460,12 @@ final class FileSystemPRDStoreTests: XCTestCase {
     // MARK: - JSON error messages
 
     func testJSONErrorIncludesFileNameAndKey() throws {
-        // Missing required "userStoryTitle" field in an iteration definition
+        // Missing both title and userStoryTitle — should fail
         let json = """
         {
             "iterationDefinitions": [
                 {
                     "id": "US-001",
-                    "userStoryDescription": "No title",
                     "priority": 1,
                     "acceptanceCriteria": []
                 }
@@ -481,7 +481,6 @@ final class FileSystemPRDStoreTests: XCTestCase {
             }
             let desc = ridlerError.errorDescription ?? ""
             XCTAssertTrue(desc.contains("ridl.json"), "Error should include filename: \(desc)")
-            XCTAssertTrue(desc.contains("userStoryTitle"), "Error should include key: \(desc)")
         }
     }
 

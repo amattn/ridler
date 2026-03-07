@@ -6,11 +6,22 @@ import os
 final class TemplateManager {
     private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "TemplateManager")
 
-    /// Names of agent loop templates used by RalphLoopEngine.buildPrompt
-    static let agentTemplateNames = [
+    /// Implementation phase templates
+    static let implementationTemplateNames = [
         "agent_instructions",
-        "story_context",
-        "progress_report",
+        "iteration_context",
+        "progress_format",
+        "learnings_format",
+        "emergent_format",
+    ]
+
+    /// Verification phase templates
+    static let verificationTemplateNames = [
+        "verification",
+        "iteration_context",
+        "progress_format",
+        "learnings_format",
+        "emergent_format",
     ]
 
     /// Names of interactive editing templates used by ClaudeTerminalManager
@@ -19,8 +30,23 @@ final class TemplateManager {
         "create_file",
     ]
 
-    /// All template names
-    static let allTemplateNames = agentTemplateNames + editingTemplateNames
+    /// All unique template names (for bundling/copying)
+    static let allTemplateNames = [
+        "agent_instructions",
+        "verification",
+        "iteration_context",
+        "progress_format",
+        "learnings_format",
+        "emergent_format",
+        "edit_file",
+        "create_file",
+    ]
+
+    /// Legacy template names from v2 that may exist in user projects
+    private static let legacyTemplateRenames: [String: String] = [
+        "story_context": "iteration_context",
+        "progress_report": "progress_format",
+    ]
 
     /// Error describing a template failure with file context.
     struct TemplateError: LocalizedError {
@@ -49,6 +75,16 @@ final class TemplateManager {
         if !fm.fileExists(atPath: promptsDir.path) {
             try fm.createDirectory(at: promptsDir, withIntermediateDirectories: true)
             logger.info("Created prompts directory at \(promptsDir.path)")
+        }
+
+        // Migrate legacy template names (v2 -> v3)
+        for (oldName, newName) in legacyTemplateRenames {
+            let oldURL = promptsDir.appendingPathComponent("\(oldName).liquid")
+            let newURL = promptsDir.appendingPathComponent("\(newName).liquid")
+            if fm.fileExists(atPath: oldURL.path) && !fm.fileExists(atPath: newURL.path) {
+                try fm.moveItem(at: oldURL, to: newURL)
+                logger.info("Migrated template \(oldName).liquid -> \(newName).liquid")
+            }
         }
 
         // Copy missing templates from bundle
@@ -165,20 +201,22 @@ final class TemplateManager {
 
     // MARK: - Agent Loop Prompt
 
-    /// Builds the full agent loop prompt by rendering and concatenating the three agent templates.
-    static func buildAgentPrompt(
+    /// Builds the full implementation phase prompt by rendering and concatenating implementation templates.
+    static func buildImplementationPrompt(
         for story: IterationDefinition,
         project: PRDProject,
-        progressContent: String?
+        progressContent: String?,
+        learningsContent: String?,
+        emergentContent: String?
     ) throws -> String {
         guard let directoryURL = project.directoryURL else {
             throw TemplateError(fileName: "", message: "Project has no directory URL")
         }
 
-        let context = buildAgentContext(for: story, project: project, progressContent: progressContent)
+        let context = buildAgentContext(for: story, project: project, progressContent: progressContent, learningsContent: learningsContent, emergentContent: emergentContent)
 
         var parts: [String] = []
-        for name in agentTemplateNames {
+        for name in implementationTemplateNames {
             let rendered = try render(templateName: name, projectDirectoryURL: directoryURL, context: context)
             parts.append(rendered)
         }
@@ -186,22 +224,60 @@ final class TemplateManager {
         return parts.joined()
     }
 
+    /// Builds the full verification phase prompt by rendering and concatenating verification templates.
+    static func buildVerificationPrompt(
+        for story: IterationDefinition,
+        project: PRDProject,
+        progressContent: String?,
+        learningsContent: String?,
+        emergentContent: String?
+    ) throws -> String {
+        guard let directoryURL = project.directoryURL else {
+            throw TemplateError(fileName: "", message: "Project has no directory URL")
+        }
+
+        let context = buildAgentContext(for: story, project: project, progressContent: progressContent, learningsContent: learningsContent, emergentContent: emergentContent)
+
+        var parts: [String] = []
+        for name in verificationTemplateNames {
+            let rendered = try render(templateName: name, projectDirectoryURL: directoryURL, context: context)
+            parts.append(rendered)
+        }
+
+        return parts.joined()
+    }
+
+    /// Backward-compatible alias for buildImplementationPrompt.
+    static func buildAgentPrompt(
+        for story: IterationDefinition,
+        project: PRDProject,
+        progressContent: String?
+    ) throws -> String {
+        try buildImplementationPrompt(for: story, project: project, progressContent: progressContent, learningsContent: nil, emergentContent: nil)
+    }
+
     /// Builds the Liquid context dictionary for agent loop templates.
     static func buildAgentContext(
         for story: IterationDefinition,
         project: PRDProject,
-        progressContent: String?
+        progressContent: String?,
+        learningsContent: String? = nil,
+        emergentContent: String? = nil
     ) -> [String: Any?] {
-        var storyDict: [String: Any?] = [
+        let criteriaList: [[String: Any]] = story.acceptanceCriteria.map { ac in
+            ["criterion": ac.criterion, "status": ac.status.rawValue]
+        }
+
+        var iterationDict: [String: Any?] = [
             "id": story.id,
-            "title": story.userStoryTitle,
+            "title": story.title,
             "priority": story.priority,
-            "description": story.userStoryDescription,
-            "acceptance_criteria": story.acceptanceCriteria,
+            "description": story.description,
+            "acceptance_criteria": criteriaList,
         ]
 
         if let refs = story.prdReferences, !refs.isEmpty {
-            storyDict["prd_references"] = refs
+            iterationDict["prd_references"] = refs
         }
 
         var projectDict: [String: Any?] = [:]
@@ -219,13 +295,20 @@ final class TemplateManager {
                 projectDict["technical_architecture"] = techArch
                 hasContext = true
             }
+            if let tv = ctx.testingAndVerification, !tv.isEmpty {
+                projectDict["testing_and_verification"] = tv
+                hasContext = true
+            }
             projectDict["has_universal_context"] = hasContext
         }
 
         return [
-            "story": storyDict,
+            "iteration": iterationDict,
+            "story": iterationDict, // backward compat for existing templates using {{ story.* }}
             "project": projectDict,
             "progress_content": progressContent,
+            "learnings_content": learningsContent,
+            "emergent_content": emergentContent,
         ]
     }
 

@@ -28,10 +28,9 @@ final class TemplateManagerTests: XCTestCase {
 
     // MARK: - Render Default Templates with Mock Data
 
-    func testRenderStoryContextWithMockData() throws {
-        // Write the bundled story_context template to our temp dir
+    func testRenderIterationContextWithMockData() throws {
         let templateContent = """
-        ## Target Story
+        ## Target Iteration
 
         - **ID:** {{ story.id }}
         - **Title:** {{ story.title }}
@@ -42,7 +41,7 @@ final class TemplateManagerTests: XCTestCase {
         {% for criterion in story.acceptance_criteria %}- {{ criterion }}
         {% endfor %}
         """
-        writeTemplate("story_context.liquid", content: templateContent)
+        writeTemplate("iteration_context.liquid", content: templateContent)
 
         let context: [String: Any?] = [
             "story": [
@@ -56,7 +55,7 @@ final class TemplateManagerTests: XCTestCase {
         ]
 
         let result = try TemplateManager.render(
-            templateName: "story_context",
+            templateName: "iteration_context",
             projectDirectoryURL: tempDir,
             context: context
         )
@@ -114,7 +113,7 @@ final class TemplateManagerTests: XCTestCase {
         XCTAssertTrue(result.contains("/tmp/ridl.md"))
     }
 
-    func testRenderProgressReportWithContent() throws {
+    func testRenderProgressFormatWithContent() throws {
         let templateContent = """
         ## Stop Condition
 
@@ -127,7 +126,7 @@ final class TemplateManagerTests: XCTestCase {
         {{ progress_content }}
         {% endif %}
         """
-        writeTemplate("progress_report.liquid", content: templateContent)
+        writeTemplate("progress_format.liquid", content: templateContent)
 
         let context: [String: Any?] = [
             "story": ["id": "US-001"] as [String: Any],
@@ -135,7 +134,7 @@ final class TemplateManagerTests: XCTestCase {
         ]
 
         let result = try TemplateManager.render(
-            templateName: "progress_report",
+            templateName: "progress_format",
             projectDirectoryURL: tempDir,
             context: context
         )
@@ -145,7 +144,7 @@ final class TemplateManagerTests: XCTestCase {
         XCTAssertTrue(result.contains("Completed setup"))
     }
 
-    func testRenderProgressReportWithoutContent() throws {
+    func testRenderProgressFormatWithoutContent() throws {
         let templateContent = """
         <ridler-complete/>
         {% if progress_content %}
@@ -153,7 +152,7 @@ final class TemplateManagerTests: XCTestCase {
         {{ progress_content }}
         {% endif %}
         """
-        writeTemplate("progress_report.liquid", content: templateContent)
+        writeTemplate("progress_format.liquid", content: templateContent)
 
         let context: [String: Any?] = [
             "story": ["id": "US-001"] as [String: Any],
@@ -161,7 +160,7 @@ final class TemplateManagerTests: XCTestCase {
         ]
 
         let result = try TemplateManager.render(
-            templateName: "progress_report",
+            templateName: "progress_format",
             projectDirectoryURL: tempDir,
             context: context
         )
@@ -173,20 +172,20 @@ final class TemplateManagerTests: XCTestCase {
     // MARK: - Custom Templates Override Defaults
 
     func testCustomTemplateUsedInsteadOfDefault() throws {
-        let customContent = "CUSTOM: Story {{ story.id }} is being worked on."
-        writeTemplate("story_context.liquid", content: customContent)
+        let customContent = "CUSTOM: Iteration {{ story.id }} is being worked on."
+        writeTemplate("iteration_context.liquid", content: customContent)
 
         let context: [String: Any?] = [
             "story": ["id": "US-042"] as [String: Any],
         ]
 
         let result = try TemplateManager.render(
-            templateName: "story_context",
+            templateName: "iteration_context",
             projectDirectoryURL: tempDir,
             context: context
         )
 
-        XCTAssertEqual(result, "CUSTOM: Story US-042 is being worked on.")
+        XCTAssertEqual(result, "CUSTOM: Iteration US-042 is being worked on.")
     }
 
     func testCustomAgentInstructionsOverride() throws {

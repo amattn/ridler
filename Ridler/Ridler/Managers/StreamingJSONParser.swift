@@ -20,16 +20,16 @@ final class StreamingJSONParser {
     private static let logger = Logger(subsystem: "com.amattn.Ridler", category: "StreamingJSONParser")
 
     private let entrySubject = PassthroughSubject<LogEntry, Never>()
-    private let completionSubject = PassthroughSubject<Void, Never>()
+    private let signalSubject = PassthroughSubject<HarnessSignal, Never>()
 
     /// Publisher that emits parsed log entries.
     var entryPublisher: AnyPublisher<LogEntry, Never> {
         entrySubject.eraseToAnyPublisher()
     }
 
-    /// Publisher that emits when the ridler-complete signal is detected.
-    var completionPublisher: AnyPublisher<Void, Never> {
-        completionSubject.eraseToAnyPublisher()
+    /// Publisher that emits when a harness signal is detected.
+    var signalPublisher: AnyPublisher<HarnessSignal, Never> {
+        signalSubject.eraseToAnyPublisher()
     }
 
     /// Parse a single line of streaming JSON output from Claude Code.
@@ -39,10 +39,8 @@ final class StreamingJSONParser {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        // Check for ridler-complete signal in raw text
-        if trimmed.contains("<ridler-complete/>") {
-            completionSubject.send()
-        }
+        // Check for harness signals in raw text
+        detectSignals(in: trimmed)
 
         guard let data = trimmed.data(using: .utf8) else {
             Self.logger.warning("StreamingJSONParser: Could not convert line to UTF-8 data")
@@ -56,10 +54,8 @@ final class StreamingJSONParser {
 
         let entry = parseJSON(json, rawJSON: trimmed)
 
-        // Also check for ridler-complete signal in parsed content
-        if entry.content.contains("<ridler-complete/>") {
-            completionSubject.send()
-        }
+        // Also check for harness signals in parsed content
+        detectSignals(in: entry.content)
 
         entrySubject.send(entry)
         return entry
@@ -314,9 +310,7 @@ final class StreamingJSONParser {
             content = extractFallbackContent(from: json)
         }
 
-        if content.contains("<ridler-complete/>") {
-            completionSubject.send()
-        }
+        detectSignals(in: content)
 
         return LogEntry(type: .assistantText, content: content, rawJSON: rawJSON)
     }
@@ -427,6 +421,19 @@ final class StreamingJSONParser {
             }
             return nil
         }.joined(separator: "\n")
+    }
+
+    /// Detects harness signals in a string and publishes them.
+    private func detectSignals(in text: String) {
+        if text.contains("<ridler-complete/>") {
+            signalSubject.send(.complete)
+        }
+        if text.contains("<ridler-verification-failed/>") {
+            signalSubject.send(.verificationFailed)
+        }
+        if text.contains("<ridler-blocked/>") {
+            signalSubject.send(.blocked)
+        }
     }
 
     private func extractFallbackContent(from json: [String: Any]) -> String {

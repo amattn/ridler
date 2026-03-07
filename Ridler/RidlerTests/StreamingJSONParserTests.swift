@@ -228,9 +228,9 @@ final class StreamingJSONParserTests: XCTestCase {
     func testDetectRidlerCompleteInAssistantContent() {
         let expectation = XCTestExpectation(description: "Completion detected")
 
-        parser.completionPublisher
+        parser.signalPublisher
             .prefix(1)
-            .sink { expectation.fulfill() }
+            .sink { _ in expectation.fulfill() }
             .store(in: &cancellables)
 
         let json = #"{"type": "assistant", "content": "All stories complete. <ridler-complete/>"}"#
@@ -242,9 +242,9 @@ final class StreamingJSONParserTests: XCTestCase {
     func testDetectRidlerCompleteInRawText() {
         let expectation = XCTestExpectation(description: "Completion detected")
 
-        parser.completionPublisher
+        parser.signalPublisher
             .prefix(1)
-            .sink { expectation.fulfill() }
+            .sink { _ in expectation.fulfill() }
             .store(in: &cancellables)
 
         // Non-JSON line containing the signal
@@ -256,9 +256,9 @@ final class StreamingJSONParserTests: XCTestCase {
     func testDetectRidlerCompleteInResult() {
         let expectation = XCTestExpectation(description: "Completion detected")
 
-        parser.completionPublisher
+        parser.signalPublisher
             .prefix(1)
-            .sink { expectation.fulfill() }
+            .sink { _ in expectation.fulfill() }
             .store(in: &cancellables)
 
         let json = #"{"type": "result", "result": "Done! <ridler-complete/>"}"#
@@ -378,9 +378,12 @@ final class StreamingJSONParserTests: XCTestCase {
 
         let completionExpectation = XCTestExpectation(description: "Completion detected")
 
-        parser.completionPublisher
+        parser.signalPublisher
             .prefix(1)
-            .sink { completionDetected = true; completionExpectation.fulfill() }
+            .sink { signal in
+                if signal == .complete { completionDetected = true }
+                completionExpectation.fulfill()
+            }
             .store(in: &cancellables)
 
         for line in lines {

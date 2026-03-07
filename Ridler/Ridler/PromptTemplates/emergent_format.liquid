@@ -1,0 +1,30 @@
+# Emergent Items Format
+
+This file captures items that emerged during RIDL iterations and need human attention — design decisions made without human input, requirement gaps, assumptions needing validation, scope questions, and edge cases the PRD didn't anticipate. Items here should be backported to the PRD on regeneration. Append-only — never replace existing entries.
+
+---
+
+APPEND to ridl/emergent.md (never replace, always append):
+
+Each item gets a unique ID: `EM-N` (incrementing from the last ID in the file, or EM-1 if the file is empty). This ID lets the PRD reference specific emergent items after triage.
+
+```
+## EM-N: [Short title]
+- **Source:** [{{ iteration.id }}] {{ iteration.title }}
+- **Date:** [Date/Time]
+- **Phase:** [implementation | verification | bookkeeping]
+- **Category:** [design decision | requirement gap | assumption | scope question | edge case]
+- **Outcome:** pending
+- What came up
+- What was decided or assumed (if anything)
+- Why this needs human review
+---
+```
+
+Outcome values: `pending` (default at creation), `approved`, `approved with changes`, `rejected`, `deferred`. The outcome is updated during PRD triage.
+
+{% if emergent_content %}
+## Previous Emergent Items
+
+{{ emergent_content }}
+{% endif %}

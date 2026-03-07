@@ -185,7 +185,7 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func interruptedStoryBanner(project: PRDProject) -> some View {
-        let interruptedStories = project.iterationDefinitions.filter { $0.inProgress && !$0.passes }
+        let interruptedStories = project.iterationDefinitions.filter { $0.hasFailingCriteria }
         let isInterrupted = !interruptedStories.isEmpty && project.loopState != .running
 
         if isInterrupted && !interruptedWarningDismissed {
@@ -271,7 +271,7 @@ struct SidebarView: View {
         let stories = milestone.storyIDs.compactMap { id in
             project.iterationDefinitions.first { $0.id == id }
         }
-        let passedCount = stories.filter(\.passes).count
+        let passedCount = stories.filter(\.isFrozen).count
         let isCollapsed = collapsedMilestones.contains(milestone.name)
 
         Button {
@@ -335,7 +335,7 @@ struct SidebarView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Text(story.userStoryTitle)
+                Text(story.title)
                     .font(.system(size: 13))
                     .lineLimit(1)
 
@@ -351,10 +351,17 @@ struct SidebarView: View {
 
     private func storyStatusIcon(story: IterationDefinition) -> some View {
         Group {
-            if story.passes {
+            if story.isFrozen {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-            } else if story.inProgress {
+            } else if story.hasErrors {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.yellow)
+            } else if story.hasFailingCriteria {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+            } else if story.acceptanceCriteria.contains(where: { $0.status == .pass }) {
+                // Some criteria pass but not all — in progress
                 Image(systemName: "circle.inset.filled")
                     .foregroundStyle(.cyan)
             } else {
@@ -369,7 +376,7 @@ struct SidebarView: View {
 
     private func progressBar(project: PRDProject) -> some View {
         let total = project.iterationDefinitions.count
-        let passed = project.iterationDefinitions.filter(\.passes).count
+        let passed = project.iterationDefinitions.filter(\.isFrozen).count
         let fraction = total > 0 ? Double(passed) / Double(total) : 0
         let percentage = Int(fraction * 100)
 

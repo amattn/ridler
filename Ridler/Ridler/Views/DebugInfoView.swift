@@ -77,12 +77,8 @@ struct DebugInfoView: View {
                     debugRow("Loop Start", value: startDate.formatted(.dateTime))
                 }
 
-                let passCount = project.iterationDefinitions.filter { $0.passes }.count
+                let passCount = project.iterationDefinitions.filter { $0.isFrozen }.count
                 debugRow("Stories", value: "\(passCount)/\(project.iterationDefinitions.count) passed")
-
-                if let currentStory = project.iterationDefinitions.first(where: { $0.inProgress }) {
-                    debugRow("Current Story", value: "\(currentStory.id) — \(currentStory.userStoryTitle)")
-                }
             }
             .padding(.vertical, 2)
         }

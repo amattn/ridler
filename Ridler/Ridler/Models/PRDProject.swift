@@ -34,7 +34,7 @@ struct PRDProject: Codable, Identifiable, Equatable {
 
     /// Default max iterations: remaining stories + 5, minimum 5
     var defaultMaxIterations: Int {
-        let remaining = iterationDefinitions.filter { !$0.passes }.count
+        let remaining = iterationDefinitions.filter { !$0.isFrozen }.count
         return max(remaining + 5, 5)
     }
 

@@ -62,10 +62,13 @@
 		A10043 /* LiquidKit in Frameworks */ = {isa = PBXBuildFile; productRef = SP0006 /* LiquidKit */; };
 		A10044 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20043 /* TemplateManager.swift */; };
 		A10045 /* agent_instructions.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20044 /* agent_instructions.liquid */; };
-		A10046 /* story_context.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20045 /* story_context.liquid */; };
-		A10047 /* progress_report.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20046 /* progress_report.liquid */; };
+		A10046 /* verification.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20045 /* verification.liquid */; };
+		A10047 /* iteration_context.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20046 /* iteration_context.liquid */; };
 		A10048 /* edit_file.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20047 /* edit_file.liquid */; };
 		A10049 /* create_file.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20048 /* create_file.liquid */; };
+		A10050 /* progress_format.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20049 /* progress_format.liquid */; };
+		A10051 /* learnings_format.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20050 /* learnings_format.liquid */; };
+		A10052 /* emergent_format.liquid in Resources */ = {isa = PBXBuildFile; fileRef = A20051 /* emergent_format.liquid */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -134,10 +137,13 @@
 		C20002 /* RidlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RidlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20043 /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
 		A20044 /* agent_instructions.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = agent_instructions.liquid; sourceTree = "<group>"; };
-		A20045 /* story_context.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = story_context.liquid; sourceTree = "<group>"; };
-		A20046 /* progress_report.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = progress_report.liquid; sourceTree = "<group>"; };
+		A20045 /* verification.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = verification.liquid; sourceTree = "<group>"; };
+		A20046 /* iteration_context.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = iteration_context.liquid; sourceTree = "<group>"; };
 		A20047 /* edit_file.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = edit_file.liquid; sourceTree = "<group>"; };
 		A20048 /* create_file.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = create_file.liquid; sourceTree = "<group>"; };
+		A20049 /* progress_format.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = progress_format.liquid; sourceTree = "<group>"; };
+		A20050 /* learnings_format.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = learnings_format.liquid; sourceTree = "<group>"; };
+		A20051 /* emergent_format.liquid */ = {isa = PBXFileReference; lastKnownFileType = text; path = emergent_format.liquid; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,10 +198,13 @@
 			isa = PBXGroup;
 			children = (
 				A20044 /* agent_instructions.liquid */,
-				A20045 /* story_context.liquid */,
-				A20046 /* progress_report.liquid */,
+				A20045 /* verification.liquid */,
+				A20046 /* iteration_context.liquid */,
 				A20047 /* edit_file.liquid */,
 				A20048 /* create_file.liquid */,
+				A20049 /* progress_format.liquid */,
+				A20050 /* learnings_format.liquid */,
+				A20051 /* emergent_format.liquid */,
 			);
 			path = PromptTemplates;
 			sourceTree = "<group>";
@@ -399,10 +408,13 @@
 				A10004 /* Preview Assets.xcassets in Resources */,
 				A10003 /* Assets.xcassets in Resources */,
 				A10045 /* agent_instructions.liquid in Resources */,
-				A10046 /* story_context.liquid in Resources */,
-				A10047 /* progress_report.liquid in Resources */,
+				A10046 /* verification.liquid in Resources */,
+				A10047 /* iteration_context.liquid in Resources */,
 				A10048 /* edit_file.liquid in Resources */,
 				A10049 /* create_file.liquid in Resources */,
+				A10050 /* progress_format.liquid in Resources */,
+				A10051 /* learnings_format.liquid in Resources */,
+				A10052 /* emergent_format.liquid in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
