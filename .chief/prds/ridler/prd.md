@@ -4,7 +4,7 @@
 
 Ridler is a native macOS SwiftUI application (macOS 14+, Apple Silicon only) that transforms Product Requirements Documents into working code by orchestrating Claude Code in an autonomous loop. It is a feature-complete native equivalent of [minicodemonkey/chief](https://github.com/minicodemonkey/chief), replacing the terminal-based Bubble Tea TUI with a native SwiftUI interface.
 
-The app reads PRDs (markdown + JSON), breaks them into user stories, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration starts with a clean context window while persisting progress between runs via a `progress.md` file. Prompt templates use the Liquid templating format and are stored per-project in the `ridl/` folder, allowing customization without code changes.
+The app reads PRDs (markdown + JSON), breaks them into iteration definitions, and executes them sequentially through fresh Claude Code sessions — the "Ralph Wiggum loop" pattern. Each iteration definition executes in two phases (implementation then verification) with a clean context window, persisting progress between runs via runtime files (`progress.md`, `learnings.md`, `emergent.md`). Prompt templates use the Liquid templating format and are stored per-project in the `ridl/` folder, allowing customization without code changes.
 
 **Key Design Principles:** Native-first SwiftUI, feature parity with Chief CLI, zero configuration (PRD state lives alongside PRD files), non-blocking parallel execution, transparent real-time streaming.
 
@@ -34,17 +34,20 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ### US-002: Define core data models
 **Priority:** 2
-**Description:** As a developer, I want well-defined data models so that the app can represent PRDs, user stories, and loop state throughout the codebase.
+**Description:** As a developer, I want well-defined data models so that the app can represent PRDs, iteration definitions, and loop state throughout the codebase.
 
 **Acceptance Criteria:**
-- [ ] `PRDProject` model representing an opened PRD with: directory URL, name, list of user stories, loop state, iteration count
-- [ ] `UserStory` model with fields: id (string, e.g. "US-001"), title, description, priority (Int), acceptanceCriteria ([String]), passes (Bool, default false), inProgress (Bool, default false)
+- [ ] `PRDProject` model representing an opened PRD with: directory URL, name, list of iteration definitions, loop state, iteration count
+- [ ] `IterationDefinition` model with fields: id (string, e.g. "US-001"), title, description, priority (Int), acceptanceCriteria ([AcceptanceCriterion])
+- [ ] `AcceptanceCriterion` model with fields: criterion (String), status (CriterionStatus). `CriterionStatus` enum with cases: .notStarted, .fail, .pass, .error
+- [ ] An iteration definition is "frozen" (complete) when all its acceptance criteria have status `.pass` (`isFrozen` computed property)
 - [ ] `LoopState` enum with cases: ready, running, paused, stopped, complete, error
+- [ ] `IterationPhase` enum with cases: implementation, verification
+- [ ] `HarnessSignal` enum with cases: complete, verificationFailed, blocked
 - [ ] `Milestone` model with name and list of story IDs
 - [ ] All models conform to `Codable` for JSON serialization
-- [ ] JSON decoding is resilient: `passes` defaults to `false` and `inProgress` defaults to `false` when omitted
 - [ ] Error types conform to `LocalizedError` with human-readable `errorDescription`
-- [ ] Unit tests verify round-trip JSON encoding/decoding including missing optional fields
+- [ ] Unit tests verify round-trip JSON encoding/decoding including AcceptanceCriterion status values
 
 ---
 
@@ -54,27 +57,27 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 **Acceptance Criteria:**
 - [ ] `PRDStore` protocol defines read/write interface for PRD files
-- [ ] Reads `ridl.json` and decodes into `PRDProject` with user stories
+- [ ] Reads `ridl.json` and decodes into `PRDProject` with iteration definitions
 - [ ] Reads `prd.md` and `ridl.md` as raw markdown strings
 - [ ] Supports the `ridl/` folder convention: all PRD files stored together in a directory
 - [ ] When given a folder, looks for `prd.md` inside it
 - [ ] `ridl.md` and `ridl.json` are optional companion files (may not exist yet)
-- [ ] JSON decoding errors include file name, problematic key, and JSON path (e.g., `ridl.json: missing required key "title" in userStories.0`)
+- [ ] JSON decoding errors include file name, problematic key, and JSON path (e.g., `ridl.json: missing required key "title" in iterationDefinitions.0`)
 - [ ] File-not-found errors include the full path searched and filenames tried
-- [ ] Unit tests for: valid JSON, missing optional fields, malformed JSON, missing files
+- [ ] Unit tests for: valid JSON, missing optional fields, malformed JSON, missing files, `iterationDefinitions` array decoding
 
 ---
 
 ### US-004: Write PRD state updates to ridl.json
 **Priority:** 4
-**Description:** As a developer, I want to write updated story state back to ridl.json so that progress persists on disk.
+**Description:** As a developer, I want to write updated iteration definition state back to ridl.json so that progress persists on disk.
 
 **Acceptance Criteria:**
-- [ ] `PRDStore` can write updated `ridl.json` with modified story states
+- [ ] `PRDStore` can write updated `ridl.json` with modified iteration definition states
 - [ ] Writing preserves all existing fields (no data loss on round-trip)
 - [ ] Concurrent read/write is safe (no file corruption)
 - [ ] Pretty-printed JSON output for human readability
-- [ ] Unit tests verify round-trip: read → modify passes/inProgress → write → read
+- [ ] Unit tests verify round-trip: read → modify criterion statuses → write → read
 
 ---
 
@@ -154,7 +157,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Each row shows a file-type icon and filename
 - [ ] Selecting a file row deselects the currently selected story (mutual exclusion)
 - [ ] If `ridl.md` or `ridl.json` does not exist on disk, the row is visually distinguished (dimmed or "(not yet created)" note)
-- [ ] Below the PRD files, a collapsible "Prompt Templates" header lists `.liquid` files from `ridl/prompts/` (e.g., `prompt.liquid`, `story.liquid`, `progress_report.liquid`)
+- [ ] Below the PRD files, a collapsible "Prompt Templates" header lists `.liquid` files from `ridl/prompts/` (e.g., `agent_instructions.liquid`, `iteration_context.liquid`, `verification.liquid`)
 - [ ] Prompt template rows show a template icon and filename; if `ridl/prompts/` does not exist yet, the section shows "(defaults — run once to generate)"
 - [ ] Selecting a prompt template file shows its content in the middle pane (same behavior as PRD files)
 - [ ] A visual divider separates file rows from the stories list below
@@ -164,11 +167,11 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ### US-011: Stories list in left pane
 **Priority:** 11
-**Description:** As a user, I want to see all user stories for a PRD so that I can track progress and select stories to view.
+**Description:** As a user, I want to see all iteration definitions for a PRD so that I can track progress and select stories to view.
 
 **Acceptance Criteria:**
-- [ ] Scrollable list of all user stories for the selected PRD
-- [ ] Each row shows: status icon (checkmark passed, dot in-progress, circle pending), story ID, and title
+- [ ] Scrollable list of all iteration definitions for the selected PRD
+- [ ] Each row shows: status icon (checkmark frozen/all criteria pass, dot in-progress/some criteria set, circle pending/all not_started), story ID, and title
 - [ ] Highlight the currently selected story
 - [ ] Progress bar at the bottom: filled portion, percentage, and count (e.g., `2/4 stories`)
 - [ ] Clicking a story selects it and shows its detail in the middle pane
@@ -188,7 +191,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Display status badge and priority number
 - [ ] Display the full description with word wrapping
 - [ ] Display acceptance criteria as a bulleted list
-- [ ] When an error occurs, show error details and a tip to check `claude.log`
+- [ ] When an error occurs, show error details and a tip to check `ridler.log`
 
 ---
 
@@ -244,11 +247,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Valid transitions: Ready→Running, Running→Paused, Running→Stopped, Running→Complete, Running→Error, Paused→Running, Stopped→Running, Error→Running
 - [ ] Running→Paused: loop finishes current iteration then pauses
 - [ ] Running→Stopped: loop halts immediately
-- [ ] Running→Complete: all stories pass
+- [ ] Running→Complete: all iteration definitions are frozen (all criteria pass)
 - [ ] Running→Error: Claude Code fails after retry exhaustion
 - [ ] Display current state with color-coded badge: Ready (gray), Running (cyan), Paused (yellow), Stopped (gray), Complete (green), Error (red)
 - [ ] "Pause after story" mode: when enabled, auto-transitions Running→Paused after a story completes
 - [ ] "Pause after milestone" mode: when enabled, auto-transitions Running→Paused after the last story in a milestone completes (only applies when PRD defines milestones)
+- [ ] Two-phase flow affects pause behavior: "Pause after story" pauses after the verification phase completes (not after implementation alone)
 - [ ] Unit tests for all valid state transitions and rejection of invalid transitions
 
 ---
@@ -270,7 +274,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ### US-018: Claude Code process manager
 **Priority:** 18
-**Description:** As a developer, I want a process manager that spawns and controls Claude Code subprocesses so that the loop engine can execute stories.
+**Description:** As a developer, I want a process manager that spawns and controls Claude Code subprocesses so that the loop engine can execute iteration definitions.
 
 **Acceptance Criteria:**
 - [ ] `ProcessManaging` protocol defines interface for spawning, streaming, and killing processes
@@ -280,7 +284,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Kill the subprocess cleanly when Stop is pressed
 - [ ] No zombie processes left behind on app quit or process termination
 - [ ] Process errors include: exit code, stderr output, and the command that was run
-- [ ] Capture full raw stdout/stderr to per-PRD `claude.log` file
+- [ ] Capture full raw stdout/stderr to per-PRD `ridler.log` file
 
 ---
 
@@ -294,7 +298,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Create structured log entries from parsed messages
 - [ ] Handle malformed JSON lines gracefully (log warning, don't crash)
 - [ ] Handle partial reads and buffer boundaries correctly
-- [ ] Detect the `<ridler-complete/>` signal in Claude's output
+- [ ] Detect all three harness signals in Claude's output: `<ridler-complete/>` (completed successfully), `<ridler-verification-failed/>` (verification found failures, retry), `<ridler-blocked/>` (agent stuck, needs human help)
 - [ ] Streaming latency < 100ms from Claude output to parsed entry
 - [ ] Parse all Claude Code `stream-json` message variants correctly: nested `message.content[]` arrays (text, tool_use, tool_result), `type="user"` messages with tool results (string, array, `is_error` with XML stripped), `type="system"` with `subtype="init"` (extract model/cwd/version), and agent sub-prompts (user text blocks with `parent_tool_use_id`). Both flat and nested formats must produce human-readable log entries
 - [ ] Store the raw JSON line on each parsed `LogEntry` (`rawJSON: String?`, nil for system-generated entries) for verbose/debug display
@@ -312,7 +316,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 - [ ] Tool call entries show icons per tool type (Read, Edit, Write, Bash, etc.)
 - [ ] Auto-scroll to follow new output while loop is running
 - [ ] Manual scrolling: disable auto-scroll when user scrolls up, re-enable when user scrolls to bottom
-- [ ] Show story transition events, iteration starts, completion messages in the log
+- [ ] Show iteration definition transition events, phase transitions, iteration starts, completion messages in the log
 - [ ] Persist all log entries to `ridler.log` as newline-delimited JSON (NDJSON). Claude Code output lines have `ridler_story_id` and `ridler_timestamp` injected. System-generated entries serialized with `ridler_type: "system"`. The `ridler_` prefix avoids conflicts with Claude Code's own fields
 - [ ] On PRD open, load existing log entries from `ridler.log` on a background thread without blocking the main UI thread
 - [ ] When "Verbose log" setting is enabled and a log entry has `rawJSON`, display a collapsible "Raw JSON" disclosure below the parsed content
@@ -324,28 +328,32 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ### US-021: Ralph loop engine
 **Priority:** 21
-**Description:** As a user, I want the autonomous execution engine so that stories are executed sequentially through Claude Code without manual intervention.
+**Description:** As a user, I want the autonomous execution engine so that iteration definitions are executed sequentially through Claude Code without manual intervention.
 
 **Acceptance Criteria:**
-- [ ] Execute the Ralph Wiggum loop: read state → select next story → build prompt → invoke Claude Code → stream output → check completion → repeat
-- [ ] Select next story by filtering `passes: false`, sorting by `priority` ascending, picking the first
-- [ ] Build prompt by rendering Liquid templates from the `ridl/` folder with story and project context (see US-045)
-- [ ] Each iteration invokes Claude Code as a fresh subprocess
-- [ ] On story completion, set `passes: true` and `inProgress: false` in `ridl.json`
-- [ ] On all stories complete, transition to Complete state and play audio notification
-- [ ] Support configurable max iterations per PRD (default: remaining stories + 5, minimum 5)
-- [ ] Detect `<ridler-complete/>` signal to exit loop early
+- [ ] Execute the Ralph Wiggum loop: read state → select next iteration definition → build prompt → invoke Claude Code → stream output → check harness signal → repeat
+- [ ] Select next iteration definition by filtering for not frozen (not all criteria pass), sorting by `priority` ascending, picking the first
+- [ ] Two-phase flow per iteration definition: implementation phase (agent implements the feature) followed by verification phase (agent verifies against acceptance criteria)
+- [ ] Build prompt by rendering Liquid templates from the `ridl/` folder with iteration definition and project context (see US-045)
+- [ ] Each phase invokes Claude Code as a fresh subprocess
+- [ ] Handle three harness signals: `<ridler-complete/>` (mark iteration definition complete — set all acceptance criteria to `.pass`), `<ridler-verification-failed/>` (retry implementation), `<ridler-blocked/>` (pause loop, needs human help)
+- [ ] On iteration definition completion, set all acceptance criteria status to `.pass` in `ridl.json`
+- [ ] On all iteration definitions frozen, transition to Complete state and play audio notification
+- [ ] Support configurable max iterations per PRD (default: remaining iteration definitions + 5, minimum 5)
 
 ---
 
-### US-022: Progress.md updates after each iteration
+### US-022: Runtime file updates after each iteration
 **Priority:** 22
-**Description:** As a developer or agent, I want implementation details appended to progress.md so that subsequent iterations have context about what was already done.
+**Description:** As a developer or agent, I want runtime files updated after each iteration so that subsequent iterations have context about what was already done.
 
 **Acceptance Criteria:**
-- [ ] After each iteration, append implementation details, file changes, and learnings to `progress.md`
-- [ ] `progress.md` is stored alongside the other PRD files in the `ridl/` directory
+- [ ] After each iteration, update three runtime files stored in the `ridl/` directory:
+  - `progress.md` — implementation details and file changes
+  - `learnings.md` — lessons learned and patterns discovered
+  - `emergent.md` — emergent behavior and unexpected findings
 - [ ] Content is human-readable and provides useful context for subsequent Claude Code sessions
+- [ ] Runtime file formats are defined by Liquid templates (`progress_format.liquid`, `learnings_format.liquid`, `emergent_format.liquid`)
 
 ---
 
@@ -363,14 +371,15 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ---
 
-### US-024: Git commit per completed story
+### US-024: Git commits per completed iteration definition
 **Priority:** 24
-**Description:** As a user, I want one git commit per completed story so that I have a clean, traceable git history.
+**Description:** As a user, I want git commits per completed iteration definition so that I have a clean, traceable git history.
 
 **Acceptance Criteria:**
-- [ ] Create one commit per completed story
-- [ ] Commit message format: `feat: [US-001] - Story Title`
-- [ ] Commit is created after story passes and ridl.json is updated
+- [ ] Create two commits per completed iteration definition (one per phase):
+  - Implementation commit: `implement: [US-001] - Story Title`
+  - Verification commit: `verify: [US-001] verification - Story Title`
+- [ ] Commits are created after each phase completes and ridl.json is updated
 - [ ] Git errors are reported clearly with the failed command and stderr
 
 ---
@@ -459,12 +468,12 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 ---
 
-### US-032: Interrupted story detection and warning
+### US-032: Interrupted iteration definition detection and warning
 **Priority:** 32
-**Description:** As a user, I want to be warned about stories that were in progress when the app was interrupted so that I know to review them before continuing.
+**Description:** As a user, I want to be warned about iteration definitions that were in progress when the app was interrupted so that I know to review them before continuing.
 
 **Acceptance Criteria:**
-- [ ] Show a yellow warning banner in the stories panel if a story has `inProgress: true` from a previously interrupted session
+- [ ] Show a yellow warning banner in the stories panel if an iteration definition has acceptance criteria with `.fail` or `.error` status from a previously interrupted session
 - [ ] Warning is visible when the PRD is loaded/reopened
 - [ ] User can acknowledge the warning and resume the loop
 
@@ -476,22 +485,28 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 
 **Acceptance Criteria:**
 - [ ] Add a Swift Liquid templating library as a dependency (e.g., [nicklama/Liqid](https://github.com/nicklama/Liqid) or equivalent)
-- [ ] Default prompt templates bundled in the app as resources:
+- [ ] Default prompt templates bundled in the app as resources (8 total):
   - **Agent loop templates** (used by `RalphLoopEngine.buildPrompt`):
     - `agent_instructions.liquid` — main agent instructions (task steps, quality requirements, stop condition)
-    - `story_context.liquid` — target story details (ID, title, description, acceptance criteria, PRD references, universal context)
-    - `progress_report.liquid` — progress.md append format
+    - `iteration_context.liquid` — target iteration definition details (ID, title, description, acceptance criteria, PRD references, universal context)
+    - `verification.liquid` — verification phase prompt (verify implementation against acceptance criteria)
+    - `progress_format.liquid` — progress.md append format
+    - `learnings_format.liquid` — learnings.md append format
+    - `emergent_format.liquid` — emergent.md append format
   - **Interactive editing templates** (used by `ClaudeTerminalManager`):
     - `edit_file.liquid` — prompt for editing an existing PRD or template file
     - `create_file.liquid` — prompt for creating a missing file; uses `{% if %}` branches on `file_name` to provide file-specific instructions (e.g., `ridl.md` reads from `prd.md`, `ridl.json` reads from `ridl.md` or `prd.md`, all others get generic instructions)
 - [ ] On first loop start for a project, if no templates exist in `ridl/prompts/`, create the directory and copy the bundled defaults there
 - [ ] `buildPrompt(for:project:)` reads `.liquid` files from the project's `ridl/prompts/` folder and renders them with a context dictionary containing:
-  - `story.id`, `story.title`, `story.description`, `story.priority`, `story.acceptance_criteria`
+  - `story.id`, `story.title`, `story.description`, `story.priority`, `story.acceptance_criteria` (iteration definition fields)
   - `story.prd_references` (optional)
   - `project.universal_context.non_functional_requirements` (optional)
   - `project.universal_context.developer_experience` (optional)
   - `project.universal_context.technical_architecture` (optional)
   - `progress_content` (contents of `progress.md` if it exists)
+  - `learnings_content` (contents of `learnings.md` if it exists)
+  - `emergent_content` (contents of `emergent.md` if it exists)
+  - `phase` (current iteration phase: "implementation" or "verification")
   - `file_path`, `file_name`, `file_exists` (for interactive editing templates)
 - [ ] If a template file is missing, copy the bundled default into `ridl/prompts/` before rendering
 - [ ] If a template fails to parse: display an inline error banner above the template preview in the middle pane showing the file name, line number, and parse error message; show a red error icon next to the template filename in the sidebar; transition loop to Error state and prevent running until the template is fixed
@@ -579,7 +594,7 @@ The app reads PRDs (markdown + JSON), breaks them into user stories, and execute
 **Acceptance Criteria:**
 - [ ] When Debug mode is enabled in Settings, Window > Debug Info opens a Debug window
 - [ ] Debug window shows: current loop state per PRD, engine iteration count, file watcher status, active process PIDs, last error per tab, memory usage
-- [ ] In debug mode, status bar expands to show: loop state enum value, current story ID, retry count, elapsed time per iteration
+- [ ] In debug mode, status bar expands to show: loop state enum value, current iteration definition ID, current phase, retry count, elapsed time per iteration
 - [ ] Debug mode state persisted across launches via UserDefaults
 
 ---
